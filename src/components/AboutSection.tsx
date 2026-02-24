@@ -30,7 +30,7 @@ const AboutSection = () => (
           className="group relative inline-flex items-center gap-3 px-6 py-3 border-2 border-black bg-white text-black text-xs font-bold tracking-[0.2em] uppercase transition-all duration-300 shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] hover:bg-black hover:text-white"
         >
           <Globe className="w-4 h-4" />
-          <span>View Portfolio Profile</span>
+          <span>View Showcase Profile</span>
         </a>
       </div>
     </div>
