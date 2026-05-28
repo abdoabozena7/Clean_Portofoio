@@ -220,11 +220,11 @@ const HeroSection = () => {
 
         <div className="mt-10">
           <a
-            href="/resume.pdf"
-            download="Abdelrahman_Abozena_Resume.pdf"
+            href={`${import.meta.env.BASE_URL}resume.pdf`}
+            download="Abdelrahman_Abozena_CV.pdf"
             className="group relative inline-flex items-center gap-2 px-8 py-4 border-2 border-black bg-black text-white text-sm font-bold tracking-[0.2em] uppercase transition-all duration-300 shadow-[8px_8px_0px_0px_rgba(0,0,0,0.2)] hover:bg-white hover:text-black hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]"
           >
-            <span>Download Resume</span>
+            <span>Download CV</span>
             <span className="w-2 h-2 border-r-2 border-b-2 border-current rotate-45 -translate-y-[1px] group-hover:translate-y-[1px] transition-transform duration-300"></span>
           </a>
         </div>
