@@ -85,7 +85,7 @@ const ContactSection = () => {
                 },
                 {
                   Icon: Globe,
-                  href: "https://abdoabozena7.github.io/Instafolio",
+                  href: "https://abdoabozena7.github.io/Clean_Portofoio/",
                 },
                 { Icon: Mail, href: "mailto:boodyabozena@gmail.com" },
               ].map(({ Icon, href }, i) => (

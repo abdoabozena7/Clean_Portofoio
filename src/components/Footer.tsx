@@ -16,7 +16,7 @@ const Footer = () => {
     },
     {
       icon: Globe,
-      href: "https://abdoabozena7.github.io/Instafolio",
+      href: "https://abdoabozena7.github.io/Clean_Portofoio/",
       label: "Portfolio",
     },
     {
@@ -44,8 +44,9 @@ const Footer = () => {
               ABDELRAHMAN ABOZENA<span className="text-foreground">.....</span>
             </h2>
             <p className="text-foreground/60 max-w-sm leading-relaxed">
-              AI-driven software engineer building machine learning systems,
-              LLM-powered applications, and scalable backend services.
+              AI-focused Computer Science student and software engineer
+              building LLM agents, RAG workflows, machine learning pipelines,
+              and Python/FastAPI systems.
             </p>
             <div className="flex gap-4">
               {socialLinks.map((link) => (

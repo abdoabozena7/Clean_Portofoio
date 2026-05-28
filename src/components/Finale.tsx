@@ -21,15 +21,15 @@ const Finale = () => {
     },
     {
       icon: Globe,
-      href: "https://abdoabozena7.github.io/Instafolio",
+      href: "https://abdoabozena7.github.io/Clean_Portofoio/",
       label: "Portfolio",
     },
   ];
 
   const marqueeTags = [
     "Abdelrahman Abozena",
-    "AI-Driven Software Engineer | LLM Agents | Machine Learning",
-    "Node.js | Python | TypeScript | Backend APIs",
+    "AI & Data Science | LLM Agents | RAG | Machine Learning",
+    "Python | FastAPI | TypeScript | Backend AI Systems",
     "Building practical AI systems for real-world impact",
   ];
 

@@ -2,10 +2,10 @@ import { useState, useEffect, useRef } from "react";
 import { Github, Linkedin, Mail, ChevronDown, Globe } from "lucide-react";
 
 const roles = [
-  "AI-Driven Software Engineer",
+  "AI & Data Science Engineer",
+  "LLM Agents / RAG Builder",
   "Machine Learning Engineer",
-  "Backend Developer",
-  "LLM Agent Builder",
+  "Python / FastAPI Systems",
 ];
 
 const HeroSection = () => {
@@ -166,12 +166,12 @@ const HeroSection = () => {
 
         <div className="flex flex-wrap gap-2 justify-center mt-8 max-w-md mx-auto">
           {[
-            "LLM Agents",
-            "Machine Learning",
-            "TypeScript",
+            "RAG",
+            "FastAPI",
             "Python",
-            "Node.js",
-            "MongoDB",
+            "Transformers",
+            "Kafka",
+            "Ollama",
           ].map((tech) => (
             <span
               key={tech}
@@ -196,7 +196,7 @@ const HeroSection = () => {
             },
             {
               Icon: Globe,
-              href: "https://abdoabozena7.github.io/Instafolio",
+              href: "https://abdoabozena7.github.io/Clean_Portofoio/",
               label: "Portfolio",
             },
             {
@@ -232,15 +232,15 @@ const HeroSection = () => {
 
       <div className="absolute bottom-10 left-6 md:left-10 z-10">
         <span className="text-foreground/80 text-xs tracking-[0.2em] uppercase font-mono font-medium">
-          abdoabozena7.github.io/Instafolio
+          abdoabozena7.github.io/Clean_Portofoio
         </span>
       </div>
 
       <div className="absolute bottom-10 right-6 md:right-10 z-10 hidden md:block">
         <div className="font-mono text-xs text-foreground/80 text-right leading-relaxed font-medium">
-          <p>const experience = "3+ years";</p>
-          <p>const projects = 2;</p>
-          <p>const focus = "LLM + Backend";</p>
+          <p>const experience = "AI + Backend";</p>
+          <p>const projects = 8;</p>
+          <p>const focus = "LLM + RAG";</p>
         </div>
       </div>
 

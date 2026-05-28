@@ -80,28 +80,28 @@ const Terminal = () => {
           </div>
         );
       case "about":
-        return "I am Abdelrahman Abozena, an AI-driven software engineer focused on LLM systems, machine learning pipelines, and scalable backend architecture.";
+        return "I am Abdelrahman Abozena, an AI-focused Computer Science student and software engineer building LLM agents, RAG workflows, machine learning pipelines, and Python/FastAPI systems.";
       case "skills":
         return (
           <div>
             <p className="mb-1">CORE STACK:</p>
             <p>- Machine Learning / LLM Agents</p>
-            <p>- Node.js / Express / REST APIs</p>
-            <p>- Python / TypeScript / JavaScript</p>
-            <p>- MongoDB / MySQL / Data Fusion</p>
+            <p>- RAG / LangGraph / Prompt Engineering</p>
+            <p>- Python / FastAPI / Streamlit</p>
+            <p>- Kafka / WebSockets / REST APIs</p>
           </div>
         );
       case "projects":
         return (
           <div className="flex flex-col gap-1">
             <a href="#projects" className="text-blue-400 hover:underline">
-              1. HIT-Ai_project
+              1. OrchCode Studio
             </a>
             <a href="#projects" className="text-blue-400 hover:underline">
-              2. AgenticAI_Community_simulator-DEPI
+              2. AgenticAI Community Simulator
             </a>
             <a href="#projects" className="text-blue-400 hover:underline">
-              3. Malware_Detection_AI_Cyber-security
+              3. AdClick Prediction System
             </a>
           </div>
         );

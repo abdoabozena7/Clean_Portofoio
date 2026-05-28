@@ -6,7 +6,10 @@ const links = [
   { label: "Experience", href: "#experience" },
   { label: "Projects", href: "#projects" },
   { label: "Technical Skills", href: "#skills" },
-  { label: "Portfolio", href: "https://abdoabozena7.github.io/Instafolio" },
+  {
+    label: "Portfolio",
+    href: "https://abdoabozena7.github.io/Clean_Portofoio/",
+  },
   { label: "Contact", href: "#contact" },
 ];
 
