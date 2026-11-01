@@ -1,22 +1,6 @@
-﻿import SectionBlock from "./SectionBlock";
+import { education } from "@/data/profileContent";
+import SectionBlock from "./SectionBlock";
 
-const education = [
-  {
-    degree: "B.S. in Computer Science - AI-focused specialization/coursework",
-    school: "Egyptian Chinese University",
-    year: "Undergraduate Program",
-  },
-  {
-    degree: "Google x Kaggle - AI Agents Intensive Certification",
-    school: "Google x Kaggle",
-    year: "Certification",
-  },
-  {
-    degree: "AI Summer School - Generative AI & Probabilistic Models",
-    school: "Harbin Institute of Technology",
-    year: "On-site in China",
-  },
-];
 
 const EducationSection = () => (
   <SectionBlock id="education" title="Education & Certifications">

@@ -10,6 +10,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 import Terminal from "@/components/Terminal";
 import Finale from "@/components/Finale";
 import ArrowPointerCursor from "@/components/ArrowPointerCursor";
+import AgentConstruction from "@/components/AgentConstruction";
 
 const Index = () => {
   return (
@@ -26,6 +27,7 @@ const Index = () => {
       <SkillsSection />
       <ContactSection />
       <Finale />
+      <AgentConstruction />
     </div>
   );
 };

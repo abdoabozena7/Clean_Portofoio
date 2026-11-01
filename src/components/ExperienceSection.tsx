@@ -1,52 +1,7 @@
+import { training, experiences } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
 
-const training = [
-  {
-    role: "AI & Data Science Training Program",
-    company: "Instant Software Solutions",
-    period: "Jan 2026 - Present",
-    description:
-      "Training across data science, machine learning, NLP, Transformers, LLM automation, and backend AI systems.",
-  },
-  {
-    role: "AI / Machine Learning Track",
-    company: "Digital Egypt Pioneers Initiative (DEPI)",
-    period: "Nov 2025 - Present",
-    description:
-      "Applied track covering ML, deep learning, NLP, computer vision, MLOps concepts, and project-based assignments.",
-  },
-  {
-    role: "AI & Data Science Course - Japanese Online Program",
-    company: "GCI",
-    period: "Present",
-    description:
-      "Currently studying AI and data science through a Japanese online program.",
-  },
-  {
-    role: "Data Science Training Course",
-    company: "Orange",
-    period: "Sep 2024",
-    description:
-      "Completed data science training in a professional telecom environment in Egypt.",
-  },
-];
 
-const experiences = [
-  {
-    role: "Back End Developer",
-    company: "EgenSolve",
-    period: "Mar 2025 - Sep 2025",
-    description:
-      "Developed a centralized backend system to manage employee accounts and system issues, linking users directly with developers through backend workflows and APIs.",
-  },
-  {
-    role: "React Developer",
-    company: "Crossover",
-    period: "Oct 2022 - Dec 2023",
-    description:
-      "Delivered high-performance front-end solutions in a remote, product-oriented development environment.",
-  },
-];
 
 const ExperienceSection = () => (
   <SectionBlock id="experience" title="Experience">

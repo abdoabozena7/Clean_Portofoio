@@ -1,0 +1,37 @@
+/* New media fits the measured original grid, preserving all later sections. */
+.project-grid { /* Responsive row reservation is measured by useProjectFootprint. */ }
+.project-card { min-width: 0; min-height: 0; }
+.project-copy { flex-shrink: 0; }
+.project-media {
+  display: flex; flex: 1; min-height: 48px; max-height: 190px;
+  margin-top: 16px; border: 1px solid rgb(0 0 0 / 0.1);
+  background: #f5f5f5; overflow: hidden;
+}
+.project-image-trigger { display: block; width: 100%; min-height: 0; overflow: hidden; }
+.project-image-trigger img { width: 100%; height: 100%; object-fit: contain; }
+.project-image-trigger:focus-visible { outline: 2px solid black; outline-offset: -3px; }
+.project-actions { flex-shrink: 0; margin-top: 16px; padding-top: 16px; }
+.project-actions > * { min-width: 0; padding-left: 10px; padding-right: 10px; }
+.project-building {
+  position: absolute; top: -10px; right: 12px; display: inline-flex;
+  align-items: center; gap: 6px; padding: 2px 7px; border: 1px solid black;
+  background: white; font: 9px/14px monospace; letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.project-building > span {
+  width: 4px; height: 4px; border-radius: 50%; background: black;
+  animation: project-working 2.4s ease-in-out infinite;
+}
+.project-preview-dialog {
+  width: calc(100vw - 32px); max-width: 1100px;
+  max-height: calc(100dvh - 32px); overflow: auto; padding: 24px;
+}
+.project-preview-dialog > img {
+  display: block; width: 100%; height: auto; max-height: 72dvh; object-fit: contain;
+}
+.harrtest-flow {
+  display: block; width: 100%; height: 100%; min-height: 0; font-family: monospace;
+}
+.project-flow-media { max-height: 215px; }
+@keyframes project-working { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .project-building > span { animation: none; } }

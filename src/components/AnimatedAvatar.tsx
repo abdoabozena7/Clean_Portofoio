@@ -1,8 +1,10 @@
 ﻿import { useState } from "react";
 
+import { profileContent } from "@/data/profileContent";
+
 const AnimatedAvatar = () => {
   const [imageError, setImageError] = useState(false);
-  const avatarSrc = `${import.meta.env.BASE_URL}images/avatar.png.png`;
+  const avatarSrc = `${import.meta.env.BASE_URL}${profileContent.avatar}`;
 
   return (
     <div className="relative w-48 h-48 md:w-64 md:h-64 mx-auto md:mx-0 shrink-0 group">

@@ -1,12 +1,13 @@
 import { useState } from "react";
 import SectionBlock from "./SectionBlock";
+import { profileContent } from "@/data/profileContent";
 import { Mail, MapPin, Copy, Check, Linkedin, Globe, Github } from "lucide-react";
 
 const ContactSection = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [copied, setCopied] = useState(false);
 
-  const contactEmail = "boodyabozena@gmail.com";
+  const contactEmail = profileContent.email;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +82,7 @@ const ContactSection = () => {
                 { Icon: Github, href: "https://github.com/abdoabozena7" },
                 {
                   Icon: Linkedin,
-                  href: "https://www.linkedin.com/in/abdelrahman-abozena",
+                  href: profileContent.linkedinUrl,
                 },
                 {
                   Icon: Globe,

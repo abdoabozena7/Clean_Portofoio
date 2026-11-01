@@ -1,39 +1,50 @@
 import { useState, useEffect, useRef } from "react";
 import { Github, Linkedin, Mail, ChevronDown, Globe } from "lucide-react";
+import MicrosoftHeadline from "./MicrosoftHeadline";
+import { profileContent, animatedRoles as roles } from "@/data/profileContent";
 
-const roles = [
-  "AI & Data Science Engineer",
-  "LLM Agents / RAG Builder",
-  "Machine Learning Engineer",
-  "Python / FastAPI Systems",
-];
 
 const HeroSection = () => {
+  const [reducedMotion, setReducedMotion] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [roleIndex, setRoleIndex] = useState(0);
-  const [displayText, setDisplayText] = useState("");
+  const [displayText, setDisplayText] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches ? roles[0] : "");
   const [isDeleting, setIsDeleting] = useState(false);
   const [cursorVisible, setCursorVisible] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  useEffect(() => {
+    const query = matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReducedMotion(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+
   // Blinking cursor
   useEffect(() => {
+    if (reducedMotion) return;
     const cursorInterval = setInterval(() => {
       setCursorVisible((prev) => !prev);
     }, 530);
     return () => clearInterval(cursorInterval);
-  }, []);
+  }, [reducedMotion]);
 
   // Typewriter effect
   useEffect(() => {
+    if (reducedMotion) {
+      setDisplayText(roles[0]);
+      setIsDeleting(false);
+      setRoleIndex(0);
+      setCursorVisible(true);
+      return;
+    }
     const currentRole = roles[roleIndex];
     const typeSpeed = isDeleting ? 40 : 80;
 
     const timeout = setTimeout(() => {
       if (!isDeleting) {
-        setDisplayText(currentRole.slice(0, displayText.length + 1));
         if (displayText.length === currentRole.length) {
-          setTimeout(() => setIsDeleting(true), 2000);
-        }
+          setIsDeleting(true);
+        } else setDisplayText(currentRole.slice(0, displayText.length + 1));
       } else {
         setDisplayText(currentRole.slice(0, displayText.length - 1));
         if (displayText.length === 0) {
@@ -41,15 +52,15 @@ const HeroSection = () => {
           setRoleIndex((prev) => (prev + 1) % roles.length);
         }
       }
-    }, typeSpeed);
+    }, !isDeleting && displayText.length === currentRole.length ? 2000 : typeSpeed);
 
     return () => clearTimeout(timeout);
-  }, [displayText, isDeleting, roleIndex]);
+  }, [displayText, isDeleting, roleIndex, reducedMotion]);
 
   // Matrix-style rain effect
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || reducedMotion) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -92,21 +103,32 @@ const HeroSection = () => {
       }
     };
 
-    const interval = setInterval(draw, 60);
+    let interval: ReturnType<typeof setInterval> | undefined;
+    let visible = true;
+    const update = () => {
+      if (interval) clearInterval(interval);
+      interval = visible && !document.hidden ? setInterval(draw, 60) : undefined;
+    };
+    const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
+    observer.observe(canvas);
+    document.addEventListener("visibilitychange", update);
+    update();
     return () => {
       clearInterval(interval);
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", update);
       window.removeEventListener("resize", resize);
     };
-  }, []);
+  }, [reducedMotion]);
 
   return (
-    <section className="min-h-screen flex flex-col justify-center items-center relative px-6 overflow-hidden">
+    <section id="hero" data-construction-section className="min-h-screen flex flex-col justify-center items-center relative px-6 overflow-hidden">
       <canvas
         ref={canvasRef}
         className="absolute inset-0 z-0 pointer-events-none"
       />
 
-      <div className="absolute top-28 left-6 md:left-10 z-10 hidden md:block">
+      <div data-construction-skip className="absolute top-28 left-6 md:left-10 z-10 hidden md:block">
         <p className="font-mono text-xs text-foreground/60 leading-relaxed font-medium">
           // portfolio.tsx
           <br />
@@ -118,7 +140,7 @@ const HeroSection = () => {
         </p>
       </div>
 
-      <div className="absolute top-28 right-6 md:right-10 z-10 hidden md:block">
+      <div data-construction-skip className="absolute top-28 right-6 md:right-10 z-10 hidden md:block">
         <p className="font-mono text-xs text-foreground/40 leading-relaxed text-right font-medium">
           {Array.from({ length: 6 }, (_, i) => (
             <span key={i} className="block">
@@ -129,12 +151,7 @@ const HeroSection = () => {
       </div>
 
       <div className="text-center relative z-10">
-        <div className="inline-flex items-center gap-2 px-4 py-2 mb-8 border border-foreground/30 bg-background/80 backdrop-blur-md shadow-sm">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-          <span className="font-mono text-xs text-foreground/90 tracking-[0.15em] uppercase font-medium">
-            Open to opportunities
-          </span>
-        </div>
+        <MicrosoftHeadline />
 
         <h1
           className="heading-brutal leading-[0.85]"
@@ -145,7 +162,7 @@ const HeroSection = () => {
           <span className="text-foreground/20">Abozena.</span>
         </h1>
 
-        <div className="mt-6 h-8 flex items-center justify-center">
+        <div data-construction-skip className="mt-6 h-8 flex items-center justify-center">
           <span className="font-mono text-sm md:text-base tracking-[0.2em] text-foreground/50">
             {"< "}
           </span>
@@ -191,7 +208,7 @@ const HeroSection = () => {
             },
             {
               Icon: Linkedin,
-              href: "https://www.linkedin.com/in/abdelrahman-abozena",
+              href: profileContent.linkedinUrl,
               label: "LinkedIn",
             },
             {
@@ -236,10 +253,10 @@ const HeroSection = () => {
         </span>
       </div>
 
-      <div className="absolute bottom-10 right-6 md:right-10 z-10 hidden md:block">
+      <div data-construction-skip className="absolute bottom-10 right-6 md:right-10 z-10 hidden md:block">
         <div className="font-mono text-xs text-foreground/80 text-right leading-relaxed font-medium">
           <p>const experience = "AI + Backend";</p>
-          <p>const projects = 8;</p>
+          <p title={profileContent.repositoryStats.privateSource}>const repos = {profileContent.repositoryStats.total}; // {profileContent.repositoryStats.public} public / {profileContent.repositoryStats.private} private</p>
           <p>const focus = "LLM + RAG";</p>
         </div>
       </div>

@@ -1,5 +1,7 @@
 ﻿import { Github, Linkedin, Mail, Heart, Globe } from "lucide-react";
 
+import { profileContent } from "@/data/profileContent";
+
 const Finale = () => {
   const currentYear = new Date().getFullYear();
 
@@ -11,7 +13,7 @@ const Finale = () => {
     },
     {
       icon: Linkedin,
-      href: "https://www.linkedin.com/in/abdelrahman-abozena",
+      href: profileContent.linkedinUrl,
       label: "LinkedIn",
     },
     {
@@ -34,7 +36,7 @@ const Finale = () => {
   ];
 
   return (
-    <section className="relative w-full bg-white border-t-8 border-black pt-20 overflow-hidden">
+    <section data-construction-section className="relative w-full bg-white border-t-8 border-black pt-20 overflow-hidden">
       <div className="absolute top-0 left-0 w-full py-4 bg-black overflow-hidden flex whitespace-nowrap">
         <div className="animate-marquee flex items-center shrink-0">
           {[...Array(10)].map((_, i) => (

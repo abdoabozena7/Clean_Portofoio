@@ -11,6 +11,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:construction": "node scripts/verify-construction.mjs",
+    "test:construction:review": "node scripts/verify-construction-review.mjs",
+    "test:layout:capture": "node scripts/capture-layout.mjs --label after",
+    "test:layout": "node scripts/compare-layout.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

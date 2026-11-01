@@ -22,4 +22,7 @@ dist-ssr
 *.ntvs*
 *.njsproj
 *.sln
+output/
+.playwright-cli/
+.runtime-proof/
 *.sw?

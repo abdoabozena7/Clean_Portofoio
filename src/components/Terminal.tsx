@@ -6,6 +6,8 @@ import {
   Minimize2,
 } from "lucide-react";
 
+import { profileContent, projects } from "@/data/profileContent";
+
 interface CommandOutput {
   id: number;
   type: "command" | "response" | "error";
@@ -94,15 +96,7 @@ const Terminal = () => {
       case "projects":
         return (
           <div className="flex flex-col gap-1">
-            <a href="#projects" className="text-blue-400 hover:underline">
-              1. OrchCode Studio
-            </a>
-            <a href="#projects" className="text-blue-400 hover:underline">
-              2. AgenticAI Community Simulator
-            </a>
-            <a href="#projects" className="text-blue-400 hover:underline">
-              3. AdClick Prediction System
-            </a>
+            {projects.map((project, index) => <a key={project.id} href="#projects" className="text-blue-400 hover:underline">{index + 1}. {project.title}</a>)}
           </div>
         );
       case "contact":
@@ -120,7 +114,7 @@ const Terminal = () => {
             <p>
               LinkedIn:{" "}
               <a
-                href="https://www.linkedin.com/in/abdelrahman-abozena"
+                href={profileContent.linkedinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-400 hover:underline"
