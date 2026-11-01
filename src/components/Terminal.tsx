@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   X,
   Terminal as TerminalIcon,
@@ -82,15 +82,12 @@ const Terminal = () => {
           </div>
         );
       case "about":
-        return "I am Abdelrahman Abozena, an AI-focused Computer Science student and software engineer building LLM agents, RAG workflows, machine learning pipelines, and Python/FastAPI systems.";
+        return profileContent.terminalBio;
       case "skills":
         return (
           <div>
             <p className="mb-1">CORE STACK:</p>
-            <p>- Machine Learning / LLM Agents</p>
-            <p>- RAG / LangGraph / Prompt Engineering</p>
-            <p>- Python / FastAPI / Streamlit</p>
-            <p>- Kafka / WebSockets / REST APIs</p>
+            {profileContent.terminalSkills.map(skill => <p key={skill}>- {skill}</p>)}
           </div>
         );
       case "projects":

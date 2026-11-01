@@ -1,4 +1,4 @@
-/** Pure scroll math: progress follows position, never an animation queue. */
+/** Paint-only progress math for autonomous visible work and immediate scroll catch-up. */
 export const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
 export const stageProgress = (progress: number, start: number, end: number) =>
   clamp01((progress - start) / (end - start));
@@ -10,6 +10,10 @@ export function visibilityProgress(top: number, viewport: number) {
 
 export function advanceProgress(previous: number, next: number, synchronize: boolean) {
   return Math.max(previous, synchronize ? 1 : clamp01(next));
+}
+
+export function autonomousProgress(previous: number, elapsed: number, delay: number, duration: number) {
+  return advanceProgress(previous, stageProgress(elapsed, delay, delay + duration), false);
 }
 
 export type TextLine = { x: number; y: number; width: number; height: number };

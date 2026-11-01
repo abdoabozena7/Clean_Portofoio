@@ -11,6 +11,7 @@ import Terminal from "@/components/Terminal";
 import Finale from "@/components/Finale";
 import ArrowPointerCursor from "@/components/ArrowPointerCursor";
 import AgentConstruction from "@/components/AgentConstruction";
+import "@/styles/palette.css";
 
 const Index = () => {
   return (

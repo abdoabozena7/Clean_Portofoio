@@ -1,5 +1,7 @@
 import { education } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
+import { ZoomIn } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 
 
 const EducationSection = () => (
@@ -20,6 +22,23 @@ const EducationSection = () => (
               {item.year}
             </span>
           </div>
+          {item.image && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <button className="certificate-image-trigger transition-shadow" aria-label={`Zoom in ${item.degree} certificate`}>
+                  <img src={`${import.meta.env.BASE_URL}${item.image}`} alt={item.imageAlt} className="certificate-thumb" loading="lazy" decoding="async" width={item.imageWidth} height={item.imageHeight} />
+                  <span className="certificate-zoom" aria-hidden="true"><ZoomIn className="w-4 h-4" /></span>
+                </button>
+              </DialogTrigger>
+              <DialogContent className="w-[calc(100vw-2rem)] max-w-4xl max-h-[calc(100dvh-2rem)] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>{item.degree}</DialogTitle>
+                  <DialogDescription>{item.school} · {item.year}</DialogDescription>
+                </DialogHeader>
+                <img src={`${import.meta.env.BASE_URL}${item.image}`} alt={item.imageAlt} className="w-full max-h-[70dvh] object-contain" />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       ))}
     </div>

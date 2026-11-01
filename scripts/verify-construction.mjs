@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, writeFile, readFile, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
@@ -7,7 +8,14 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.
 const output = process.env.PORTFOLIO_TEST_OUTPUT || 'output/playwright/behavior';
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
-const report = { head: execFileSync('git', ['rev-parse', 'HEAD']).toString().trim(), checks: [], errors: [], requestFailures: [] };
+async function fingerprint() {
+  const files=[];
+  async function walk(dir) { for(const f of await readdir(dir,{withFileTypes:true})) { const path=dir+'/'+f.name; if(f.isDirectory()) await walk(path); else files.push(path); } }
+  await walk('src'); const hash=createHash('sha256');
+  for(const file of files.sort()) { hash.update(file); hash.update(await readFile(file)); }
+  return hash.digest('hex');
+}
+const report = { head: execFileSync('git', ['rev-parse', 'HEAD']).toString().trim(), sourceBefore: await fingerprint(), checks: [], errors: [], requestFailures: [] };
 const check = (name, actual, expected = true) => { assert.deepEqual(actual, expected, name); report.checks.push({ name, passed: true }); console.log(name); };
 const url = process.env.PORTFOLIO_URL || 'http://127.0.0.1:8080/Clean_Portofoio/';
 report.url = url;
@@ -41,8 +49,18 @@ try {
   const initialMasks = await page.locator('[data-building]').count();
   check('Construction actually applies masks to real elements', initialMasks > 10);
   const active = await page.locator('[data-agent]').evaluateAll(els => els.filter(el => getComputedStyle(el).opacity !== '0').length);
-  check('At least three independent virtual cursors work during hero construction', active >= 3);
-  await page.waitForTimeout(2700);
+  check('Eight autonomous virtual cursors work during hero construction', active, 8);
+  check('Agent pointers use the original real cursor silhouette', await page.evaluate(() => {
+    const original = [...document.querySelectorAll('.curzr-arrow-pointer path')].map(p => p.getAttribute('d'));
+    return [...document.querySelectorAll('[data-agent]')].every(agent => JSON.stringify([...agent.querySelectorAll('path')].map(p => p.getAttribute('d'))) === JSON.stringify(original));
+  }));
+  check('Agents use all five colors from the supplied palette', await page.locator('[data-agent]').evaluateAll(els => [...new Set(els.map(el => getComputedStyle(el).getPropertyValue('--agent-color').trim()))].sort()), ['#2bbaa5','#93d3ae','#f96635','#f9a822','#faecb6'].sort());
+  const firstClip = await page.locator('#hero h1').evaluate(el => el.style.getPropertyValue('--construction-clip'));
+  await page.waitForTimeout(1600);
+  check('Text builds autonomously without any mouse or scroll input', await page.locator('#hero h1').evaluate(el => el.style.getPropertyValue('--construction-clip')) !== firstClip);
+  check('The slower intro remains in construction after two seconds', (await page.locator('#hero [data-building]').count()) > 0);
+  await page.waitForFunction(() => !document.querySelector('#hero [data-building]'), null, { timeout: 12000 });
+  await page.waitForTimeout(80);
   check('Document geometry stays identical throughout hero construction', await rects(), initial);
   await page.locator('#hero h1').evaluate(el => { el.style.transform = 'translateY(10px)'; });
   check('Negative control detects an actual injected 10px layout shift', JSON.stringify(await rects()) !== JSON.stringify(initial));
@@ -50,9 +68,10 @@ try {
   await page.locator('#hero h1').evaluate(el => { el.dataset.building = 'text'; el.style.setProperty('--construction-clip', 'inset(0 100% 0 0)'); });
   check('Negative control detects hidden content in the reading area', (await visiblePending()).length > 0);
   await page.locator('#hero h1').evaluate(el => { delete el.dataset.building; el.style.removeProperty('--construction-clip'); });
-  check('Hero finishes within its short intro', await page.locator('#hero [data-building]').count(), 0);
+  check('Autonomous hero finishes without waiting for user input', await page.locator('#hero [data-building]').count(), 0);
+  check('Completed work leaves no frozen decorative cursors', await page.locator('[data-agent]').evaluateAll(els => els.filter(el => getComputedStyle(el).opacity === '1').length), 0);
   await snap('hero-finished');
-  check('Requested Microsoft headline is visible', await page.getByText('SWE Intern at Microsoft', { exact: true }).isVisible());
+  check('Requested Microsoft headline is visible', await page.locator('#hero').getByText('SWE Intern at Microsoft', { exact: true }).isVisible());
   await page.mouse.move(230, 240); await page.waitForTimeout(120);
   const cursor = await page.locator('.curzr-arrow-pointer').evaluate(el => ({ transform: el.style.transform, opacity: el.style.opacity, z: Number(el.style.zIndex) }));
   check('Original user cursor responds independently', cursor.transform.includes('230') && cursor.opacity === '1' && cursor.z > 100);
@@ -71,7 +90,11 @@ try {
   check('Slow scrolling exposes intermediate construction', sawPartial);
   check('Multiple agents collaborate while scrolling', sawAgents);
   check('Scrolling construction never moves layout boxes', await rects(), beforeScroll);
-  check('Reading-area content is already fully constructed', await visiblePending(), []);
+  const partialAbout = await page.locator('#about [data-building]').count();
+  await page.waitForTimeout(1600);
+  check('Current-section work continues after scrolling stops', (await page.locator('#about [data-building]').count()) < partialAbout || (await page.locator('#about [data-constructed]').count()) > 0);
+  await page.waitForTimeout(8000);
+  check('Autonomous work leaves the reading area fully constructed', await visiblePending(), []);
   // Large wheel input must synchronize without waiting for any previous task.
   await page.mouse.wheel(0, 3000); await page.waitForTimeout(100);
   check('Fast scroll immediately synchronizes the reading area', await visiblePending(), []);
@@ -85,18 +108,34 @@ try {
   check('Anchor targets immediately expose readable content', await visiblePending(), []);
   await snap('projects-anchor');
   check('All requested projects and the skill are present', await page.locator('[data-project]').count(), 7);
+  check('HarrTest is first and explicitly in progress', await page.locator('[data-project]').first().evaluate(el => el.dataset.project === 'harrtest' && el.textContent.includes('In progress')));
+  check('Portrait is rendered in black and white', await page.locator('#about img').evaluate(el => getComputedStyle(el).filter), 'grayscale(1)');
+  check('Microsoft is the first displayed professional employer', await page.locator('#experience h3').nth(1).innerText(), 'Microsoft');
+  check('All eight verified roles appear in the actual timeline', await page.locator('#experience h4').count(), 8);
+  check('The new C# certificate is displayed', await page.getByRole('heading', { name: 'Learning C#', exact: true }).count(), 1);
+  check('Certificate photographs are rendered inline by default', await page.locator('#education .certificate-thumb').count(), 3);
+  check('The Crossover role clearly states its freelance basis', await page.locator('#experience').innerText().then(text => text.includes('Part-time freelance') && text.includes('through Crossover')));
   for (const img of await page.locator('.project-media img').all()) {
     await img.scrollIntoViewIfNeeded();
     await img.evaluate(img => Promise.race([img.decode(), new Promise((_, reject) => setTimeout(() => reject(new Error('Image decode timed out')), 10000))]));
   }
   check('Real project images load', await page.locator('.project-media img').evaluateAll(imgs => imgs.every(img => img.naturalWidth > 0)));
-  await page.getByRole('button', { name: 'Preview Hivo Studio', exact: true }).click();
+  await page.getByRole('button', { name: 'Zoom in Hivo Studio', exact: true }).click();
   check('Project preview opens accessible dialog', await page.getByRole('dialog').isVisible());
   await snap('project-preview');
   await page.keyboard.press('Escape');
   await page.getByRole('dialog').waitFor({ state: 'hidden' });
   check('Preview closes with Escape', await page.getByRole('dialog').count(), 0);
-  check('Preview restores keyboard focus', await page.getByRole('button', { name: 'Preview Hivo Studio', exact: true }).evaluate(el => el === document.activeElement));
+  check('Preview restores keyboard focus', await page.getByRole('button', { name: 'Zoom in Hivo Studio', exact: true }).evaluate(el => el === document.activeElement));
+  await page.locator('nav a[href="#education"]').click();
+  for (const name of ['Learning C#', 'GCI World April 2026 - Data Science', 'Artificial Intelligence, Leading the Frontier - International Summer School']) {
+    const button = page.getByRole('button', { name: `Zoom in ${name} certificate`, exact: true });
+    await button.click();
+    check(`${name} opens its genuine certificate image`, await page.getByRole('dialog').locator('img').evaluate(async img => { await img.decode(); return img.naturalWidth > 0; }));
+    await page.keyboard.press('Escape'); await page.getByRole('dialog').waitFor({ state: 'hidden' });
+    check(`${name} certificate restores focus`, await button.evaluate(el => el === document.activeElement));
+  }
+  await page.locator('nav a[href="#projects"]').click();
 
   await page.keyboard.press('Control+k');
   const terminal = page.locator('input[autocomplete="off"]');
@@ -153,6 +192,8 @@ try {
   check('Mobile has no horizontal overflow', await mp.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
   await mp.screenshot({ path: `${output}/mobile-projects.png` });
   await touch.close();
+  report.sourceAfter = await fingerprint();
+  check('Application source remains stable during the browser journey', report.sourceBefore, report.sourceAfter);
   report.passed = true;
 } catch (error) {
   report.passed = false; report.failure = error.stack;

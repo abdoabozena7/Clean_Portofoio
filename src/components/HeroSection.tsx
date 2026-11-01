@@ -162,7 +162,7 @@ const HeroSection = () => {
           <span className="text-foreground/20">Abozena.</span>
         </h1>
 
-        <div data-construction-skip className="mt-6 h-8 flex items-center justify-center">
+        <div data-construction="asset" data-construction-skip className="mt-6 h-8 flex items-center justify-center">
           <span className="font-mono text-sm md:text-base tracking-[0.2em] text-foreground/50">
             {"< "}
           </span>
@@ -189,10 +189,11 @@ const HeroSection = () => {
             "Transformers",
             "Kafka",
             "Ollama",
-          ].map((tech) => (
+          ].map((tech, index) => (
             <span
               key={tech}
-              className="px-3 py-1 font-mono text-xs border-2 border-foreground/40 text-foreground/80 font-medium tracking-wider hover:bg-foreground hover:text-background transition-all duration-300 cursor-default"
+              data-tone={index % 5}
+              className="palette-tag px-3 py-1 font-mono text-xs border-2 border-foreground/40 text-foreground/80 font-medium tracking-wider transition-all duration-300 cursor-default"
             >
               {tech}
             </span>
@@ -224,11 +225,12 @@ const HeroSection = () => {
           ].map(({ Icon, href, label }, i) => (
             <a
               key={i}
+              data-tone={i % 5}
               href={href}
               target="_blank"
               rel="noopener noreferrer"
               aria-label={label}
-              className="group relative inline-flex items-center justify-center p-3 border-2 border-black bg-white text-black transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px] hover:bg-black hover:text-white"
+              className="accent-button group relative inline-flex items-center justify-center p-3 border-2 border-black bg-white text-black transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
             >
               <Icon className="w-5 h-5" />
             </a>

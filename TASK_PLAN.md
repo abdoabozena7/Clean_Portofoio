@@ -1,3 +1,7 @@
+# Current revision
+
+The follow-up autonomous/palette/content/media requests are complete. See REVISION_PLAN.md and CHANGE_REPORT.md for the current accepted scope and evidence. The original first-delivery plan below is historical; its frozen content/project footprint requirements were explicitly superseded by the later user requests.
+
 # Portfolio construction enhancement — local only
 
 Original baseline: `c0f0146ea55fca394fd48053b7af67c99361d600`, tag `baseline/pre-agent-construction`.

@@ -20,7 +20,7 @@
 - Latest production build browser journey:40 checks passed, zero page errors or failed requests, at local port8082. Report in `output/playwright/production-behavior/report.json`.
 - Latest build, lint, Vitest and TypeScript commands exit0. Vitest:4 tests. Lint:7 existing Fast Refresh warnings in UI library files. Browserslist data-age notice remains from baseline.
 
-## Final acceptance
+## First delivery acceptance (historical)
 
 - Source `c9a0a8e10008702d6b267673916482f88e224810db4f8cc9a9a411fc3e3bfcd7` stayed unchanged during the final original-vs-modified capture. Both capture and comparison exit0.
 - Viewports1440×900,1366×768,768×1024,390×844:336 preserved element rectangle/font/margin/padding checks,32 section rectangles,16 grids and hero slots match original.28 unchanged-section screenshot crops have zero differing pixels outside explicit authorized/dynamic masks. Zero new overflow, browser errors, failed requests or unloaded images. Screenshots actually inspected by root and the independent capture agent.
@@ -29,3 +29,19 @@
 - Production-build journey on8082:40 actual browser checks pass, covering construction, geometry, negative controls, original cursor, scroll/reverse/history/anchors, previews/focus/Escape, terminal, contact validation, genuine CV download, reduced motion, print and touch menu. No messages were sent. Report: `output/playwright/production-behavior/report.json`.
 - Negative controls detect both an actual temporary10px browser transform and hidden reading-area content; comparison also rejects a separately injected10px saved-measurement shift. Failed attempts were not used as passing evidence.
 - Final build/lint/Vitest/TypeScript all successful after final app changes. Existing7 lint warnings and original320px overflow are retained, not hidden. Production test server is stopped after verification; dev preview8080 remains available for the owner's local review.
+
+
+## Current revision acceptance — 2 November 2026
+
+- Current app source89ec657b212ce2c75fd54fac12beb6c0d7a804f475b791958ffa4a7217ed04a8 stays unchanged throughout the final60-check production journey and209-check visual run. Autonomy probe source is separately bound to its declared files and passes32checks.
+- Actual rendered content now uses the verified data, instead of the earlier unused archive. About/Experience/Education/Skills/contact/footer/terminal agree; Microsoft is first, eight roles are present, and Crossover is part-time freelance per the owner.
+- Three supplied certificate images render inline; all zoom dialogs load actual images and close with Escape/focus restoration. The cleaner supplied Prompt image replaces the old asset. Portrait filter is grayscale(1).
+- Five exact palette tokens are used across eight agents, tags, rules and real hovered controls. Pointer path strings match both original cursor paths; synchronous mouse events affect only the real cursor. Autonomous progress continues without input and normal measured speed is420px/s. Finished desktop/touch RAF counts are0.
+- User-authorized project UX change removes the old sizing fixture. Two desktop columns, a compact wide HarrTest feature and natural card heights replace forced legacy rows. Education/Experience/project heights intentionally change; hero slots/navigation/outer columns stay protected.
+- Eight local company-logo assets decode. Public LinkedIn company guest pages supplied six company marks; Microsoft uses the existing local symbol, DEPI its official initiative image. Source URLs are in profileContent.ts and a hashed final asset manifest in output/research/logos. No credentials, private pages or runtime LinkedIn fetches.
+- A200response from one Orange asset endpoint contained HTML. Image decoding caught it; replaced it with the valid public LinkedIn Orange JPEG. Invalid research download retained outside public assets.
+- Corrected a real CSS specificity issue that initially let Tailwind flex override the featured horizontal grid. Inspected the corrected compact first card on desktop and mobile.
+- Verification adaptations preserve correct oracles: fixed nav baseline coordinates are viewport-relative; tablet media width is304px, so the design minimum is300px rather than the initial off-by-one305assumption; fast-jump opacity checks target the visible first card rather than an offscreen later card. Failed reports were retained.
+- A safe10px injected hero shift fails the visual comparator exactly at hero slot1y. Four required sizes have no overflow/errors/failed requests/unloaded images. Extra320/600/900/1000checks show all cards contained; the original320→342overflow is unchanged.
+- Build/lint/TypeScript and four unit tests pass. Seven existing UI-library Fast Refresh warnings and the Browserslist age notice remain. No messages, push or deployment. Production test server is stopped after verification; the8080dev preview stays available for review.
+- Current raw evidence: output/playwright/final-production/report.json (60checks), autonomous-review/report.json (32), visual-revision/report.json (209), additional-widths-and-hovers.json, and visual-revision-negative/report.json. Older first-delivery reports are historical and do not certify this revision.

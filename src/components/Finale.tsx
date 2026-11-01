@@ -1,4 +1,4 @@
-﻿import { Github, Linkedin, Mail, Heart, Globe } from "lucide-react";
+import { Github, Linkedin, Mail, Heart, Globe } from "lucide-react";
 
 import { profileContent } from "@/data/profileContent";
 
@@ -28,12 +28,7 @@ const Finale = () => {
     },
   ];
 
-  const marqueeTags = [
-    "Abdelrahman Abozena",
-    "AI & Data Science | LLM Agents | RAG | Machine Learning",
-    "Python | FastAPI | TypeScript | Backend AI Systems",
-    "Building practical AI systems for real-world impact",
-  ];
+  const marqueeTags = profileContent.marqueeTags;
 
   return (
     <section data-construction-section className="relative w-full bg-white border-t-8 border-black pt-20 overflow-hidden">
@@ -89,11 +84,11 @@ const Finale = () => {
           <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-600 rounded-full">
             <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-widest text-green-800">
-              Available for AI and Backend Roles
+              {profileContent.headline}
             </span>
           </div>
           <p className="text-xs font-mono text-black/70 uppercase tracking-widest leading-loose max-w-sm">
-            Based in Giza, Egypt | Open to remote and onsite opportunities
+            {profileContent.footerNote}
           </p>
         </div>
       </div>

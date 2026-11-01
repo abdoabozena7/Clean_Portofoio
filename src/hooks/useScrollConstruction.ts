@@ -1,11 +1,13 @@
 import { useLayoutEffect, type RefObject } from "react";
-import { advanceProgress, clamp01, stageProgress, textFrame, visibilityProgress, type TextLine } from "@/lib/construction";
+import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
 
+type Kind = "text" | "asset" | "structure";
 type Target = {
-  el: HTMLElement; section: HTMLElement; kind: "text" | "asset" | "structure";
-  top: number; left: number; width: number; height: number;
-  lines: TextLine[]; count: number; progress: number; hero: boolean; order: number;
+  el: HTMLElement; section: HTMLElement; kind: Kind; top: number; left: number; width: number; height: number;
+  lines: TextLine[]; count: number; progress: number; elapsed: number; visibleSince: number | null;
+  duration: number; delay: number; order: number;
 };
+type Position = { x: number; y: number; angle: number; initialized: boolean; target: Target | null };
 
 function measureLines(el: HTMLElement): TextLine[] {
   const origin = el.getBoundingClientRect();
@@ -13,24 +15,28 @@ function measureLines(el: HTMLElement): TextLine[] {
   const lines: TextLine[] = [];
   while (walker.nextNode()) {
     if (!walker.currentNode.textContent?.trim()) continue;
-    const range = document.createRange();
-    range.selectNodeContents(walker.currentNode);
+    const range = document.createRange(); range.selectNodeContents(walker.currentNode);
     for (const rect of Array.from(range.getClientRects())) {
       if (!rect.width || !rect.height) continue;
-      const y = rect.top - origin.top;
+      const y = rect.top - origin.top, x = rect.left - origin.left;
       const line = lines.find(item => Math.abs(item.y - y) < 3);
-      const x = rect.left - origin.left;
       if (line) {
         const right = Math.max(line.x + line.width, x + rect.width);
-        line.x = Math.min(line.x, x);
-        line.width = right - line.x;
-        line.height = Math.max(line.height, rect.height);
+        line.x = Math.min(line.x, x); line.width = right - line.x; line.height = Math.max(line.height, rect.height);
       } else lines.push({ x, y, width: rect.width, height: rect.height });
     }
   }
   return lines.sort((a, b) => a.y - b.y);
 }
 
+const typedProgress = (p: number, count: number) => {
+  // Two brief, deterministic writing pauses. Real strings never change.
+  const held = p < .30 ? p : p < .34 ? .30 : p < .68 ? p - .04 : p < .71 ? .64 : (p - .07) / .93;
+  return Math.floor(clamp01(held) * count) / count;
+};
+
+/** Visible tasks advance autonomously. Scroll changes the work area, never the mouse.
+ * Large jumps still finish visible content immediately instead of accumulating a queue. */
 export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
   useLayoutEffect(() => {
     const layer = layerRef.current;
@@ -41,184 +47,188 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const targets: Target[] = [];
     const cursors = Array.from(layer.querySelectorAll<HTMLElement>("[data-agent]"));
     const guides = Array.from(layer.querySelectorAll<SVGGElement>("[data-guide]"));
-    const caret = layer.querySelector<HTMLElement>(".construction-caret")!;
+    const carets = Array.from(layer.querySelectorAll<HTMLElement>("[data-caret]"));
+    const positions: Position[] = cursors.map(() => ({ x: 0, y: 0, angle: 0, initialized: false, target: null }));
     let frame = 0, dirty = true, stopped = false, jump = !!location.hash || scrollY > 20;
-    let lastY = scrollY, lastTime = performance.now(), velocity = 0;
-    const started = performance.now();
-    const positions = cursors.map(() => ({ x: 0, y: 0, target: null as Target | null }));
+    let lastY = scrollY, lastScrollTime = performance.now(), lastTick = performance.now(), velocity = 0;
 
     for (const section of sections) {
-      const elements = section.querySelectorAll<HTMLElement>("[data-construction], h1, h2, h3, p, img, a");
+      const candidates = new Set<HTMLElement>(section.querySelectorAll<HTMLElement>("[data-construction],h1,h2,h3,h4,p,img,a,button,input,textarea,span"));
+      // Existing containers reserve their exact space while their surfaces are built.
+      for (const child of Array.from(section.children)) {
+        if (child instanceof HTMLElement && child.tagName === "DIV" && !child.classList.contains("absolute")) candidates.add(child);
+      }
       let order = 0;
-      for (const el of elements) {
-        if (el.closest("[data-construction-skip]") || el.closest("[data-agent-layer]")) continue;
-        const kind = el.dataset.construction || (/^H[123]$|^P$/.test(el.tagName) ? "text" : "asset");
+      for (const el of candidates) {
+        if (el.closest("[data-agent-layer],.animate-marquee,.animate-marquee-reverse")) continue;
+        if (el.closest("[data-construction-skip]") && !el.dataset.construction) continue;
+        if (el.tagName === "SPAN" && (el.children.length || !el.textContent?.trim() || el.parentElement?.closest("h1,h2,h3,h4,p,[data-construction='text']"))) continue;
+        // A media/interactive parent reveals its icon and text together.
+        const assetParent = el.parentElement?.closest("a,button,[data-construction='asset']");
+        if (assetParent && section.contains(assetParent)) continue;
+        const kind = el.dataset.construction || (/^H[1234]$|^P$/.test(el.tagName) ? "text" : el.tagName === "DIV" ? "structure" : "asset");
         if (!["text", "asset", "structure"].includes(kind)) continue;
-        targets.push({ el, section, kind: kind as Target["kind"], top: 0, left: 0, width: 0, height: 0,
-          lines: [], count: el.textContent?.trim().length || 1, progress: reduced.matches ? 1 : 0,
-          hero: section.id === "hero", order: order++ });
+        const count = el.textContent?.trim().length || 1;
+        targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
+          progress: 0, elapsed: 0, visibleSince: null, order: order++,
+          duration: kind === "structure" ? 1050 : kind === "asset" ? 1100 : Math.max(2000, Math.min(4400, count * 24)),
+          delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
       }
     }
 
     const measure = () => {
-      // Read all geometry before writing any masks. Re-measured on font/image/resize changes.
-      for (const target of targets) {
-        const rect = target.el.getBoundingClientRect();
-        target.top = rect.top + scrollY; target.left = rect.left;
-        target.width = rect.width; target.height = rect.height;
-        if (target.kind === "text") target.lines = measureLines(target.el);
+      for (const t of targets) {
+        const rect = t.el.getBoundingClientRect();
+        t.top = rect.top + scrollY; t.left = rect.left; t.width = rect.width; t.height = rect.height;
+        if (t.kind === "text") t.lines = measureLines(t.el);
       }
       dirty = false;
     };
-
-    const finish = (target: Target) => {
-      target.progress = 1;
-      delete target.el.dataset.building;
-      target.el.style.removeProperty("--construction-clip");
-      target.el.style.removeProperty("--construction-opacity");
-      target.el.dataset.constructed = "true";
+    const finish = (t: Target) => {
+      t.progress = 1; delete t.el.dataset.building;
+      t.el.style.removeProperty("--construction-clip"); t.el.style.removeProperty("--construction-opacity");
+      t.el.dataset.constructed = "true";
     };
-
+    const paint = (t: Target) => {
+      if (t.progress === 1) return;
+      t.el.dataset.building = t.kind;
+      if (t.kind === "text") t.el.style.setProperty("--construction-clip", textFrame(t.lines, t.width, t.height, typedProgress(t.progress, t.count)).clip);
+      else if (t.kind === "asset") t.el.style.setProperty("--construction-clip", `inset(0 ${100 - t.progress * 100}% 0 0)`);
+      else t.el.style.setProperty("--construction-opacity", String(t.progress));
+    };
     const hideAgents = () => {
-      cursors.forEach(cursor => { cursor.style.opacity = "0"; });
-      guides.forEach(guide => guide.setAttribute("opacity", "0"));
-      caret.style.opacity = "0";
+      cursors.forEach(c => { c.style.opacity = "0"; });
+      guides.forEach(g => g.setAttribute("opacity", "0"));
+      carets.forEach(c => { c.style.opacity = "0"; });
     };
-
+    const point = (t: Target, index: number) => {
+      const rect = t.el.getBoundingClientRect();
+      let x = rect.left, y = rect.top;
+      if (t.kind === "text") {
+        const text = textFrame(t.lines, rect.width, rect.height, typedProgress(t.progress, t.count));
+        x += text.x + 3; y += text.y + text.height * .75;
+      } else if (t.kind === "asset") {
+        x += rect.width * Math.max(.04, t.progress); y += Math.min(26, rect.height * .3);
+      } else {
+        // Trace an actual edge while another agent can work on its contents.
+        x += rect.width * (index % 2 ? 1 - t.progress : t.progress);
+        y += index % 2 ? Math.min(rect.height, 32) : 0;
+      }
+      return { rect, x: Math.max(10, Math.min(innerWidth - 112, x)), y: Math.max(78, Math.min(innerHeight - 42, y)) };
+    };
+    const schedule = () => { if (!frame && !stopped && !document.hidden) frame = requestAnimationFrame(tick); };
     const tick = (now: number) => {
       frame = 0;
       if (stopped || document.hidden) return;
+      const dt = Math.min(50, Math.max(0, now - lastTick)); lastTick = now;
       const repaint = dirty;
       if (dirty) measure();
-      if (reduced.matches) {
-        targets.forEach(finish); hideAgents(); return;
-      }
-      const y = scrollY, vh = innerHeight;
-      const heroTime = clamp01((now - started) / 2450);
+      if (reduced.matches) { targets.forEach(finish); hideAgents(); return; }
+      const simplified = coarse.matches || innerWidth < 768;
       const fast = velocity > 1.65;
-      const active: Target[] = [];
-      for (const target of targets) {
-        if (target.progress === 1) continue;
-        const top = target.top - y;
-        const onscreen = top < vh && top + target.height > 60 && target.width > 0 && target.height > 0;
-        // Large cards/sections reveal their structure at entry; each text/media child has its own visibility progress.
-        let p = visibilityProgress(top, vh);
-        if (target.hero && y < vh * 0.2 && !jump) {
-          const badge = !!target.el.closest("[data-microsoft-headline]");
-          const start = badge ? (target.kind === "structure" ? 0.01 : target.kind === "asset" ? 0.09 : 0.21) : target.kind === "text" ? 0.28 : 0.50;
-          const end = badge ? (target.kind === "structure" ? 0.14 : target.kind === "asset" ? 0.24 : 0.61) : 0.98;
-          p = stageProgress(heroTime, start, end);
-        } else if (target.kind === "structure") p = stageProgress(p, 0, 0.22);
-        const synchronize = top + target.height < 70 || (onscreen && (jump || fast)) || (target.hero && y > vh * 0.2);
-        const next = advanceProgress(target.progress, p, synchronize);
-        if (next >= 1) { finish(target); continue; }
-        if (repaint || next !== target.progress || !target.el.dataset.building) {
-          target.progress = next;
-          target.el.dataset.building = target.kind;
-          if (target.kind === "text") {
-            // Integer glyph steps with two deterministic short holds; no layout-changing string edits.
-            const held = next < 0.30 ? next : next < 0.34 ? 0.30 : next < 0.68 ? next - 0.04 : next < 0.71 ? 0.64 : (next - 0.07) / 0.93;
-            const step = Math.floor(clamp01(held) * target.count) / target.count;
-            target.el.style.setProperty("--construction-clip", textFrame(target.lines, target.width, target.height, step).clip);
-          } else if (target.kind === "asset") {
-            target.el.style.setProperty("--construction-clip", `inset(0 ${100 - next * 100}% 0 0)`);
-          } else target.el.style.setProperty("--construction-opacity", String(next));
+      const work: Target[] = [];
+      for (const t of targets) {
+        if (t.progress === 1) continue;
+        const top = t.top - scrollY;
+        const visible = t.width > 0 && t.height > 0 && top < innerHeight * .98 && top + t.height > 76;
+        if ((!t.width || !t.height) || top + t.height < 76 || (visible && (jump || fast))) { finish(t); continue; }
+        if (visible) {
+          t.visibleSince ??= now;
+          // Bounded visible work is fail-open; offscreen tasks never keep running.
+          if (now - t.visibleSince > (simplified ? 1200 : 9500)) { finish(t); continue; }
+          work.push(t);
         }
-        if (onscreen && next > 0 && next < 1) active.push(target);
+        if (repaint || !t.el.dataset.building) paint(t);
       }
-      // At most four current tasks. Nothing queues or continues building offscreen.
       hideAgents();
-      if (!coarse.matches && innerWidth >= 768) {
-        const ranked = [...active].sort((a, b) => Math.abs(a.top - y - vh * 0.52) - Math.abs(b.top - y - vh * 0.52));
-        const text = ranked.find(t => t.kind === "text");
-        const asset = ranked.find(t => t.kind === "asset");
-        const structure = ranked.find(t => t.kind === "structure");
-        const choices = [structure || text || asset, text, structure || asset || text, asset || ranked.find(t => t !== text)];
-        choices.forEach((target, index) => {
-          if (!target) return;
-          const rect = target.el.getBoundingClientRect();
-          const p = target.progress;
-          let x = rect.left, cy = rect.top;
-          if (index === 1) {
-            const held = p < 0.30 ? p : p < 0.34 ? 0.30 : p < 0.68 ? p - 0.04 : p < 0.71 ? 0.64 : (p - 0.07) / 0.93;
-            const text = textFrame(target.lines, rect.width, rect.height, Math.floor(clamp01(held) * target.count) / target.count);
-            x += text.x + 3; cy += text.y + text.height * 0.75;
-            caret.style.cssText = `transform:translate3d(${x - 2}px,${rect.top + text.y + text.height * 0.14}px,0);height:${Math.max(12, text.height * 0.73)}px;opacity:${Math.floor(now / 350) % 2 ? 0.25 : 0.8}`;
-          } else if (index === 0) {
-            const distance = p * 4;
-            if (distance < 1) x += rect.width * distance;
-            else if (distance < 2) { x += rect.width; cy += rect.height * (distance - 1); }
-            else if (distance < 3) { x += rect.width * (3 - distance); cy += rect.height; }
-            else cy += rect.height * (4 - distance);
-          } else if (index === 2) { x += rect.width * (1 - p); cy += rect.height; }
-          else { x += rect.width * p; cy += Math.min(25, rect.height * 0.25); }
-          x = Math.max(8, Math.min(innerWidth - 110, x)); cy = Math.max(78, Math.min(vh - 44, cy));
-          const position = positions[index];
-          if (!position.target || jump || fast) { position.x = x - (index === 1 ? 24 : 14); position.y = cy - 18; }
-          position.x += (x - position.x) * 0.38; position.y += (cy - position.y) * 0.38; position.target = target;
-          const cursor = cursors[index];
+      const used = new Set<Target>();
+      for (let index = 0; index < cursors.length; index++) {
+        const cursor = cursors[index], position = positions[index];
+        const role = cursor.dataset.role;
+        const previous = position.target;
+        const available = work.filter(t => !used.has(t));
+        const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
+          const rank = (t: Target) => (t.kind === role ? 0 : 1000) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
+          return rank(a) - rank(b);
+        })[0];
+        if (!target) continue;
+        used.add(target); position.target = target;
+        const aim = point(target, index);
+        if (!position.initialized) {
+          position.x = Math.max(10, Math.min(innerWidth - 112, aim.rect.left + Math.min(100, aim.rect.width * .4) + index * 5));
+          position.y = Math.max(78, aim.rect.top - 66 - index * 5); position.initialized = true;
+        }
+        const dx = aim.x - position.x, dy = aim.y - position.y;
+        const distance = Math.hypot(dx, dy);
+        const step = Math.min(distance, (fast ? 1400 : 420) * dt / 1000);
+        if (distance > .2) {
+          position.x += dx / distance * step; position.y += dy / distance * step;
+          const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+          position.angle += ((angle - position.angle + 540) % 360 - 180) * Math.min(1, dt / 160);
+        }
+        // Text waits for its editor to arrive, including a deliberate move to a new line.
+        if (simplified || target.kind !== "text" || distance < 48 || target.elapsed < target.delay) {
+          target.elapsed += dt * (simplified ? 4 : velocity > .6 ? 1.5 : 1);
+          target.progress = autonomousProgress(target.progress, target.elapsed, target.delay, target.duration);
+          if (target.progress >= 1) { finish(target); continue; } else paint(target);
+        }
+        if (!simplified) {
           cursor.style.opacity = "1";
-          cursor.style.transform = `translate3d(${position.x + Math.sin(now / 370 + index) * 0.6}px,${position.y}px,0)`;
-          cursor.dataset.click = String(Math.floor(p * 14) % 5 === 0);
-          const guide = guides[index];
-          const r = guide.querySelector("rect")!;
-          r.setAttribute("x", String(rect.left - 3)); r.setAttribute("y", String(rect.top - 3));
-          r.setAttribute("width", String(rect.width + 6)); r.setAttribute("height", String(rect.height + 6));
-          r.style.strokeDashoffset = String(1 - Math.min(1, p * 2.5));
-          guide.setAttribute("opacity", String(Math.min(0.65, (1 - p) * 3)));
-          const left = rect.left - 5, right = rect.right + 5, top = rect.top - 5, bottom = rect.bottom + 5;
-          guide.querySelector("path")!.setAttribute("d", `M${left + 6},${top}h-6v6 M${right - 6},${top}h6v6 M${left},${bottom - 6}v6h6 M${right - 6},${bottom}h6v-6`);
-        });
+          cursor.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
+          cursor.querySelector<SVGElement>("svg")!.style.transform = `rotate(${position.angle}deg)`;
+          cursor.dataset.click = String(target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0);
+          cursor.querySelector<HTMLElement>(".agent-action")!.textContent = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
+          const guide = guides[index], rect = aim.rect;
+          const selection = guide.querySelector("rect")!;
+          selection.setAttribute("x", String(rect.left - 3)); selection.setAttribute("y", String(rect.top - 3));
+          selection.setAttribute("width", String(rect.width + 6)); selection.setAttribute("height", String(rect.height + 6));
+          selection.style.strokeDashoffset = String(1 - Math.min(1, target.progress * 2));
+          guide.setAttribute("opacity", String(Math.min(.65, (1 - target.progress) * 4)));
+          const l = rect.left - 5, r = rect.right + 5, top = rect.top - 5, b = rect.bottom + 5;
+          guide.querySelector("path")!.setAttribute("d", `M${l + 6},${top}h-6v6 M${r - 6},${top}h6v6 M${l},${b - 6}v6h6 M${r - 6},${b}h6v-6`);
+          if (target.kind === "text" && target.progress > 0 && target.progress < 1) {
+            const text = textFrame(target.lines, rect.width, rect.height, typedProgress(target.progress, target.count));
+            carets[index].style.cssText = `background:${getComputedStyle(cursor).getPropertyValue("--agent-color")};transform:translate3d(${rect.left + text.x}px,${rect.top + text.y + text.height * .14}px,0);height:${Math.max(12, text.height * .73)}px;opacity:${Math.floor(now / 430) % 2 ? .3 : .9}`;
+          }
+        }
       }
-      jump = false;
-      // Velocity is measured from input, and decays while waiting for further scroll input.
-      velocity *= 0.85;
-      // On touch/small screens masks repaint on input only; there are no visible
-      // pointers/caret to animate while the user is idle.
-      if (heroTime < 1 || (active.length && !coarse.matches && innerWidth >= 768)) schedule();
+      jump = false; velocity *= .85;
+      if (work.some(t => t.progress < 1)) schedule();
     };
-
-    const schedule = () => { if (!frame && !stopped && !document.hidden) frame = requestAnimationFrame(tick); };
     const onScroll = () => {
-      const now = performance.now();
-      const delta = Math.abs(scrollY - lastY);
-      velocity = delta / Math.max(8, now - lastTime);
-      if (delta > innerHeight * 0.6) jump = true;
-      lastY = scrollY; lastTime = now; schedule();
+      const now = performance.now(), delta = Math.abs(scrollY - lastY);
+      velocity = delta / Math.max(8, now - lastScrollTime);
+      if (delta > innerHeight * .6) jump = true;
+      lastY = scrollY; lastScrollTime = now; schedule();
     };
     const onMeasure = () => { dirty = true; schedule(); };
     const onJump = () => { jump = true; schedule(); };
     const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) onJump(); };
     const onFocus = (event: FocusEvent) => {
       const focused = event.target as HTMLElement;
-      // Reveal masked ancestors too, so keyboard navigation never reaches an invisible control.
-      targets.filter(t => t.el.contains(focused) || focused.contains(t.el)).forEach(finish);
-      schedule();
+      targets.filter(t => t.el.contains(focused) || focused.contains(t.el)).forEach(finish); schedule();
     };
-    const onVisibility = () => { if (document.hidden) { cancelAnimationFrame(frame); frame = 0; } else { dirty = true; jump = true; schedule(); } };
+    const onVisibility = () => {
+      if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
+      else { lastTick = performance.now(); dirty = true; jump = true; schedule(); }
+    };
     const observer = new ResizeObserver(onMeasure);
     sections.forEach(section => observer.observe(section));
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onMeasure, { passive: true });
-    window.addEventListener("hashchange", onJump);
-    window.addEventListener("popstate", onJump);
-    window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("focusin", onFocus);
-    document.addEventListener("visibilitychange", onVisibility);
-    reduced.addEventListener("change", onMeasure);
-    coarse.addEventListener("change", onMeasure);
+    window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onMeasure, { passive: true });
+    window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump); window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("focusin", onFocus); document.addEventListener("visibilitychange", onVisibility);
+    reduced.addEventListener("change", onMeasure); coarse.addEventListener("change", onMeasure);
     document.fonts.ready.then(() => { if (!stopped) onMeasure(); });
-    sections.forEach(section => section.querySelectorAll("img").forEach(img => img.addEventListener("load", onMeasure)));
-    measure();
-    tick(performance.now());
+    sections.forEach(s => s.querySelectorAll("img").forEach(img => img.addEventListener("load", onMeasure)));
+    measure(); targets.forEach(paint); tick(performance.now());
     return () => {
       stopped = true; cancelAnimationFrame(frame); observer.disconnect();
       window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onMeasure);
       window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump); window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("focusin", onFocus); document.removeEventListener("visibilitychange", onVisibility);
       reduced.removeEventListener("change", onMeasure); coarse.removeEventListener("change", onMeasure);
-      sections.forEach(section => section.querySelectorAll("img").forEach(img => img.removeEventListener("load", onMeasure)));
-      targets.forEach(target => { finish(target); delete target.el.dataset.constructed; });
+      sections.forEach(s => s.querySelectorAll("img").forEach(img => img.removeEventListener("load", onMeasure)));
+      targets.forEach(t => { finish(t); delete t.el.dataset.constructed; });
     };
   }, [layerRef]);
 }

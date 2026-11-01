@@ -1,6 +1,6 @@
-/** Single editable source. Only promote source-checked facts into display slots.
- * LinkedIn is never scraped or contacted at runtime. Existing display slots are
- * retained verbatim so the verified archive does not silently grow the page. */
+/** Single editable source for all displayed professional content.
+ * LinkedIn is never scraped or contacted at runtime. Profile facts come from the
+ * owner-supplied PDF and certificates; repository facts retain their sources. */
 export const profileSources = {
   linkedin: "https://www.linkedin.com/in/abdelrahman-abozena",
   suppliedProfile: "Owner-supplied LinkedIn export: Profile (14).pdf",
@@ -20,6 +20,13 @@ export type Project = {
 };
 
 export const projects: Project[] = [
+  {
+    id: "harrtest", title: "HarrTest",
+    description: "Your agent says ‘tested’ but never ran the app? Make it show the evidence.",
+    tags: ["Agent Skill", "Verification", "Open Source"],
+    githubUrl: "https://github.com/abdoabozena7/HarrTest", kind: "skill", inProgress: true,
+    source: "Public HarrTest README and SKILL.md: plan, build, run, observe, verify. A skill does not guarantee correctness or host enforcement.",
+  },
   {
     id: "hivo", title: "Hivo Studio",
     description: "Running out of coding credits? Build with local models and a coordinated agent team.",
@@ -66,8 +73,8 @@ export const projects: Project[] = [
     tags: ["Python", "FastAPI", "React"],
     githubUrl: "https://github.com/abdoabozena7/Prompt_optimizer_for_coding_agents",
     image: "images/projects/prompt-optimizer.png",
-    imageAlt: "Prompt Optimizer project setup for recovering intent and preparing a coding-agent repair plan.",
-    imageSource: "Project's existing docs/assets/prompt-optimizer-home.png",
+    imageAlt: "Prompt Optimizer review screen showing recovered intent, selected commits, blind spots, and clarification questions.",
+    imageSource: "Owner-supplied cleaner Prompt Optimizer review screenshot, 1 November 2026",
     source: "Current local README describes FastAPI and React; public repository description retains the earlier Streamlit stack.",
   },
   {
@@ -80,33 +87,159 @@ export const projects: Project[] = [
     imageSource: "https://github.com/abdoabozena7/Tayara-ThreeJS/blob/main/Screenshots/1.png",
     source: "Public README and original repository gameplay screenshot.",
   },
+
+];
+
+export type EducationItem = {
+  degree: string; school: string; year: string; image?: string;
+  imageAlt?: string; source: string; duration?: string; imageWidth?: number; imageHeight?: number;
+};
+
+export const education: EducationItem[] = [
   {
-    id: "harrtest", title: "HarrTest",
-    description: "Your agent says ‘tested’ but never ran the app? Make it show the evidence.",
-    tags: ["Agent Skill", "Verification", "Open Source"],
-    githubUrl: "https://github.com/abdoabozena7/HarrTest", kind: "skill",
-    source: "Public HarrTest README and SKILL.md: plan, build, run, observe, verify. A skill does not guarantee correctness or host enforcement.",
+    degree: "Computer Science", school: "Egyptian Chinese University",
+    year: "Undergraduate Program", source: profileSources.suppliedProfile,
+  },
+  {
+    degree: "Artificial Intelligence, Leading the Frontier - International Summer School",
+    school: "Harbin Institute of Technology", year: "July 7-18, 2025 · Completed",
+    image: "images/certificates/hit-summer-school-2025.jpg",
+    imageWidth: 489, imageHeight: 695,
+    imageAlt: "Harbin Institute of Technology completion certificate for the Artificial Intelligence international summer school, July 7-18, 2025.",
+    source: "Owner-supplied HIT completion certificate",
+  },
+  {
+    degree: "AI Agents Intensive", school: "Google × Kaggle",
+    year: "Certification", source: profileSources.suppliedProfile,
+  },
+  {
+    degree: "GCI World April 2026 - Data Science",
+    school: "Matsuo-Iwasawa Laboratory, The University of Tokyo",
+    year: "Completed · Certificate issued August 31, 2026",
+    image: "images/certificates/gci-world-2026.jpg",
+    imageWidth: 1077, imageHeight: 774,
+    imageAlt: "GCI World April 2026 completion certificate issued by the Matsuo-Iwasawa Laboratory, University of Tokyo, on August 31, 2026, confirming the final assessment was passed.",
+    source: "Owner-supplied GCI completion certificate",
+  },
+  {
+    degree: "Learning C#", school: "LinkedIn Learning",
+    year: "Completed October 29, 2026 · 2h 54m", duration: "2 hours 54 minutes",
+    image: "images/certificates/learning-csharp-2026.png",
+    imageWidth: 1031, imageHeight: 795,
+    imageAlt: "LinkedIn Learning Learning C# course completion certificate for Abdelrahman Abozena, October 29, 2026, duration 2 hours 54 minutes.",
+    source: "Owner-supplied LinkedIn Learning completion certificate",
   },
 ];
 
-// The existing display content stays verbatim. The fuller verified records below
-// are available for deliberate future edits without adding new page sections.
-export const education = [
-  { degree: "B.S. in Computer Science - AI-focused specialization/coursework", school: "Egyptian Chinese University", year: "Undergraduate Program" },
-  { degree: "Google x Kaggle - AI Agents Intensive Certification", school: "Google x Kaggle", year: "Certification" },
-  { degree: "AI Summer School - Generative AI & Probabilistic Models", school: "Harbin Institute of Technology", year: "On-site in China" },
+export type ExperienceItem = {
+  company: string; role: string; period: string; description: string | null;
+  location: string | null; source?: string;
+};
+
+/** Local copies from public company pages; no LinkedIn request is made by the portfolio. */
+export const companyLogos: Record<string, { image: string; source: string }> = {
+  Microsoft: { image: "images/microsoft-symbol.svg", source: "https://www.microsoft.com/" },
+  "Instant Software Solutions": { image: "images/companies/instant.jpg", source: "https://www.linkedin.com/company/instantsoftwaresolution" },
+  Foursw: { image: "images/companies/foursw.jpg", source: "https://www.linkedin.com/company/foursoftware" },
+  EgenSolve: { image: "images/companies/egensolve.jpg", source: "https://www.linkedin.com/company/egensolve" },
+  Crossover: { image: "images/companies/crossover.jpg", source: "https://www.linkedin.com/company/crossover" },
+  "FlyRank AI": { image: "images/companies/flyrank.jpg", source: "https://www.linkedin.com/company/flyrank" },
+  Orange: { image: "images/companies/orange.jpg", source: "https://www.linkedin.com/company/orange" },
+  "Digital Egypt Pioneers Initiative - DEPI": { image: "images/companies/depi.png", source: "https://depi.gov.eg/assets/images/proAr.png" },
+};
+
+export const experiences: ExperienceItem[] = [
+  { company: "Microsoft", role: "SWE Intern", period: "October 2026 - Present", location: "Cairo, Egypt", description: "Software engineering internship at Microsoft." },
+  { company: "Instant Software Solutions", role: "AI & Data Science Engineer", period: "January 2026 - Present", location: "Giza, Al Jizah, Egypt", description: null },
+  { company: "Foursw", role: "Artificial Intelligence Engineer", period: "June 2026 - October 2026", location: "Giza", description: "Design and implement AI solutions for software projects. Integrate LLMs, AI agents, and intelligent workflows into existing systems, turning business requirements into practical AI features." },
+  { company: "EgenSolve", role: "Back End Developer", period: "March 2025 - April 2025", location: "Giza, Al Jizah, Egypt", description: "Developed a system to manage employee accounts and handle system issues, linking them directly with developers for faster problem resolution." },
+  { company: "Crossover", role: "React Developer · Part-time freelance", period: "October 2022 - December 2023", location: null, description: "Contributed to React development on a part-time freelance basis through Crossover.", source: "Owner clarification, November 1, 2026: freelance engagement, not direct employment" },
 ];
 
-export const training = [
-  { role: "AI & Data Science Training Program", company: "Instant Software Solutions", period: "Jan 2026 - Present", description: "Training across data science, machine learning, NLP, Transformers, LLM automation, and backend AI systems." },
-  { role: "AI / Machine Learning Track", company: "Digital Egypt Pioneers Initiative (DEPI)", period: "Nov 2025 - Present", description: "Applied track covering ML, deep learning, NLP, computer vision, MLOps concepts, and project-based assignments." },
-  { role: "AI & Data Science Course - Japanese Online Program", company: "GCI", period: "Present", description: "Currently studying AI and data science through a Japanese online program." },
-  { role: "Data Science Training Course", company: "Orange", period: "Sep 2024", description: "Completed data science training in a professional telecom environment in Egypt." },
+export const training: ExperienceItem[] = [
+  { company: "FlyRank AI", role: "Backend AI Engineering Internship", period: "May 2026 - August 2026", location: "Giza", description: "AI internship focusing on Backend AI Engineering." },
+  { company: "Orange", role: "Intern", period: "July 2026", location: "Qesm El Doki", description: "Built AI agent workflows using Flowise and n8n, with RAG, vector databases, memory management, and external tools and data sources." },
+  { company: "Digital Egypt Pioneers Initiative - DEPI", role: "Machine Learning Engineer", period: "November 2025 - July 2026", location: "Egypt", description: null },
 ];
 
-export const experiences = [
-  { role: "Back End Developer", company: "EgenSolve", period: "Mar 2025 - Sep 2025", description: "Developed a centralized backend system to manage employee accounts and system issues, linking users directly with developers through backend workflows and APIs." },
-  { role: "React Developer", company: "Crossover", period: "Oct 2022 - Dec 2023", description: "Delivered high-performance front-end solutions in a remote, product-oriented development environment." },
+export const skillCategories = [
+  {
+    title: "AI & ML",
+    skills: [
+      "Generative AI",
+      "LLM Agents",
+      "RAG",
+      "LangGraph",
+      "Prompt Engineering",
+      "Deterministic LLM Programming",
+      "Multi-Agent Systems",
+      "Local LLMs/Ollama",
+      "Transformers",
+      "NLP",
+      "Machine Learning",
+      "Deep Learning",
+      "MLOps",
+    ],
+  },
+  {
+    title: "Data Science",
+    skills: [
+      "EDA",
+      "Data Preprocessing",
+      "Feature Engineering",
+      "Model Evaluation",
+      "CTR Prediction",
+      "Sentiment Analysis",
+      "Computer Vision/YOLO",
+      "Data Fusion",
+    ],
+  },
+  {
+    title: "Backend & MLOps",
+    skills: [
+      "Python",
+      "FastAPI",
+      "Node.js",
+      "Express",
+      "RESTful APIs",
+      "WebSockets",
+      "Kafka",
+      "Streamlit",
+      "Real-Time Inference",
+      "Backend System Architecture",
+      "Flowise",
+      "n8n",
+    ],
+  },
+  {
+    title: "Databases",
+    skills: ["MySQL", "MongoDB", "SQLite"],
+  },
+  {
+    title: "Languages & Tools",
+    skills: [
+      "Python",
+      "JavaScript",
+      "TypeScript",
+      "C#",
+      "Git",
+      "GitHub",
+      "Docker Basics",
+    ],
+  },
+  {
+    title: "Frontend",
+    skills: ["React", "Vite", "Tailwind CSS"],
+  },
+  {
+    title: "Certification",
+    skills: [
+      "Google x Kaggle - AI Agents Intensive",
+      "AI Summer School - Harbin Institute of Technology",
+      "GCI World April 2026 - Completed",
+      "LinkedIn Learning - Learning C#",
+    ],
+  },
 ];
 
 export const repositoryStats = {
@@ -124,30 +257,32 @@ export const profileContent = {
   linkedinUrl: profileSources.linkedin,
   githubUrl: profileSources.github,
   email: "boodyabozena@gmail.com",
+  location: "Giza, Egypt",
   avatar: "images/portrait-cutout.png",
+  avatarStatus: "SWE Intern",
+  about: [
+    "I am a SWE Intern at Microsoft and an AI engineer specializing in Agentic AI and Retrieval-Augmented Generation (RAG).",
+    "I build LLM-powered applications, multi-agent architectures, and scalable backend systems with Python and FastAPI, from data processing to deployment and real-time inference.",
+    "I study Computer Science at Egyptian Chinese University. My work combines machine learning, MLOps, and practical AI engineering, with a focus on reliable, evidence-backed systems.",
+  ],
+  contactIntro: "Currently a SWE Intern at Microsoft. For AI, backend, or open-source collaboration, feel free to reach out.",
+  footerNote: "Based in Giza, Egypt | Let's talk AI, agents, and engineering",
+  terminalBio: "I am Abdelrahman Abozena, a SWE Intern at Microsoft and an AI engineer building Agentic AI, RAG, and scalable Python/FastAPI systems.",
+  terminalSkills: ["Agentic AI / LLM Agents / RAG", "Python / FastAPI / Backend Systems", "Machine Learning / MLOps", "C# - Learning C# completed"],
+  marqueeTags: [
+    "Abdelrahman Abozena", "SWE Intern at Microsoft",
+    "Agentic AI | RAG | Python | FastAPI", "Building practical AI systems with evidence",
+  ],
   animatedRoles,
   repositoryStats,
   repositories: repositoryStats,
-  projects, education, training, experiences,
-  verifiedExperience: [
-    { company: "Microsoft", role: "SWE Intern", period: "October 2026 - Present", location: "Cairo, Egypt", description: null },
-    { company: "Instant Software Solutions", role: "AI & Data science Engineer", period: "January 2026 - Present", location: "Giza, Al Jizah, Egypt", description: null },
-    { company: "Foursw", role: "Artificial Intelligence Engineer", period: "June 2026 - October 2026", location: "Giza", description: "Design and implement AI solutions for software projects; integrate LLMs, AI agents, and intelligent workflows into existing systems." },
-    { company: "FlyRank AI", role: "Backend AI Engineering Internship", period: "May 2026 - August 2026", location: "Giza", description: "AI internship focusing on Backend AI Engineering." },
-    { company: "Orange", role: "Intern", period: "July 2026", location: "Qesm El Doki", description: "Built AI agent workflows using Flowise and n8n, with RAG, vector databases, memory management, and external tools and data sources." },
-    { company: "Digital Egypt Pioneers Initiative - DEPI", role: "Machine Learning Engineer", period: "November 2025 - July 2026", location: "Egypt", description: null },
-    { company: "EgenSolve", role: "Back End Developer", period: "March 2025 - April 2025", location: "Giza, Al Jizah, Egypt", description: "Developed a system to manage employee accounts and handle system issues, linking them directly with developers for faster problem resolution." },
-    { company: "Crossover", role: "React Developer", period: "October 2022 - December 2023", location: null, description: null },
-  ],
+  projects, education, training, experiences, skillCategories,
+  verifiedExperience: [...experiences, ...training],
   verifiedEducation: [
     { institution: "Egyptian Chinese University", subject: "Computer Science", period: null },
-    { institution: "Harbin Institute of Technology", subject: "Artificial Intelligence", period: null },
+    { institution: "Harbin Institute of Technology", subject: "Artificial Intelligence", period: "July 7-18, 2025" },
   ],
-  verifiedCertifications: [
-    { title: "GCI World April 2026", credentialUrl: null },
-    { title: "Google × Kaggle – AI Agents Intensive", credentialUrl: null },
-    { title: "AI Summer School (Generative AI & Probabilistic Models) – HIT", credentialUrl: null },
-  ],
+  verifiedCertifications: education.slice(1).map(item => ({ title: item.degree, credentialUrl: null, source: item.source })),
   verifiedRecordSource: profileSources.suppliedProfile,
   verifiedAchievements: [] as { title: string; date: string | null; sourceUrl: string }[],
   // Add only owner-confirmed or publicly sourced updates. Drafts do not render.

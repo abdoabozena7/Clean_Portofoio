@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 
 import { profileContent } from "@/data/profileContent";
 
@@ -15,7 +15,7 @@ const AnimatedAvatar = () => {
           <img
             src={avatarSrc}
             alt="Abdelrahman Abozena"
-            className="w-full h-full object-cover object-top"
+            className="w-full h-full object-cover object-top grayscale"
             loading="eager"
             onError={() => setImageError(true)}
           />
@@ -36,7 +36,7 @@ const AnimatedAvatar = () => {
 
       <div className="absolute -bottom-3 -right-3 bg-black text-white px-3 py-1 text-[10px] font-mono uppercase tracking-widest border border-black z-10">
         <span className="inline-block w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5 animate-pulse" />
-        Available
+        {profileContent.avatarStatus}
       </div>
     </div>
   );

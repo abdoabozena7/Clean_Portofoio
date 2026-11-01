@@ -1,44 +1,46 @@
-# Local portfolio review
+# Local portfolio revision — 2 November 2026
 
 Preview: http://127.0.0.1:8080/Clean_Portofoio/
 
-The original is preserved at tag `baseline/pre-agent-construction` (`c0f0146`). All changes are on `codex/scroll-agent-construction`; nothing was pushed or deployed.
+All requested revisions are implemented locally. Nothing was pushed or deployed. Original source remains at baseline/pre-agent-construction; the first review version is preserved at dfbf80c.
 
-## Changes
+## Current behavior
 
-- `AgentConstruction.tsx`, `useScrollConstruction.ts`, `construction.ts`, `construction.css`: four decorative DOM-targeted pointers, temporary guides, line-aware text clipping, scroll-driven progress, fast-jump synchronization and persistent completed states. No animation canvas or runtime AI request was added. Original `ArrowPointerCursor.tsx` is unchanged.
-- `SectionBlock.tsx`, `Index.tsx`, `Finale.tsx`: isolated animation integration. Removed the previous section translation entrance so construction never moves layout boxes.
-- `MicrosoftHeadline.tsx`, `HeroSection.tsx`, local Microsoft SVG: exact Microsoft headline in the existing 34px badge, with original name/role/tags/social/CV geometry. Existing role animation retained, timer cleanup corrected, reduced motion honored, existing matrix work paused offscreen.
-- `profileContent.ts`: central headline, links, animated roles, original display slots, verified LinkedIn PDF records, certifications, projects, editable update placeholders and source provenance. Full professional records are stored without adding timeline rows. Original timeline/education display copy is intentionally retained; edit those display arrays to promote future verified updates.
-- `ProjectsSection.tsx`, `HarrTestFlow.tsx`, `projects.css`: six requested projects plus HarrTest, concise English hooks, genuine inline screenshots and accessible image dialogs. Hivo and YA RAB OSTORHA have understated active-work indicators. Original columns, breakpoints and overall measured project-grid footprint retained. `useProjectFootprint.ts` briefly measures an invisible, inert sizing fixture from `projectLayoutBaseline.ts` and removes it before paint; this preserves the original natural footprint between test widths as well as at the four required sizes, without a flow-affecting wrapper or hard-coded viewport coordinates.
-- `AnimatedAvatar.tsx`: supplied speaking portrait with transparent background, inside the original image box. Source asset: `public/images/portrait-cutout.png`, generated using the built-in image-generation edit tool. Prompt: “Remove ONLY the background completely, producing true transparent alpha. Preserve the exact person, facial identity, glasses, black shirt, hair, microphone and cord, both hands, skin, watch, original natural lighting, pose and proportions. Clean accurate hair and finger edges. Do not beautify, redraw, recolor, crop any visible part of the person, add objects or text. Professional faithful photographic cutout for existing portfolio portrait.” Alpha verified RGBA, range 0–255.
-- Terminal project replies use the same content source. ESLint now ignores generated `.vite` files; existing UI-library warnings remain visible.
+- Eight autonomous builders use the exact two SVG paths of the real custom cursor. The real cursor remains independent. Visible tasks progress without mouse or scroll input, with slower movement capped near 420px/s, natural text masks and coordinated image/structure work. Fast jumps catch up immediately; offscreen tasks do not accumulate. Completed agents disappear and idle animation frames stop. Reduced motion, touch and keyboard focus remain supported.
+- The supplied palette (#2BBAA5, #93D3AE, #FAECB6, #F9A822, #F96635) colors agents, skill/project/hero tags, category rules and selected hovers. Dark label text preserves contrast on the pale colors.
+- Portrait renders in grayscale. The exact cleaner Prompt Optimizer screenshot replaces the previous image. HarrTest is first, marked In progress, with a native workflow diagram.
+- Projects now use natural card heights and two desktop columns with larger 16:9 media. The featured HarrTest card uses a compact horizontal layout on desktop. Obsolete fixed-height footprint measurement was removed, eliminating the reserved blank areas. Image controls say Zoom in.
+- About, experience, education, skills, contact, footer and terminal all consume the updated profile data. Eight verified roles are displayed, with Microsoft first. Crossover is explicitly React Developer · Part-time freelance, based on the owner's clarification. No unprovided Microsoft responsibilities were invented.
+- Three certificate photographs appear inline by default, with accessible zoom dialogs: HIT summer school (7–18 July 2025), GCI (issued 31 August 2026), and LinkedIn Learning C# (29 October 2026, 2h54m). Google/Kaggle remains text-only because no image was provided.
+- Eight real company logos replace the experience timeline dots. Local copies came from public company pages or the official initiative site, without credentials or authenticated scraping.
 
-The later instruction “use all mentioned” superseded the original five-project limit. The seven card interiors and portrait/badge/count content are authorized visual changes; their surrounding section geometry stays under regression checks.
+The later requests expressly authorize colored accents, updated content growth, inline certificate images and new project sizing. Those sections intentionally have different heights from the first version. Original hero/name/technology/social/CV slots, navigation, section order, typography and outer column alignment remain protected. Construction itself does not move layout boxes.
 
-## Verification
+## Files
 
-Evidence and images: `output/playwright/`. The durable checklist is `TASK_PLAN.md`; raw findings and initial failures are recorded in `EVIDENCE.md`.
+- Animation: AgentConstruction.tsx, useScrollConstruction.ts, construction.ts, agentConfig.ts, construction.css. Original ArrowPointerCursor.tsx is unchanged.
+- Color: palette.ts, palette.css, HeroSection.tsx, SkillsSection.tsx, ProjectsSection.tsx, Index.tsx.
+- Content: profileContent.ts and About/Avatar/Education/Experience/Contact/Finale/Terminal consumers.
+- Media: public/images/certificates, public/images/companies, updated Prompt Optimizer PNG, project CSS and zoom controls.
+- Checks: verify-construction.mjs, verify-autonomous-review.mjs, verify-visual-revision.mjs, construction.test.ts and npm scripts. Historical fixed-footprint checks were retired with the removed layout fixture.
 
-Final results: build, lint, TypeScript and4 unit tests pass;40 production-browser checks and14 independent construction checks pass. Required four-viewport comparison verifies336 preserved elements,32 sections and16 grids. All28 unchanged-section screenshot crops are pixel-exact outside authorized/dynamic masks. Extra320/600/900/1000px baseline comparisons also preserve exact section geometry. All eight checklist tasks are verified.
+## Final verification
 
-```powershell
-npm run build
-npm run lint
-npm test
-npx tsc --noEmit -p tsconfig.app.json
-npm run test:construction
-npm run test:construction:review
-npm run test:layout:capture
-npm run test:layout
-```
+- Build, TypeScript, lint and four unit tests pass. Lint retains seven existing Fast Refresh warnings in UI library files.
+- 60 production-build browser checks pass: no-input construction, geometry stability, cursor independence, scrolling/history/anchors, zoom/focus/Escape, certificate images, timeline facts, terminal, form validation, genuine CV download, reduced motion, print and touch.
+- 32 autonomy review probes pass. Measured normal movement is about 420px/s; completed desktop/touch idle RAF count is zero.
+- 209 visual/responsive checks pass at 1440×900, 1366×768, 768×1024 and 390×844. Hero slots, navigation and avatar size match the previous review. Name/navigation screenshot crops match. Three inline certificates and all eight logos decode; cards contain their contents; no horizontal overflow, page errors or failed requests.
+- Extra widths 320/600/900/1000 pass card containment and palette-hover checks. The original 320px-wide document overflow (342px) is unchanged.
+- A deliberate 10px hero shift is rejected by the visual verifier. Other failures found during iteration are recorded in EVIDENCE.md.
 
-Browser scripts use the installed bundled Playwright/Sharp runtime. Other machines can set `PLAYWRIGHT_MODULE` and `SHARP_MODULE` to their installed package directories. Capture requires a local preview on port 8080; `PORTFOLIO_URL` can point the behavior journey at a production-build local preview. The preserved original baseline captures must exist before running the comparison; generate them from the baseline tag in a separate original checkout, never from modified source.
+Current application fingerprint: 89ec657b212ce2c75fd54fac12beb6c0d7a804f475b791958ffa4a7217ed04a8.
 
-## Content access and limits
+Evidence: output/playwright/final-production/report.json, autonomous-review/report.json, visual-revision/report.json and its screenshots.
 
-LinkedIn's public page returned HTTP 999. The supplied PDF and public GitHub/local repository evidence supplied the facts; there is no authenticated scraping or automatic runtime LinkedIn fetch. Public repositories: 63 verified on 1 November 2026. Total 92 is owner-reported; 29 private is derived, with provenance in the data.
+Run: npm run build; npm run lint; npm test; npm run test:construction; npm run test:construction:review; npm run test:layout. Browser verification uses the bundled Playwright/Sharp runtime; PLAYWRIGHT_MODULE and SHARP_MODULE can point to other installations. The visual verifier requires the saved revision-before baseline.
 
-The CV download deliberately serves the original PDF. Contact submission retains its existing mailto behavior; testing filled/validated the form without sending a message. Wazzefni's real screenshot shows its signed-out frontend, with no fabricated job results. Local browser verification does not establish field Core Web Vitals or cross-browser behavior outside the exercised Chromium engine.
+## Sources and limits
 
-Existing limitations retained from the original:7 UI-library Fast Refresh lint warnings; an old Browserslist data notice; at320px the original and modified documents both measure342px wide. The required390px mobile viewport and all wider verified widths have no horizontal overflow. No new unresolved issue remains in the tested acceptance scope.
+Professional facts come from the supplied LinkedIn PDF/certificates and owner clarifications. Company-logo sources are recorded next to each asset in profileContent.ts: [Instant](https://www.linkedin.com/company/instantsoftwaresolution), [FourSW](https://www.linkedin.com/company/foursoftware), [EgenSolve](https://www.linkedin.com/company/egensolve), [Crossover](https://www.linkedin.com/company/crossover), [FlyRank](https://www.linkedin.com/company/flyrank), [Orange](https://www.linkedin.com/company/orange), [DEPI](https://depi.gov.eg/) and [Microsoft](https://www.microsoft.com/). No LinkedIn calls occur at runtime.
+
+The CV remains the original PDF. Contact keeps its original mailto behavior; no message was sent during tests. No field Core Web Vitals or non-Chromium browser claim is made. Existing warnings and the narrow 320px overflow are retained; no new unresolved issue remains in the exercised scope.

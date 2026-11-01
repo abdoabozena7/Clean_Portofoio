@@ -1,3 +1,4 @@
+import { profileContent } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
 import { Globe } from "lucide-react";
 import AnimatedAvatar from "./AnimatedAvatar";
@@ -9,20 +10,13 @@ const AboutSection = () => (
 
       <div className="flex-1">
         <p className="body-text max-w-2xl">
-          I am an AI-focused Computer Science student and software engineer with
-          practical experience building LLM agents, RAG workflows, multi-agent
-          simulations, machine learning pipelines, data analysis projects, and
-          scalable backend APIs.
+          {profileContent.about[0]}
         </p>
         <p className="body-text max-w-2xl mt-6">
-          My project-based portfolio covers Python, EDA, ML evaluation, deep
-          learning foundations, NLP/Transformers, Generative AI, and deployment
-          with FastAPI and Streamlit.
+          {profileContent.about[1]}
         </p>
         <p className="body-text max-w-2xl mt-6 mb-8">
-          I care about reliability, maintainability, and measurable impact,
-          turning experimental ideas into end-to-end AI products that solve
-          real-world business problems.
+          {profileContent.about[2]}
         </p>
         <a
           href="https://abdoabozena7.github.io/Clean_Portofoio/"

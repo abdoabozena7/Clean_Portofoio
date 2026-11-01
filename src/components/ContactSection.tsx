@@ -31,9 +31,7 @@ const ContactSection = () => {
       <div className="grid md:grid-cols-2 gap-8 md:gap-20">
         <div className="space-y-8 md:space-y-10">
           <p className="text-foreground/80 leading-relaxed font-light text-lg">
-            I am open to backend, AI, and machine learning opportunities.
-            Whether you want to collaborate, discuss a role, or ask a question,
-            feel free to reach out.
+            {profileContent.contactIntro}
           </p>
 
           <div className="space-y-6">
@@ -68,7 +66,7 @@ const ContactSection = () => {
                 <p className="text-xs uppercase tracking-widest text-foreground/50 mb-1">
                   Location
                 </p>
-                <p className="font-mono text-sm">Giza, Egypt</p>
+                <p className="font-mono text-sm">{profileContent.location}</p>
               </div>
             </div>
           </div>
