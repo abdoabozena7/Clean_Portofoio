@@ -100,4 +100,3 @@ report.sourceChangedDuringCapture = report.sourceBefore !== report.sourceAfter;
 await writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2));
 if (report.sourceChangedDuringCapture) throw new Error('Source changed during capture; baseline is not coherent');
 console.log(`Layout capture saved: ${output}`);
-
