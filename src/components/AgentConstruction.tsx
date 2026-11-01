@@ -18,6 +18,17 @@ export default function AgentConstruction() {
         ))}
       </svg>
       {agents.map(agent => (
+        <div key={agent.task} data-prop={agent.task} className="construction-prop" style={{ "--agent-color": agent.color } as CSSProperties}>
+          <div className="construction-prop-surface">
+            <img className="prop-template" alt="" /><img className="prop-image" alt="" />
+            <div className="prop-icon" />
+            <span className="prop-template-label" /><span className="prop-label" />
+          </div>
+          <span className="prop-copy" /><span className="prop-handle" />
+          <span className="prop-operation" />
+        </div>
+      ))}
+      {agents.map(agent => (
         <div key={agent.name} data-agent={agent.task} data-role={agent.role} className="virtual-agent" style={{ "--agent-color": agent.color } as CSSProperties}>
           <span className="agent-click" />
           <svg className="agent-pointer-shape" width="20" height="20" viewBox="0 0 32 32">

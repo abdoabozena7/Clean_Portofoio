@@ -113,7 +113,7 @@ try {
   check('Microsoft is the first displayed professional employer', await page.locator('#experience h3').nth(1).innerText(), 'Microsoft');
   check('All eight verified roles appear in the actual timeline', await page.locator('#experience h4').count(), 8);
   check('The new C# certificate is displayed', await page.getByRole('heading', { name: 'Learning C#', exact: true }).count(), 1);
-  check('Certificate photographs are rendered inline by default', await page.locator('#education .certificate-thumb').count(), 3);
+  check('Certificate photographs are rendered inline by default', await page.locator('#education .certificate-thumb').count(), 6);
   check('The Crossover role clearly states its freelance basis', await page.locator('#experience').innerText().then(text => text.includes('Part-time freelance') && text.includes('through Crossover')));
   for (const img of await page.locator('.project-media img').all()) {
     await img.scrollIntoViewIfNeeded();

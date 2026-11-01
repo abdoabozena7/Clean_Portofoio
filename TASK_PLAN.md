@@ -1,6 +1,6 @@
 # Current revision
 
-The follow-up autonomous/palette/content/media requests are complete. See REVISION_PLAN.md and CHANGE_REPORT.md for the current accepted scope and evidence. The original first-delivery plan below is historical; its frozen content/project footprint requirements were explicitly superseded by the later user requests.
+The cinematic follow-up is complete. See CINEMATIC_PLAN.md and CHANGE_REPORT.md for the current scope and evidence. REVISION_PLAN.md records the prior autonomous/palette/content/media delivery. The original first-delivery plan below is historical; its frozen content/project footprint requirements were explicitly superseded by the later user requests.
 
 # Portfolio construction enhancement — local only
 

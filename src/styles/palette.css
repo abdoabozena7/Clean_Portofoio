@@ -26,9 +26,22 @@ html .palette-tag:hover, html .accent-button:hover {
   padding: 3px; border: 1px solid #111920; background: white; z-index: 1;
 }
 .company-logo img { width: 100%; height: 100%; object-fit: contain; }
-.certificate-image-trigger { position: relative; display: block; width: fit-content; max-width: 100%; margin-top: 18px; border: 2px solid #111920; background: white; }
-.certificate-image-trigger img { display: block; width: auto; height: auto; max-width: 100%; max-height: 360px; object-fit: contain; }
-.certificate-zoom { position: absolute; right: 7px; bottom: 7px; padding: 5px; background: var(--accent-cream); border: 1px solid #111920; }
+.credential { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 24px; align-items: start; }
+.credential-copy { min-width: 0; }
+.certificate-image-trigger { position: relative; display: flex; justify-content: center; align-items: center; width: 160px; height: 112px; max-width: 100%; border: 1px solid #111920; background: #fff; padding: 5px; }
+.certificate-image-trigger img { display: block; width: auto; height: auto; max-width: 100%; max-height: 100%; object-fit: contain; }
+.certificate-zoom { position: absolute; right: 3px; bottom: 3px; padding: 3px; background: var(--accent-cream); border: 1px solid #111920; }
+.credential[data-achievement] { border-left-color: var(--accent-amber); }
+.achievement-ribbon { display: inline-flex; gap: 5px; align-items: center; font: bold 10px/1.3 ui-monospace, monospace; text-transform: uppercase; letter-spacing: .07em; background: var(--accent-cream); border: 1px solid #aa710e; color: #684305; padding: 4px 7px; margin-bottom: 9px; }
+.credential-story:hover { color: #86600c; }
+.microsoft-headline { transform: translateY(var(--badge-offset, 0px)); }
+.microsoft-headline:hover { border-color: #111920; background: var(--accent-cream); }
+.microsoft-headline:focus-visible { outline: 2px solid #111920; outline-offset: 4px; }
+.microsoft-story-tip { position: fixed; z-index: 60; pointer-events: none; padding: 6px 9px; border: 1px solid #111920; box-shadow: 3px 3px 0 #111920; background: var(--accent-cream); color: #111920; font: 11px/1.2 ui-monospace, monospace; white-space: nowrap; }
 .certificate-image-trigger:hover { box-shadow: 5px 5px 0 var(--accent-mint); }
 .certificate-image-trigger:focus-visible { outline: 2px solid #111920; outline-offset: 5px; }
 @media (min-width: 768px) { .company-logo { left: auto; right: -16px; } }
+@media (max-width: 600px) {
+  .credential { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .certificate-image-trigger { width: 132px; height: 92px; }
+}

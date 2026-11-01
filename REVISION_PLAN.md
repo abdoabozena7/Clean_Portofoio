@@ -1,4 +1,6 @@
-# Autonomous construction and visual refinement — completed
+# Previous revision: autonomous construction and visual refinement — completed
+
+The subsequent cinematic construction / compact credentials revision is recorded in CINEMATIC_PLAN.md and the current CHANGE_REPORT.md. The fingerprint and evidence below belong to the earlier 15c0d84 delivery.
 
 Local only. Original Git baseline and first review commit dfbf80c remain preserved. The user's latest requests supersede scroll-only progress, frozen legacy profile copy and fixed project heights. They authorize an autonomous visible build, supplied color accents, inline certificates, logos and denser project media.
 

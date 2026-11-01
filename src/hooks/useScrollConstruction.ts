@@ -1,11 +1,12 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
+import { constructionScene, type SceneBox } from "@/lib/constructionScene";
 
 type Kind = "text" | "asset" | "structure";
 type Target = {
   el: HTMLElement; section: HTMLElement; kind: Kind; top: number; left: number; width: number; height: number;
   lines: TextLine[]; count: number; progress: number; elapsed: number; visibleSince: number | null;
-  duration: number; delay: number; order: number;
+  duration: number; delay: number; order: number; cinematic: boolean;
 };
 type Position = { x: number; y: number; angle: number; initialized: boolean; target: Target | null };
 
@@ -48,6 +49,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const cursors = Array.from(layer.querySelectorAll<HTMLElement>("[data-agent]"));
     const guides = Array.from(layer.querySelectorAll<SVGGElement>("[data-guide]"));
     const carets = Array.from(layer.querySelectorAll<HTMLElement>("[data-caret]"));
+    const props = Array.from(layer.querySelectorAll<HTMLElement>("[data-prop]"));
+    const sources: (HTMLElement | null)[] = cursors.map(() => null);
     const positions: Position[] = cursors.map(() => ({ x: 0, y: 0, angle: 0, initialized: false, target: null }));
     let frame = 0, dirty = true, stopped = false, jump = !!location.hash || scrollY > 20;
     let lastY = scrollY, lastScrollTime = performance.now(), lastTick = performance.now(), velocity = 0;
@@ -65,13 +68,14 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (el.tagName === "SPAN" && (el.children.length || !el.textContent?.trim() || el.parentElement?.closest("h1,h2,h3,h4,p,[data-construction='text']"))) continue;
         // A media/interactive parent reveals its icon and text together.
         const assetParent = el.parentElement?.closest("a,button,[data-construction='asset']");
-        if (assetParent && section.contains(assetParent)) continue;
+        if (assetParent && section.contains(assetParent) && assetParent.getAttribute("data-construction") !== "structure") continue;
         const kind = el.dataset.construction || (/^H[1234]$|^P$/.test(el.tagName) ? "text" : el.tagName === "DIV" ? "structure" : "asset");
         if (!["text", "asset", "structure"].includes(kind)) continue;
         const count = el.textContent?.trim().length || 1;
+        const cinematic = (kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction"));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
-          progress: 0, elapsed: 0, visibleSince: null, order: order++,
-          duration: kind === "structure" ? 1050 : kind === "asset" ? 1100 : Math.max(2000, Math.min(4400, count * 24)),
+          progress: 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
+          duration: cinematic ? 2350 : kind === "structure" ? 1050 : Math.max(2000, Math.min(4400, count * 24)),
           delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
       }
     }
@@ -93,6 +97,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       if (t.progress === 1) return;
       t.el.dataset.building = t.kind;
       if (t.kind === "text") t.el.style.setProperty("--construction-clip", textFrame(t.lines, t.width, t.height, typedProgress(t.progress, t.count)).clip);
+      else if (t.cinematic && !coarse.matches && innerWidth >= 768) {
+        const handoff = clamp01((t.progress - .94) / .06);
+        if (t.kind === "structure") t.el.style.setProperty("--construction-opacity", String(handoff));
+        else t.el.style.setProperty("--construction-clip", `inset(0 ${100 - handoff * 100}% 0 0)`);
+      }
       else if (t.kind === "asset") t.el.style.setProperty("--construction-clip", `inset(0 ${100 - t.progress * 100}% 0 0)`);
       else t.el.style.setProperty("--construction-opacity", String(t.progress));
     };
@@ -100,11 +109,61 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       cursors.forEach(c => { c.style.opacity = "0"; });
       guides.forEach(g => g.setAttribute("opacity", "0"));
       carets.forEach(c => { c.style.opacity = "0"; });
+      props.forEach(p => { p.style.opacity = "0"; });
+    };
+    // Repeated media and pills begin as a real sibling template, then become unique.
+    const bindProp = (t: Target, index: number) => {
+      const prop = props[index];
+      const image = t.kind !== "asset" ? null : t.el instanceof HTMLImageElement ? t.el : t.el.querySelector<HTMLImageElement>("img");
+      const selector = t.el.closest(".project-media") ? ".project-media img" : t.el.closest(".certificate-image-trigger") ? ".certificate-thumb" : t.el.closest(".company-logo") ? ".company-logo img" : null;
+      const peers = selector ? Array.from(t.section.querySelectorAll<HTMLElement>(selector)) : Array.from(t.el.parentElement?.querySelectorAll<HTMLElement>(".palette-tag") || []);
+      const template = peers[0] || t.el;
+      sources[index] = template;
+      const templateImage = template instanceof HTMLImageElement ? template : template.querySelector<HTMLImageElement>("img");
+      prop.dataset.media = image ? "image" : t.kind === "structure" ? "frame" : "label";
+      prop.dataset.copy = String(template !== t.el && template !== image);
+      prop.dataset.target = image?.getAttribute("alt") || t.el.textContent?.trim().slice(0, 70) || "frame";
+      const templateImg = prop.querySelector<HTMLImageElement>(".prop-template")!;
+      const actualImg = prop.querySelector<HTMLImageElement>(".prop-image")!;
+      const icon = prop.querySelector<HTMLElement>(".prop-icon")!;
+      icon.replaceChildren();
+      if (!image && t.kind === "asset") {
+        const svg = t.el.querySelector("svg");
+        if (svg) { icon.append(svg.cloneNode(true), document.createTextNode(t.el.textContent?.trim() || "")); prop.dataset.media = "icon"; }
+      }
+      if (image) {
+        actualImg.src = image.currentSrc || image.src;
+        templateImg.src = templateImage?.currentSrc || templateImage?.src || image.src;
+        actualImg.style.objectFit = getComputedStyle(image).objectFit;
+        templateImg.style.objectFit = getComputedStyle(image).objectFit;
+        actualImg.style.filter = getComputedStyle(image).filter;
+        templateImg.style.filter = getComputedStyle(templateImage || image).filter;
+      } else { actualImg.removeAttribute("src"); templateImg.removeAttribute("src"); }
+      prop.querySelector<HTMLElement>(".prop-label")!.textContent = t.el.textContent?.trim() || "";
+      prop.querySelector<HTMLElement>(".prop-template-label")!.textContent = template.textContent?.trim() || "";
+      const style = getComputedStyle(t.el), surface = prop.querySelector<HTMLElement>(".construction-prop-surface")!;
+      surface.style.background = style.backgroundColor === "rgba(0, 0, 0, 0)" ? "#ffffffed" : style.backgroundColor;
+      surface.style.font = style.font; surface.style.color = style.color;
+      prop.querySelector<HTMLElement>(".prop-label")!.style.padding = style.padding;
+      prop.querySelector<HTMLElement>(".prop-template-label")!.style.padding = style.padding;
+    };
+    const sceneFor = (t: Target, index: number, rect: DOMRect) => {
+      const origin = (sources[index] || t.el).getBoundingClientRect();
+      // Keep pickup in the visible work area even when its template is above it.
+      const source: SceneBox = {
+        left: Math.max(12, Math.min(innerWidth - rect.width * .58 - 12, origin.left - Math.min(80, rect.width * .25) + index * Math.min(9, rect.width * .09))),
+        top: Math.max(82, Math.min(innerHeight - rect.height * .58 - 20, origin.top - Math.min(64, rect.height * .3) - index * 5)),
+        width: origin.width, height: origin.height,
+      };
+      return constructionScene(rect, source, t.progress);
     };
     const point = (t: Target, index: number) => {
       const rect = t.el.getBoundingClientRect();
       let x = rect.left, y = rect.top;
-      if (t.kind === "text") {
+      if (t.cinematic) {
+        const scene = sceneFor(t, index, rect);
+        x = scene.gripX; y = scene.gripY;
+      } else if (t.kind === "text") {
         const text = textFrame(t.lines, rect.width, rect.height, typedProgress(t.progress, t.count));
         x += text.x + 3; y += text.y + text.height * .75;
       } else if (t.kind === "asset") {
@@ -148,11 +207,13 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const previous = position.target;
         const available = work.filter(t => !used.has(t));
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
-          const rank = (t: Target) => (t.kind === role ? 0 : 1000) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
+          const rank = (t: Target) => (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);
         })[0];
         if (!target) continue;
-        used.add(target); position.target = target;
+        used.add(target);
+        if (position.target !== target) bindProp(target, index);
+        position.target = target;
         const aim = point(target, index);
         if (!position.initialized) {
           position.x = Math.max(10, Math.min(innerWidth - 112, aim.rect.left + Math.min(100, aim.rect.width * .4) + index * 5));
@@ -167,7 +228,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           position.angle += ((angle - position.angle + 540) % 360 - 180) * Math.min(1, dt / 160);
         }
         // Text waits for its editor to arrive, including a deliberate move to a new line.
-        if (simplified || target.kind !== "text" || distance < 48 || target.elapsed < target.delay) {
+        if (simplified || (!target.cinematic && target.kind !== "text") || distance < 48 || target.elapsed < target.delay) {
           target.elapsed += dt * (simplified ? 4 : velocity > .6 ? 1.5 : 1);
           target.progress = autonomousProgress(target.progress, target.elapsed, target.delay, target.duration);
           if (target.progress >= 1) { finish(target); continue; } else paint(target);
@@ -178,13 +239,27 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           cursor.querySelector<SVGElement>("svg")!.style.transform = `rotate(${position.angle}deg)`;
           cursor.dataset.click = String(target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0);
           cursor.querySelector<HTMLElement>(".agent-action")!.textContent = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
-          const guide = guides[index], rect = aim.rect;
+          let guideRect: SceneBox = aim.rect;
+          if (target.cinematic) {
+            const prop = props[index], scene = sceneFor(target, index, aim.rect);
+            prop.style.opacity = String(scene.opacity * (1 - scene.handoff));
+            prop.style.width = aim.rect.width + "px"; prop.style.height = aim.rect.height + "px";
+            prop.style.transform = `translate3d(${scene.left}px,${scene.top}px,0) scale(${scene.scale})`;
+            prop.dataset.phase = scene.phase;
+            prop.querySelector<HTMLElement>(".prop-image")!.style.opacity = String(scene.replacement);
+            prop.querySelector<HTMLElement>(".prop-label")!.style.opacity = String(scene.replacement);
+            prop.querySelector<HTMLElement>(".prop-template")!.style.opacity = String(1 - scene.replacement);
+            prop.querySelector<HTMLElement>(".prop-template-label")!.style.opacity = String(1 - scene.replacement);
+            prop.querySelector<HTMLElement>(".prop-operation")!.textContent = scene.phase === "pick" ? prop.dataset.copy === "true" ? "duplicate" : "pick up" : scene.phase === "carry" ? "drag" : scene.phase === "resize" ? "resize" : "align";
+            guideRect = scene;
+          }
+          const guide = guides[index], rect = guideRect;
           const selection = guide.querySelector("rect")!;
           selection.setAttribute("x", String(rect.left - 3)); selection.setAttribute("y", String(rect.top - 3));
           selection.setAttribute("width", String(rect.width + 6)); selection.setAttribute("height", String(rect.height + 6));
           selection.style.strokeDashoffset = String(1 - Math.min(1, target.progress * 2));
           guide.setAttribute("opacity", String(Math.min(.65, (1 - target.progress) * 4)));
-          const l = rect.left - 5, r = rect.right + 5, top = rect.top - 5, b = rect.bottom + 5;
+          const l = rect.left - 5, r = rect.left + rect.width + 5, top = rect.top - 5, b = rect.top + rect.height + 5;
           guide.querySelector("path")!.setAttribute("d", `M${l + 6},${top}h-6v6 M${r - 6},${top}h6v6 M${l},${b - 6}v6h6 M${r - 6},${b}h6v-6`);
           if (target.kind === "text" && target.progress > 0 && target.progress < 1) {
             const text = textFrame(target.lines, rect.width, rect.height, typedProgress(target.progress, target.count));

@@ -13,8 +13,10 @@
     "test:watch": "vitest",
     "test:construction": "node scripts/verify-construction.mjs",
     "test:construction:review": "node scripts/verify-autonomous-review.mjs",
+    "test:cinematic": "node scripts/verify-cinematic.mjs",
     "test:layout:capture": "node scripts/capture-layout.mjs --label revision-after",
     "test:layout": "node scripts/verify-visual-revision.mjs",
+    "test:layout:cinematic": "node scripts/compare-cinematic-layout.mjs",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },

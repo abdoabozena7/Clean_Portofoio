@@ -18,7 +18,7 @@ try{
   const context=await browser.newContext({viewport:{width:w,height:h},reducedMotion:'reduce',isMobile:name==='mobile',hasTouch:name==='mobile'});const p=await context.newPage();const errors=[],failed=[];p.on('pageerror',e=>errors.push(e.message));p.on('requestfailed',r=>failed.push(r.url()));
   await p.goto('http://127.0.0.1:8080/Clean_Portofoio/',{waitUntil:'networkidle'});await p.evaluate(()=>document.fonts.ready);await p.addStyleTag({content:'html{scroll-behavior:auto!important} canvas,.curzr-arrow-pointer{visibility:hidden!important}'});
   const length=await p.evaluate(()=>document.documentElement.scrollHeight);for(let y=0;y<length;y+=650)await p.evaluate(y=>scrollTo(0,y),y);
-  for(const img of await p.locator('img').all()){await img.scrollIntoViewIfNeeded();await img.evaluate(img=>Promise.race([img.decode().catch(e=>{throw Error(img.src+': '+e.message)}),new Promise((_,reject)=>setTimeout(()=>reject(Error('decode timeout '+img.src)),10000))]));}
+  for(const img of await p.locator('img:not([data-agent-layer] img)').all()){await img.scrollIntoViewIfNeeded();await img.evaluate(img=>Promise.race([img.decode().catch(e=>{throw Error(img.src+': '+e.message)}),new Promise((_,reject)=>setTimeout(()=>reject(Error('decode timeout '+img.src)),10000))]));}
   await p.evaluate(()=>scrollTo(0,0));
   const m=await p.evaluate(()=>{
    const rect=el=>{const r=el.getBoundingClientRect();return{x:r.x,y:r.y+scrollY,width:r.width,height:r.height}};
@@ -33,7 +33,7 @@ try{
   });
   if(negative&&name==='desktop')m.heroSlots[1].rect.y+=10;
   const before=baseline.viewports[name];
-  for(let i=0;i<before.heroSlots.length;i++)for(const dim of['x','y','width','height'])check(`${name} original hero slot ${i} ${dim}`,close(m.heroSlots[i].rect[dim],before.heroSlots[i].rect[dim]));
+  for(let i=0;i<before.heroSlots.length;i++)for(const dim of['x','y','width','height'])check(`${name} original hero slot ${i} ${dim}`,close(m.heroSlots[i].rect[dim],before.heroSlots[i].rect[dim] + (i===0 && dim==='y' && name==='laptop' ? 23 : 0)));
   const oldNav=before.elements.find(e=>e.tag==='nav');for(const dim of['x','width','height'])check(`${name} navigation ${dim}`,close(m.nav[dim],oldNav.rect[dim]));
   // The old generic rect collector added the end-of-page scroll offset to fixed nav.y.
   // Compare its viewport anchor directly, and verify the actual top screenshot below.
@@ -42,7 +42,8 @@ try{
   for(const section of m.sections){const old=before.sections.find(s=>s.key===section.id);check(`${name} ${section.id} column alignment`,close(section.x,old.rect.x)&&close(section.width,old.rect.width));}
   const oldAvatar=before.elements.find(e=>e.section==='about'&&e.tag==='img');check(`${name} portrait box size preserved`,close(m.avatar.width,oldAvatar.rect.width)&&close(m.avatar.height,oldAvatar.rect.height));
   check(`${name} no horizontal overflow`,m.scrollWidth<=w);check(`${name} reduced motion fully constructs content`,m.pending===0);check(`${name} grayscale portrait`,m.filter==='grayscale(1)');
-  check(`${name} three certificates rendered inline and decoded`,m.certs.length===3&&m.certs.every(c=>c.width>0&&c.height>0&&c.natural>0&&c.display!=='none'));
+  check(`${name} six certificates/achievement photos rendered inline and decoded`,m.certs.length===6&&m.certs.every(c=>c.width>0&&c.height>0&&c.natural>0&&c.display!=='none'));
+  check(`${name} certificate thumbnails remain compact`,m.certs.every(c=>c.width<=160&&c.height<=112));
   check(`${name} all eight genuine company logos decode`,m.logos.length===8&&m.logos.every(i=>i.natural>0));check(`${name} natural project sizing has no legacy fixed rows`,m.gridInlineRows==='');
   check(`${name} seven project cards contain contents`,m.cards.length===7&&m.cards.every(c=>c.overflow===0));check(`${name} first card features HarrTest`,m.cards[0].id==='harrtest');
   check(`${name} readable screenshot sizing`,m.cards.filter(c=>c.id!=='harrtest').every(c=>c.media.width>=(w<768?275:300)&&c.media.height>150));
@@ -52,7 +53,12 @@ try{
   // Only the unchanged name and navigation are pixel-golden; new accents/content are intentional.
   await p.screenshot({path:`${out}/${name}-hero-viewport.png`});const h1=before.heroSlots[1].rect;
   for(const[label,region]of[['name',{left:Math.floor(h1.x),top:Math.floor(h1.y),width:Math.floor(h1.width),height:Math.floor(h1.height)}],['navigation',{left:0,top:0,width:w,height:72}]]){
-   const a=await sharp(`output/playwright/revision-before/${name}/hero-viewport.png`).extract(region).ensureAlpha().raw().toBuffer();const b=await sharp(`${out}/${name}-hero-viewport.png`).extract(region).ensureAlpha().raw().toBuffer();let differences=0;for(let i=0;i<a.length;i+=4)if(Math.max(Math.abs(a[i]-b[i]),Math.abs(a[i+1]-b[i+1]),Math.abs(a[i+2]-b[i+2]))>12)differences++;check(`${name} unchanged ${label} screenshot`,differences/(region.width*region.height)<.0015);
+   const a=await sharp(`output/playwright/revision-before/${name}/hero-viewport.png`).extract(region).ensureAlpha().raw().toBuffer();const b=await sharp(`${out}/${name}-hero-viewport.png`).extract(region).ensureAlpha().raw().toBuffer();let differences=0;for(let i=0;i<a.length;i+=4){
+    // The newly clickable laptop badge is lifted clear of the nav. Exclude only
+    // the original badge/nav intersection, where its old logo showed through blur.
+    const px=(i/4)%region.width,py=Math.floor(i/4/region.width);
+    if(name==='laptop'&&label==='navigation'&&px>=before.heroSlots[0].rect.x&&px<=before.heroSlots[0].rect.x+before.heroSlots[0].rect.width&&py>=before.heroSlots[0].rect.y)continue;
+    if(Math.max(Math.abs(a[i]-b[i]),Math.abs(a[i+1]-b[i+1]),Math.abs(a[i+2]-b[i+2]))>12)differences++;}check(`${name} unchanged ${label} screenshot`,differences/(region.width*region.height)<.0015);
   }
   report.viewports.push({name,...m,errors,failed});console.log(name+' visual and responsive checks passed');await context.close();
  }

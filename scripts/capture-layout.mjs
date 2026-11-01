@@ -37,7 +37,7 @@ try {
     await page.evaluate(() => Promise.race([document.fonts.ready, new Promise((_, reject) => setTimeout(() => reject(new Error('Font loading exceeded 10 seconds')), 10000))]));
     // Calling decode on lazy images before scrolling deadlocks their deferred loading.
     await page.evaluate(() => Promise.race([
-      Promise.all([...document.images].filter(image => image.complete || image.loading !== 'lazy').map(image => image.decode().catch(() => {}))),
+      Promise.all([...document.images].filter(image => !image.closest("[data-agent-layer]")).filter(image => image.complete || image.loading !== 'lazy').map(image => image.decode().catch(() => {}))),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Eager image decoding exceeded 10 seconds')), 10000)),
     ]));
     await page.addStyleTag({ content: 'html {scroll-behavior:auto!important}' });
@@ -50,7 +50,7 @@ try {
     }
     stage('traversal complete; decoding reached lazy images');
     await page.evaluate(() => Promise.race([
-      Promise.all([...document.images].map(image => image.decode().catch(() => {}))),
+      Promise.all([...document.images].filter(image => !image.closest("[data-agent-layer]")).map(image => image.decode().catch(() => {}))),
       new Promise((_, reject) => setTimeout(() => reject(new Error('Image decoding after traversal exceeded 10 seconds')), 10000)),
     ]));
     await page.waitForTimeout(1100);
@@ -72,7 +72,7 @@ try {
       const hero = document.querySelector('section:not([aria-live])');
       const center = hero?.querySelector('.text-center');
       const heroSlots = center ? [...center.children].map((el, i) => ({ index: i, tag: el.tagName, rect: rect(el), text: el.textContent?.trim().slice(0, 100) })) : [];
-      return { sections, elements, grids, heroSlots, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, innerWidth, innerHeight, fonts: document.fonts.status, loadedImages: [...document.images].map(el => ({src: el.src, complete: el.complete, width: el.naturalWidth, height: el.naturalHeight})) };
+      return { sections, elements, grids, heroSlots, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, innerWidth, innerHeight, fonts: document.fonts.status, loadedImages: [...document.images].filter(image => !image.closest("[data-agent-layer]")).map(el => ({src: el.src, complete: el.complete, width: el.naturalWidth, height: el.naturalHeight})) };
     });
     const folder = path.join(output, name); await mkdir(folder, { recursive: true });
     stage('metrics captured; screenshots');

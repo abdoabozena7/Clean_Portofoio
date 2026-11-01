@@ -93,12 +93,14 @@ export const projects: Project[] = [
 export type EducationItem = {
   degree: string; school: string; year: string; image?: string;
   imageAlt?: string; source: string; duration?: string; imageWidth?: number; imageHeight?: number;
+  brief: string; achievement?: boolean; storyUrl?: string;
 };
 
 export const education: EducationItem[] = [
   {
     degree: "Computer Science", school: "Egyptian Chinese University",
     year: "Undergraduate Program", source: profileSources.suppliedProfile,
+    brief: "Studying Computer Science at Egyptian Chinese University.",
   },
   {
     degree: "Artificial Intelligence, Leading the Frontier - International Summer School",
@@ -107,10 +109,12 @@ export const education: EducationItem[] = [
     imageWidth: 489, imageHeight: 695,
     imageAlt: "Harbin Institute of Technology completion certificate for the Artificial Intelligence international summer school, July 7-18, 2025.",
     source: "Owner-supplied HIT completion certificate",
+    brief: "Completed the international summer school exploring the frontiers of artificial intelligence.",
   },
   {
     degree: "AI Agents Intensive", school: "Google × Kaggle",
     year: "Certification", source: profileSources.suppliedProfile,
+    brief: "Completed the AI Agents Intensive program from Google and Kaggle.",
   },
   {
     degree: "GCI World April 2026 - Data Science",
@@ -120,6 +124,7 @@ export const education: EducationItem[] = [
     imageWidth: 1077, imageHeight: 774,
     imageAlt: "GCI World April 2026 completion certificate issued by the Matsuo-Iwasawa Laboratory, University of Tokyo, on August 31, 2026, confirming the final assessment was passed.",
     source: "Owner-supplied GCI completion certificate",
+    brief: "Completed data science theory and implementation coursework and passed the final assessment.",
   },
   {
     degree: "Learning C#", school: "LinkedIn Learning",
@@ -128,6 +133,32 @@ export const education: EducationItem[] = [
     imageWidth: 1031, imageHeight: 795,
     imageAlt: "LinkedIn Learning Learning C# course completion certificate for Abdelrahman Abozena, October 29, 2026, duration 2 hours 54 minutes.",
     source: "Owner-supplied LinkedIn Learning completion certificate",
+    brief: "Completed 2 hours 54 minutes of C# learning with LinkedIn Learning.",
+  },
+  {
+    degree: "Microsoft Machine Learning Engineer", school: "Digital Egypt Pioneers Initiative · MCIT",
+    year: "November 2025 – July 2026 · Completed",
+    brief: "Completed the Microsoft Machine Learning Engineer training track through DEPI.",
+    image: "images/certificates/depi-2026.png", imageWidth: 1122, imageHeight: 610,
+    imageAlt: "DEPI certificate of achievement for the Microsoft Machine Learning Engineer track, November 2025 to July 2026, sponsored by Egypt's Ministry of Communications and Information Technology.",
+    source: "Owner-supplied DEPI certificate of achievement, November 2, 2026",
+  },
+  {
+    degree: "Artificial Intelligence Level 1", school: "Orange Digital Center",
+    year: "September 14–23, 2024 · 24 hours · Grade 99%",
+    brief: "Built AI foundations in data preparation, feature learning, machine learning, and training and testing.",
+    image: "images/certificates/orange-ai-2024.png", imageWidth: 1001, imageHeight: 563,
+    imageAlt: "Orange Digital Center Artificial Intelligence Level 1 completion certificate, 24-hour course in September 2024, grade 99 percent.",
+    source: "Owner-supplied Orange Digital Center certificate, November 2, 2026",
+  },
+  {
+    degree: "IMPACT Hackathon — 1st Place", school: "GDG on Campus · Egyptian Chinese University",
+    year: "2026 · Hivo Studio", achievement: true,
+    brief: "Won first place with Hivo Studio, an AI coding workspace that plans and coordinates complex development tasks.",
+    image: "images/certificates/impact-first-place-2026.png", imageWidth: 1280, imageHeight: 853,
+    imageAlt: "Abdelrahman and teammate celebrating first place at IMPACT with the First Winner award.",
+    source: "Owner-supplied winning photo and publicly accessible LinkedIn IMPACT post",
+    storyUrl: "https://lnkd.in/p/eDP9zBzM",
   },
 ];
 
@@ -253,6 +284,7 @@ export const repositoryStats = {
 export const profileContent = {
   name: "Abdelrahman Abozena",
   headline: "SWE Intern at Microsoft",
+  microsoftStoryUrl: "https://lnkd.in/p/e-7HV-sM",
   currentRole: { title: "SWE Intern", company: "Microsoft", source: profileSources.suppliedProfile },
   linkedinUrl: profileSources.linkedin,
   githubUrl: profileSources.github,
@@ -282,9 +314,9 @@ export const profileContent = {
     { institution: "Egyptian Chinese University", subject: "Computer Science", period: null },
     { institution: "Harbin Institute of Technology", subject: "Artificial Intelligence", period: "July 7-18, 2025" },
   ],
-  verifiedCertifications: education.slice(1).map(item => ({ title: item.degree, credentialUrl: null, source: item.source })),
+  verifiedCertifications: education.slice(1).filter(item => !item.achievement).map(item => ({ title: item.degree, credentialUrl: null, source: item.source })),
   verifiedRecordSource: profileSources.suppliedProfile,
-  verifiedAchievements: [] as { title: string; date: string | null; sourceUrl: string }[],
+  verifiedAchievements: [{ title: "IMPACT Hackathon 2026 — 1st Place with Hivo Studio", date: null, sourceUrl: "https://lnkd.in/p/eDP9zBzM" }],
   // Add only owner-confirmed or publicly sourced updates. Drafts do not render.
   recentUpdates: [] as { title: string; date: string; sourceUrl: string }[],
   nextUpdate: { title: null, date: null, sourceUrl: null },

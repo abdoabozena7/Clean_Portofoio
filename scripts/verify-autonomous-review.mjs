@@ -6,7 +6,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const output = 'output/playwright/autonomous-review';
 await mkdir(output, { recursive: true });
-const files = ['src/hooks/useScrollConstruction.ts', 'src/components/AgentConstruction.tsx', 'src/lib/agentConfig.ts', 'src/lib/palette.ts', 'src/styles/construction.css', 'src/lib/construction.ts', 'src/components/ArrowPointerCursor.tsx'];
+const files = ['src/hooks/useScrollConstruction.ts', 'src/components/AgentConstruction.tsx', 'src/lib/agentConfig.ts', 'src/lib/palette.ts', 'src/styles/construction.css', 'src/lib/construction.ts', 'src/lib/constructionScene.ts', 'src/components/ArrowPointerCursor.tsx'];
 const fingerprint = async () => {
   const hash = createHash('sha256');
   for (const file of files) { hash.update(file); hash.update(await readFile(file)); }
