@@ -48,8 +48,9 @@ try {
   await snap('hero-building');
   const initialMasks = await page.locator('[data-building]').count();
   check('Construction actually applies masks to real elements', initialMasks > 10);
-  const active = await page.locator('[data-agent]').evaluateAll(els => els.filter(el => getComputedStyle(el).opacity !== '0').length);
-  check('Eight autonomous virtual cursors work during hero construction', active, 8);
+  await page.waitForFunction(() => [...document.querySelectorAll('[data-agent]')].some(el => Number(getComputedStyle(el).opacity) > .5));
+  const active = await page.locator('[data-agent]').evaluateAll(els => els.filter(el => Number(getComputedStyle(el).opacity) > .5).length);
+  check('The directed hero has a purposeful small active team', active >= 1 && active <= 5);
   check('Agent pointers use the original real cursor silhouette', await page.evaluate(() => {
     const original = [...document.querySelectorAll('.curzr-arrow-pointer path')].map(p => p.getAttribute('d'));
     return [...document.querySelectorAll('[data-agent]')].every(agent => JSON.stringify([...agent.querySelectorAll('path')].map(p => p.getAttribute('d'))) === JSON.stringify(original));

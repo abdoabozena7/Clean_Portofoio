@@ -20,17 +20,17 @@ try {
   const before = await p.locator('#hero h1').evaluate(el => ({ text: el.textContent, rect: el.getBoundingClientRect().toJSON() }));
   const firstLetters = await p.locator('[data-name-assembly]').innerHTML();
   await p.waitForTimeout(400);
-  check('Name is assembled from individually moving measured letters', await p.locator('[data-name-assembly] > span').count() === 19 && await p.locator('[data-name-assembly]').innerHTML() !== firstLetters);
+  check('Name is assembled as measured word blocks with real editing guides', await p.locator('[data-name-piece]').count() === 4 && await p.locator('[data-name-frame]').count() === 3 && await p.locator('[data-name-assembly]').innerHTML() !== firstLetters);
   check('The real accessible name is unchanged while its letters move', await p.locator('#hero h1').textContent() === before.text);
   const role = await p.locator('#hero .mt-6.h-8').textContent();
-  await p.waitForFunction(() => { const letters = [...document.querySelectorAll('[data-name-assembly] > span')]; return document.querySelector('#hero h1').hasAttribute('data-building') && letters.length === 19 && letters.every(el => +el.style.opacity === 1 && new DOMMatrix(getComputedStyle(el).transform).a === 1); }, null, { timeout: 7000 });
+  await p.waitForFunction(() => +document.querySelector('[data-name-assembly]').dataset.nameProgress > .94 && document.querySelector('#hero h1').hasAttribute('data-building'), null, { timeout: 9000 });
   const alignment = await p.evaluate(() => {
     const ranges = [], walker = document.createTreeWalker(document.querySelector('#hero h1'), NodeFilter.SHOW_TEXT);
-    while (walker.nextNode()) { const n = walker.currentNode; for (let i = 0; i < n.textContent.length; i++) { if (!n.textContent[i].trim()) continue; const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1); ranges.push(r.getBoundingClientRect()); } }
-    return [...document.querySelectorAll('[data-name-assembly] > span')].map((el, i) => { const r = document.createRange(); r.selectNodeContents(el); const box = r.getBoundingClientRect(); return { dx: box.left - ranges[i].left, dy: box.top - ranges[i].top }; });
+    while (walker.nextNode()) { const n=walker.currentNode, text=n.textContent, from=text.search(/\S/); if(from<0)continue; const end=text.trimEnd().length, dot=text[end-1]==='.'; const r=document.createRange();r.setStart(n,from);r.setEnd(n,dot?end-1:end);ranges.push(r.getBoundingClientRect());if(dot){const d=document.createRange();d.setStart(n,end-1);d.setEnd(n,end);ranges.push(d.getBoundingClientRect());} }
+    return ['first','surname','period'].map((kind,i) => { const el=document.querySelector(`[data-name-piece="${kind}"]`),r=document.createRange();r.selectNodeContents(el);const box=r.getBoundingClientRect();return{dx:box.left-ranges[i].left,dy:box.top-ranges[i].top}; });
   });
-  report.diagnostics.push({ nameLetterAlignment: alignment });
-  check('Every landed letter matches the real heading glyph position before handoff', alignment.every(g => Math.abs(g.dx) < .2 && Math.abs(g.dy) < .2));
+  report.diagnostics.push({ nameWordAlignment: alignment });
+  check('Every word and period matches its native text Range before handoff', alignment.length===3 && alignment.every(g=>Math.abs(g.dx)<.2&&Math.abs(g.dy)<.2));
   await p.screenshot({ path: `${out}/name-landed.png` });
   await p.waitForFunction(() => !document.querySelector('#hero [data-building]'), null, { timeout: 9000 });
   check('Name handoff removes glyph props and displays the real heading once', await p.locator('[data-name-assembly]').evaluate(el => +el.style.opacity === 0) && await p.locator('#hero h1').evaluate(el => getComputedStyle(el).clipPath === 'none'));

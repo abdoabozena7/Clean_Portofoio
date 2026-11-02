@@ -64,11 +64,13 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     };
     let lastTick = performance.now();
     const byElement = new Map<HTMLElement, Target>();
+    const completed = new WeakSet<HTMLElement>();
+    let mobileRegistry = coarse.matches || innerWidth < 768, reflowing = false;
     const preparedImages = new WeakSet<HTMLImageElement>();
     const nameHeading = document.querySelector<HTMLElement>('[data-construction-scene="letters"]');
     const nameScene = nameHeading ? createNameConstruction(nameHeading, layer) : null;
 
-    for (const section of sections) {
+    const registerTargets = (section: HTMLElement) => {
       const candidates = new Set<HTMLElement>(section.querySelectorAll<HTMLElement>("[data-construction],h1,h2,h3,h4,p,img,a,button,input,textarea,span"));
       // Existing containers reserve their exact space while their surfaces are built.
       for (const child of Array.from(section.children)) {
@@ -76,6 +78,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       }
       let order = 0;
       for (const el of candidates) {
+        if (byElement.has(el)) continue;
         if (el.closest("[data-agent-layer],.animate-marquee,.animate-marquee-reverse")) continue;
         if (el.closest("[data-construction-skip]") && !el.dataset.construction) continue;
         if (el.tagName === "SPAN" && (el.children.length || !el.textContent?.trim() || el.parentElement?.closest("h1,h2,h3,h4,p,[data-construction='text']"))) continue;
@@ -87,12 +90,13 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const count = el.textContent?.trim().length || 1;
         const cinematic = el.dataset.constructionScene !== "activity" && ((kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction")));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
-          progress: 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
-          duration: el.dataset.constructionScene === "letters" ? 3200 : el.dataset.constructionScene === "activity" ? 1300 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
+          progress: completed.has(el) ? 1 : 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
+          duration: el.dataset.constructionScene === "letters" ? 5500 : el.dataset.constructionScene === "activity" ? 1300 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
           delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
+        byElement.set(el, targets[targets.length - 1]);
       }
-    }
-    targets.forEach(t => byElement.set(t.el, t));
+    };
+    sections.filter(s => !mobileRegistry || s.id === "hero").forEach(registerTargets);
 
     const measure = () => {
       for (const t of targets) {
@@ -103,9 +107,10 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (t.el.dataset.constructionScene === "activity") t.weeks = [...new Set(Array.from(t.el.querySelectorAll<SVGRectElement>("rect[data-date]")).map(rect => rect.parentElement as unknown as SVGGElement))];
       }
       dirty = false;
-      nameScene?.measure();
+      if (nameHeading && byElement.get(nameHeading)?.progress !== 1) nameScene?.measure();
     };
     const finish = (t: Target) => {
+      completed.add(t.el);
       t.progress = 1; delete t.el.dataset.building;
       t.el.style.removeProperty("--construction-clip"); t.el.style.removeProperty("--construction-opacity");
       t.el.dataset.constructed = "true";
@@ -221,19 +226,20 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       }
       return { rect, x: Math.max(10, Math.min(innerWidth - 20, x)), y: Math.max(78, Math.min(innerHeight - 42, y)) };
     };
-    const schedule = () => { if (!frame && !stopped && !document.hidden) frame = requestAnimationFrame(tick); };
+    const schedule = () => { if (!frame && !stopped && !document.hidden && !reflowing) frame = requestAnimationFrame(tick); };
     const tick = (now: number) => {
       frame = 0;
-      if (stopped || document.hidden) return;
+      if (stopped || document.hidden || reflowing) return;
       const dt = Math.min(50, Math.max(0, now - lastTick)); lastTick = now;
       const repaint = dirty;
       if (dirty) { measure(); positions.forEach((p, i) => { if (p.target) bindProp(p.target, i); }); }
       if (reduced.matches) { targets.forEach(finish); hideAgents(); return; }
+      if (mobileRegistry && targets.every(t => t.progress === 1)) { hideAgents(); dirty = false; return; }
       const simplified = coarse.matches || innerWidth < 768;
       const intent = getScrollIntent(), velocity = Math.abs(intent.speed);
       const urgency = intent.active && intent.userDriven ? clamp01((velocity - .4) / 1.1) : 0;
-      const lead = intent.userDriven ? Math.min(innerHeight * 2.5, velocity * 650) : 0;
-      const fast = velocity > 1.1 && intent.active && intent.userDriven;
+      const fast = intent.active && intent.userDriven && (intent.scan || velocity > 3.5);
+      const lead = fast ? Math.min(innerHeight * 2.5, velocity * 650) : 0;
       for (const section of sections) {
         const rect = section.getBoundingClientRect();
         if (rect.top < innerHeight + Math.max(220, lead) && rect.bottom > -lead) {
@@ -248,7 +254,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (t.progress === 1) continue;
         const top = t.top - scrollY;
         const visible = t.width > 0 && t.height > 0 && top < innerHeight * .98 && top + t.height > 76;
-        const approaching = intent.active && intent.userDriven && velocity > .65 && (intent.direction > 0
+        const approaching = fast && (intent.direction > 0
           ? top < innerHeight * .85 + lead && top + t.height > 76
           : top + t.height > 76 - lead && top < innerHeight * .85);
         if ((!t.width || !t.height) || top + t.height < 76 || approaching || (visible && (jump || fast))) { ready(t); continue; }
@@ -264,6 +270,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       hideAgents();
       const assembling = targets.find(t => t.el === nameHeading && t.progress < 1 && work.includes(t));
       if (assembling && nameScene) {
+        // The word workshop owns the hero stage; ancestor frame props must not
+        // cover it or hide its supporting controls during the directed scene.
+        for (let parent = nameHeading?.parentElement; parent && parent !== assembling.section; parent = parent.parentElement) {
+          const target = byElement.get(parent); if (target) finish(target);
+        }
         // Advance one shared clock once, then let every pointer manipulate its own glyph.
         assembling.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
         assembling.progress = autonomousProgress(assembling.progress, assembling.elapsed, assembling.delay, assembling.duration);
@@ -289,7 +300,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const cursor = cursors[index], position = positions[index];
         const role = cursor.dataset.role;
         const previous = position.target;
-        const available = work.filter(t => !used.has(t) && t.el !== nameHeading && !(t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500));
+        const available = work.filter(t => t.progress < 1 && !used.has(t) && t.el !== nameHeading && !(assembling && assembling.progress < .86 && t.section === assembling.section && !t.el.closest("[data-microsoft-headline]")) && !(t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500));
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
           const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);
@@ -361,8 +372,18 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       targets.filter(t => active.includes(t.el.closest<HTMLElement>("[data-scan-group]")?.dataset.scanGroup || "")).forEach(ready);
       hideAgents(); dirty = true; schedule();
     };
-    const onActivityReady = () => { dirty = true; schedule(); };
-    const onMeasure = () => { dirty = true; schedule(); };
+    const refreshMode = () => {
+      const next = coarse.matches || innerWidth < 768;
+      if (next === mobileRegistry) return;
+      mobileRegistry = next; jump = true;
+      if (next) {
+        for (let i = targets.length - 1; i >= 0; i--) if (targets[i].section.id !== "hero") { finish(targets[i]); byElement.delete(targets[i].el); targets.splice(i, 1); }
+      } else sections.forEach(registerTargets);
+    };
+    const onActivityReady = () => { if (!mobileRegistry && !reflowing) { dirty = true; schedule(); } };
+    const onMeasure = () => { refreshMode(); if (reflowing) return; dirty = true; schedule(); };
+    const onLayoutStart = () => { reflowing = true; cancelAnimationFrame(frame); frame = 0; hideAgents(); nameScene?.hide(); };
+    const onLayoutSettled = () => { reflowing = false; lastTick = performance.now(); dirty = true; schedule(); };
     const onJump = () => { jump = true; schedule(); };
     const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) onJump(); };
     const onFocus = (event: FocusEvent) => {
@@ -375,6 +396,12 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     };
     const observer = new ResizeObserver(onMeasure);
     sections.forEach(section => observer.observe(section));
+    const entranceObserver = new IntersectionObserver(entries => {
+      if (!mobileRegistry || reduced.matches) return;
+      entries.forEach(entry => { const el = entry.target as HTMLElement; if (entry.isIntersecting && !el.dataset.mobileEnter) el.dataset.mobileEnter = "true"; });
+    }, { threshold: .04 });
+    sections.filter(s => s.id !== "hero").forEach(s => entranceObserver.observe(s));
+    window.addEventListener("portfolio:layout-start", onLayoutStart); window.addEventListener("portfolio:layout-settled", onLayoutSettled);
     window.addEventListener("resize", onMeasure, { passive: true }); window.addEventListener("portfolio:regroup", onRegroup);
     window.addEventListener("portfolio:activity-ready", onActivityReady);
     window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump); window.addEventListener("pageshow", onPageShow);
@@ -385,7 +412,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     sections.forEach(s => s.querySelectorAll("img").forEach(img => img.addEventListener("load", onMeasure)));
     resolveInitialHash(); measure(); targets.forEach(paint); tick(performance.now());
     return () => {
-      stopped = true; cancelAnimationFrame(frame); observer.disconnect();
+      stopped = true; cancelAnimationFrame(frame); observer.disconnect(); entranceObserver.disconnect();
+      window.removeEventListener("portfolio:layout-start", onLayoutStart); window.removeEventListener("portfolio:layout-settled", onLayoutSettled);
       unsubscribe(); window.removeEventListener("resize", onMeasure); window.removeEventListener("portfolio:regroup", onRegroup);
       window.removeEventListener("portfolio:activity-ready", onActivityReady);
       window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump); window.removeEventListener("pageshow", onPageShow);
@@ -394,6 +422,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       window.removeEventListener("wheel", markNavigationTouched); window.removeEventListener("touchstart", markNavigationTouched); window.removeEventListener("keydown", markNavigationTouched);
       sections.forEach(s => s.querySelectorAll("img").forEach(img => img.removeEventListener("load", onMeasure)));
       targets.forEach(t => { finish(t); delete t.el.dataset.constructed; });
+      sections.forEach(s => { delete s.dataset.mobileEnter; });
       nameScene?.dispose();
     };
   }, [layerRef]);

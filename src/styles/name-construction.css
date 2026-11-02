@@ -1,0 +1,8 @@
+.name-workshop-piece { position: absolute; left: 0; top: 0; display: block; white-space: pre; transform-origin: 0 0; will-change: transform; }
+.name-workshop-guides { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.name-workshop-guides g { opacity: 0; }
+.name-workshop-guides rect { fill: none; stroke: currentColor; stroke-width: 1.5; }
+.name-workshop-guides g > path { fill: #fff; stroke: currentColor; stroke-width: 1.5; }
+.name-workshop-alignment { fill: none; stroke: #2bbaa5; stroke-width: 1; stroke-dasharray: 4 5; opacity: 0; }
+.construction-letters > .name-workshop-readout { position: absolute; left: 0; top: 0; padding: 4px 6px; color: #111920; border: 1px solid #111920; font: 600 9px/1.2 ui-monospace, monospace; white-space: nowrap; opacity: 0; }
+.agent-construction .virtual-agent[data-agent="layout"][data-letter="0"] .agent-label { top: -45px; left: -7px; }

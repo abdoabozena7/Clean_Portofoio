@@ -1,83 +1,45 @@
-import { useState, useEffect } from "react";
-import { ArrowUp, Check, ArrowUpLeft } from "lucide-react";
-import type { AttentionView } from "@/hooks/useAttentionJourney";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ArrowUp, ArrowUpRight, Check, X } from "lucide-react";
+import { getExploration, subscribeExploration } from "@/lib/exploration";
 
-const ScrollToTop = () => {
-  const [visible, setVisible] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [attention, setAttention] = useState<AttentionView | null>(null);
-
+/** A transparent map of five highlights, independent from document scroll distance. */
+export default function ScrollToTop() {
+  const exploration = useSyncExternalStore(subscribeExploration, getExploration, getExploration);
+  const [visible, setVisible] = useState(false), [open, setOpen] = useState(false);
+  const [route, setRoute] = useState("all");
+  const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
+  const core = exploration.items.filter(item => item.critical);
+  const count = core.filter(item => exploration.explored.includes(item.id)).length;
+  const percentage = exploration.total ? Math.round(count / exploration.total * 100) : 0;
+  const remaining = exploration.items.filter(item => !exploration.explored.includes(item.id));
+  const inRoute = (id: string) => route === "all" || (route === "ai" ? /project-|skills-/.test(id) : /experience-|education-|honors-/.test(id));
+  const next = remaining.find(item => inRoute(item.id) && item.id === exploration.suggestedId) || remaining.find(item => inRoute(item.id));
   useEffect(() => {
-    const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      const docHeight =
-        document.documentElement.scrollHeight - window.innerHeight;
-      const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-
-      setProgress(scrollPercent);
-      setVisible(scrollTop > 400);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    const updateAttention = (event: Event) => setAttention((event as CustomEvent<AttentionView>).detail);
-    window.addEventListener("portfolio:attention-status", updateAttention);
-    return () => { window.removeEventListener("scroll", handleScroll); window.removeEventListener("portfolio:attention-status", updateAttention); };
+    const update = () => setVisible(scrollY > 400); update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => window.removeEventListener("scroll", update);
   }, []);
-
-  // Circle configuration
-  const size = 48;
-  const strokeWidth = 3;
-  const center = size / 2;
-  const radius = center - strokeWidth - 2; // -2 for padding
-  const circumference = 2 * Math.PI * radius;
-  const highlight = attention && ["warning", "relocating", "reviewing", "complete"].includes(attention.phase);
-  const offset = circumference - (highlight ? attention.progress : progress / 100) * circumference;
-
-  return (
-    <button
-      onClick={() => highlight && attention.phase !== "complete" ? window.dispatchEvent(new Event("portfolio:attention-return")) : window.scrollTo({ top: 0, behavior: "smooth" })}
-      data-attention-ring={highlight ? attention.phase : undefined}
-      className={`scroll-ring fixed bottom-6 left-6 z-50 group transition-all duration-500 ease-out ${
-        visible || highlight
-          ? "opacity-100 translate-y-0"
-          : "opacity-0 translate-y-8 pointer-events-none"
-      }`}
-      aria-label={highlight ? attention.phase === "complete" ? "Highlight complete · scroll to top" : `Return to ${attention.item?.title}` : "Scroll to top"}
-    >
-      <div className="relative flex items-center justify-center bg-background/80 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300">
-        <svg width={size} height={size} className="rotate-[-90deg]">
-          {/* Background Ring */}
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="transparent"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            className="text-foreground/10"
-          />
-          {/* Progress Ring */}
-          <circle
-            cx={center}
-            cy={center}
-            r={radius}
-            fill="transparent"
-            stroke="currentColor"
-            strokeWidth={strokeWidth}
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-            className="text-foreground transition-all duration-100"
-          />
-        </svg>
-
-        {/* Icon */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          {highlight ? attention.phase === "complete" ? <Check className="w-5 h-5" /> : <ArrowUpLeft className="w-5 h-5" /> : <ArrowUp className="w-5 h-5 text-foreground/80 group-hover:-translate-y-0.5 transition-transform duration-300" />}
-        </div>
-      </div>
+  useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: PointerEvent) => { if (!root.current?.contains(event.target as Node)) setOpen(false); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); trigger.current?.focus({ preventScroll: true }); } };
+    window.addEventListener("pointerdown", dismiss, { passive: true }); window.addEventListener("keydown", escape);
+    return () => { window.removeEventListener("pointerdown", dismiss); window.removeEventListener("keydown", escape); };
+  }, [open]);
+  const visit = (id: string) => { setOpen(false); window.dispatchEvent(new CustomEvent("portfolio:explore-highlight", { detail: id })); };
+  const circumference = 2 * Math.PI * 21;
+  return <div ref={root} className={`exploration-control ${visible || open ? "is-visible" : ""}`}>
+    <button ref={trigger} type="button" className="exploration-trigger" onClick={() => setOpen(value => !value)} aria-label={`Highlights explored: ${percentage}%. Open exploration map`} aria-expanded={open} aria-controls="exploration-map">
+      <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="none" stroke="#11192020" strokeWidth="2" /><circle className="exploration-arc" cx="24" cy="24" r="21" fill="none" stroke="var(--accent-teal)" strokeWidth="3" strokeDasharray={circumference} strokeDashoffset={circumference * (1 - percentage / 100)} /></svg>
+      <strong>{percentage}<span>%</span></strong><span className="exploration-label">Highlights<br />explored</span>
     </button>
-  );
-};
-
-export default ScrollToTop;
+    {open && <section id="exploration-map" className="exploration-map" aria-label="Explore portfolio highlights" data-exploration-map>
+      <div className="exploration-map-head"><div><span className="cue-kicker">Your exploration map</span><h2>{count} of {exploration.total} highlights explored</h2></div><button type="button" className="map-close" aria-label="Close exploration map" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }}><X className="w-4 h-4" /></button></div>
+      <p className="exploration-explainer">Counts after 3 seconds visible in full detail, or when you open a highlight’s source or image. An estimate of exposure, not reading. This visit only.</p>
+      <div className="exploration-routes" aria-label="Choose what to explore">{[["all", "All"], ["ai", "AI & agents"], ["career", "Career & learning"]].map(([id, label]) => <button type="button" key={id} aria-pressed={route === id} onClick={() => setRoute(id)}>{label}</button>)}</div>
+      {next ? <button type="button" className="exploration-next" onClick={() => visit(next.id)}><span><span className="cue-kicker">One more story?</span><strong>{next.message}</strong></span><ArrowUpRight className="w-4 h-4 shrink-0" /></button> : <p className="exploration-done">That route is explored. Feel free to keep browsing.</p>}
+      <ul className="exploration-items">{core.map(item => <li key={item.id}><button type="button" onClick={() => visit(item.id)}><span className={`exploration-check ${exploration.explored.includes(item.id) ? "is-explored" : ""}`} aria-hidden="true">{exploration.explored.includes(item.id) && <Check className="w-3 h-3" />}</span><span>{item.title}</span><span className="sr-only">{exploration.explored.includes(item.id) ? "Explored" : "Not yet explored"}</span><ArrowUpRight className="w-3 h-3 ml-auto shrink-0" /></button></li>)}</ul>
+      <button type="button" className="map-back-top" aria-label="Scroll to top" onClick={() => { setOpen(false); window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" }); }}><ArrowUp className="w-3 h-3" /> Back to top</button>
+    </section>}
+  </div>;
+}
