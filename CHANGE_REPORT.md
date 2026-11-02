@@ -1,6 +1,6 @@
 # Reversible discovery score and complete hero building - 2 November2026
 
-Final implementation is verified; authorized release/live checks are next. Original/final source history and previous live release remain preserved. Current user asks for real expanded exposure, reversible progress, round/curved controls and no90%-complete hero pop.
+Published and verified: https://abdoabozena7.github.io/Clean_Portofoio/ . Runtime sourcefbac916 is pushed; gh-pagesd2b58a9666d0336bcb79df0fb065018df5ec4400 completed successfulPagesworkflow41457057276.21actual desktop/mobile live checks pass; normalURL andall3JS/CSSSHA256s match testedproduction. Original/final source history and previous live release remain preserved. Current user asks for real expanded exposure, reversible progress, round/curved controls and no90%-complete hero pop.
 
 ## Result
 
@@ -24,7 +24,7 @@ Final all-src SHA256:50f4982fc2861f381b2beb1e35d0e25a561deff68b59592ad45f145854c
 
 A fair gamecaption is: Can you figure out what moves this progress ring? Scrolling alone won't do it. No socialpostsent. The algorithm is client-side/public, so treat this as guessing interaction rather than a secret or verified reading detector. Smartest UX of the year is an untested superlative, not established by functional checks. Primary guidance for a nextstep: https://www.nngroup.com/articles/usability-testing-101/ and https://www.nngroup.com/articles/benchmarking-ux/ . Test with realvisitors, measure navigation success, comprehension and frustration before making superiority/retention claims. No such study has been run.
 
-Files: newdiscoveryScore.ts/unitmodelchecks anddiscovery/complete-route/hero verifiers; updated useAttentionJourney/explorationstore/ScrollToTop/adaptive.css/useScrollConstruction andtestaliases/liveverifier. No dependencies/profilecontent/sectionlayoutchanges. Evidence output/playwright/discovery,discovery-completion,discovery-production,hero-completion,fluid-layout,dynamic,cinematic andoutput/research/fluid-review. NativeEdge/Chromiumtouch/reducedmotion scope, actual screenshots inspected. Instruction-onlyHarrTestlatest2.6.1; native VERIFIED_WITHIN_SCOPE, formal sealedROOT_GOAL_UNVERIFIED(notexecuted). Release/liveverification pending.
+Files: newdiscoveryScore.ts/unitmodelchecks anddiscovery/complete-route/hero verifiers; updated useAttentionJourney/explorationstore/ScrollToTop/adaptive.css/useScrollConstruction andtestaliases/liveverifier. No dependencies/profilecontent/sectionlayoutchanges. Evidence output/playwright/discovery,discovery-completion,discovery-production,hero-completion,fluid-layout,dynamic,cinematic andoutput/research/fluid-review. NativeEdge/Chromiumtouch/reducedmotion scope, actual screenshots inspected. Instruction-onlyHarrTestlatest2.6.1; native VERIFIED_WITHIN_SCOPE, formal sealedROOT_GOAL_UNVERIFIED(notexecuted). Release/liveverification complete:21genuine livechecksPASS including actualexpandedscoregrowth, realfastskipdecline, actualcirculartrigger, optionalmapnavigation/freewheel, authenticIMPACTphoto, mobilehero-onlyagents/compaction/accessiblerestoration andno runtimeerrors. Priorpublisheda2432dd preserved at baseline/pre-discovery-score-2026-11-02. No runtimechangesaftertestedrelease. See DEPLOYMENT.md.
 
 ---
 

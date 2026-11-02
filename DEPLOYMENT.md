@@ -1,3 +1,19 @@
+# Verified discovery-score and complete-hero release - 2 November2026
+
+Live: https://abdoabozena7.github.io/Clean_Portofoio/
+
+- Runtime sourcefbac916 on codex/scroll-agent-construction; finalall-src SHA25650f4982fc2861f381b2beb1e35d0e25a561deff68b59592ad45f145854c72e29.
+- Existingnpmrundeploy under continuinguserauthorization publishedgh-pagesd2b58a9666d0336bcb79df0fb065018df5ec4400.
+- GitHubPagesworkflow https://github.com/abdoabozena7/Clean_Portofoio/actions/runs/41457057276 completed/success withmatchinghead.
+- NormalpublicHTML/all3productionJS-CSSbytehashes match thetestedbuild: index-D3lJIp0R.js, index-N-YmI_9J.css, Tooltip-BAxPWbMb-D76Z9I16.js. SHA256receipts in output/playwright/fluid-live/report.json.
+-21actual livechecksPASS: completedrealhero/name/Microsoft, originalshortAbout/projectorder, actualexpandedviewscoregrowth, circularcontrol, actualfastscrollscoredecline, smallcurvedoptionalreminder, noautoreturn/freewheel, explicitmapRevisit, genuine1280x853IMPACTZoom, mobilecompactionwithnoagentsbelowhero, properlabel/rules/accessiblerestoration/nooverflow/runtimeerrors. DefaultnativeEdge transport; previousrecordedHTTP2cold-imagestall caveat remains documented, no universalimage-speed claim.
+- Finalsource22productiondiscovery +3actual33story100completion +65fluid +60productioninteractions +28dynamic +21cinematic +2268four-sizegeometry/content/namepixel checksPASS.12scopedhero natural-finishchecksand23name probesvalid;6unit/build/types/lintPASS,7oldFastRefreshwarnings/oldBrowserslistdata. NativeEdge/Chromiumtouch/reducedmotionscope; no physicalSafari/CWV/user-study/smartest-UXclaim.
+- Priorpublisheda2432dd remains at baseline/pre-discovery-score-2026-11-02, earlierbaseline/sourcecommits retained. Runtimechanges confined to thenamedsourcebranchandexistinggh-pagesflow. Finalverificationdocscommitchangesnoruntime.
+
+Temporary8082previewstoppedafterverification; existing8080localpreview remains. No mandatorypopup, scrolllock, automaticreturn, analytics/storage/socialpost or LLM API. Full evidence/corrected findings and gamecaption advice in CHANGE_REPORT.md.
+
+---
+
 # Verified fluid browsing and exploration release - 2 November2026
 
 Additional live image verification: all6original project PNGs match local SHA256s and all6fully decode at their real dimensions in native Edge over HTTP/1.1, without routing/mocks. Actual completed screenshot inspected (fluid-live/desktop-projects-decoded.png). The default automated Edge HTTP/2 connection in this environment stalled image streams beyond60s; independent real HTTP downloads completed in0.34-16.28s and HTTP/1.1 Edge completed. This is a recorded transport/environment limitation; no universal cold-image-loading or physical-device speed guarantee is claimed. Runtime assets were not changed to hide it. Receipts: fluid-live/project-images.json and project-image-bytes.json.

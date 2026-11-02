@@ -1,6 +1,6 @@
 # Current revision
 
-See DISCOVERY_PLAN.md and the newest CHANGE_REPORT.md entry. Reversible all-story exposure score, round controls/curved side panel and complete per-element hero construction are implemented and verified; existing authorized Pages release/live verification is the finalstep. Prior5-highlight/source-click instant-award contract is superseded by the user's expanded-visible-content requirement. Existing free native scrolling/mobile hero-only agents remain. Earlier plans below are historical.
+See DISCOVERY_PLAN.md and the newest CHANGE_REPORT.md entry. Reversible all-story exposure score, round controls/curved side panel and complete per-element hero construction are implemented, tested and deployed under existing authorization. Sourcefbac916; publishedgh-pagesd2b58a9, successfulPagesrun41457057276 and21livechecks/productionbytehashes verified. Prior5-highlight/source-click instant-award contract is superseded by the user's expanded-visible-content requirement. Existing free native scrolling/mobile hero-only agents remain. Earlier plans below are historical.
 
 # Portfolio construction enhancement — local only
 
