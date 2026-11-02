@@ -7,7 +7,7 @@ import { createNameConstruction } from "@/lib/nameConstruction";
 type Kind = "text" | "asset" | "structure";
 type Target = {
   el: HTMLElement; section: HTMLElement; kind: Kind; top: number; left: number; width: number; height: number;
-  lines: TextLine[]; count: number; progress: number; elapsed: number; visibleSince: number | null;
+  lines: TextLine[]; count: number; progress: number; elapsed: number; active: number; visibleSince: number | null;
   duration: number; delay: number; order: number; cinematic: boolean; weeks?: SVGGElement[];
 };
 type Position = { x: number; y: number; angle: number; initialized: boolean; target: Target | null };
@@ -90,8 +90,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const count = el.textContent?.trim().length || 1;
         const cinematic = el.dataset.constructionScene !== "activity" && ((kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction")));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
-          progress: completed.has(el) ? 1 : 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
-          duration: el.dataset.constructionScene === "letters" ? 5500 : el.dataset.constructionScene === "activity" ? 1300 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
+          progress: completed.has(el) ? 1 : 0, elapsed: 0, active: 0, visibleSince: null, order: order++, cinematic,
+          duration: el.dataset.constructionScene === "letters" ? 5500 : el.dataset.constructionScene === "activity" ? 1300 : section.id === "hero" && kind === "asset" ? 1050 + (order % 4) * 85 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
           delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
         byElement.set(el, targets[targets.length - 1]);
       }
@@ -261,8 +261,10 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (visible) {
           t.visibleSince ??= now;
           if (t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - t.visibleSince < 2500) { work.push(t); continue; }
-          // Bounded visible work is fail-open; offscreen tasks never keep running.
-          if (now - t.visibleSince > (simplified ? 5500 : 8000)) { finish(t); continue; }
+          // Lower sections fail open in the reading area. The watched hero has
+          // its own directed job clocks: time spent waiting for the name scene
+          // must not finish every remaining control in the same deadline frame.
+          if (t.section.id !== "hero" && now - t.visibleSince > (simplified ? 5500 : 8000)) { finish(t); continue; }
           work.push(t);
         }
         if (repaint || !t.el.dataset.building) paint(t);
@@ -300,13 +302,24 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const cursor = cursors[index], position = positions[index];
         const role = cursor.dataset.role;
         const previous = position.target;
-        const available = work.filter(t => t.progress < 1 && !used.has(t) && t.el !== nameHeading && !(assembling && assembling.progress < .86 && t.section === assembling.section && !t.el.closest("[data-microsoft-headline]")) && !(t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500));
+        const available = work.filter(t => {
+          if (t.progress === 1 || used.has(t) || t.el === nameHeading) return false;
+          if (assembling && assembling.progress < .86 && t.section === assembling.section && !t.el.closest("[data-microsoft-headline]")) return false;
+          if (t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500) return false;
+          // Build a hero surface before working on its text/logo. Otherwise a
+          // completed child remains invisible, then appears with its parent.
+          if (t.section.id === "hero") for (let parent = t.el.parentElement; parent && parent !== t.section; parent = parent.parentElement) {
+            const ancestor = byElement.get(parent); if (ancestor && ancestor.progress < 1) return false;
+          }
+          return true;
+        });
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
           const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);
         })[0];
         if (!target) continue;
         used.add(target);
+        target.active += dt;
         if (position.target !== target) bindProp(target, index);
         position.target = target;
         const aim = point(target, index);
@@ -323,7 +336,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           position.angle += ((angle - position.angle + 540) % 360 - 180) * Math.min(1, dt / 160);
         }
         // Text waits for its editor to arrive, including a deliberate move to a new line.
-        if (target.el === nameHeading || simplified || urgency > .25 || (!target.cinematic && target.kind !== "text") || distance < 48 || target.elapsed < target.delay) {
+        if (target.el === nameHeading || simplified || urgency > .25 || (!target.cinematic && target.kind !== "text") || distance < 48 || target.elapsed < target.delay || (target.section.id === "hero" && target.active > target.delay + target.duration * 2)) {
           target.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
           target.progress = autonomousProgress(target.progress, target.elapsed, target.delay, target.duration);
           if (target.progress >= 1) { finish(target); continue; } else paint(target);

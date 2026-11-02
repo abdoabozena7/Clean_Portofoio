@@ -1,7 +1,7 @@
 import type { AttentionItem } from "@/data/attentionContent";
 
-export type ExplorationSnapshot = { explored: string[]; total: number; items: AttentionItem[]; suggestedId: string | null };
-const empty: ExplorationSnapshot = { explored: [], total: 5, items: [], suggestedId: null };
+export type ExplorationSnapshot = { explored: string[]; total: number; items: AttentionItem[]; suggestedId: string | null; score: number; gaps: number; credits: Record<string, number> };
+const empty: ExplorationSnapshot = { explored: [], total: 0, items: [], suggestedId: null, score: 0, gaps: 0, credits: {} };
 let snapshot = empty;
 const listeners = new Set<() => void>();
 export const getExploration = () => snapshot;

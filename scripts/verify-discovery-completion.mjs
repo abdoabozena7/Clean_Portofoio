@@ -1,0 +1,13 @@
+import {createRequire} from 'node:module';
+import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const out='output/playwright/discovery-completion';await mkdir(out,{recursive:true});
+const url=process.env.PORTFOLIO_URL||'http://127.0.0.1:8080/Clean_Portofoio/';
+async function source(){const files=[];async function walk(d){for(const f of await readdir(d,{withFileTypes:true})){const p=d+'/'+f.name;if(f.isDirectory())await walk(p);else files.push(p);}}await walk('src');const h=createHash('sha256');for(const p of files.sort()){h.update(p);h.update(await readFile(p));}return h.digest('hex');}
+const report={url,sourceBefore:await source(),steps:[],checks:[],passed:false},browser=await chromium.launch({channel:'msedge',headless:true});
+try{const page=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,reducedMotion:'reduce'});await page.goto(url+'#contact',{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);const ids=await page.locator('[data-discovery-id]').evaluateAll(es=>es.map(e=>e.dataset.discoveryId));
+for(const id of ids){await page.locator(`[data-discovery-id="${id}"]`).evaluate(el=>scrollTo({top:Math.max(0,scrollY+el.getBoundingClientRect().top-115),behavior:'instant'}));await page.waitForTimeout(4400);const score=parseFloat(await page.locator('.exploration-trigger strong').textContent());report.steps.push({id,score});console.log(`${id}: ${score}%`);}
+const score=report.steps.at(-1).score;report.checks.push({name:'All real stories can genuinely reach100 with native expanded exposure',passed:score===100,score});
+await page.getByRole('button',{name:/Discovery score: .*Open exploration map/}).click();report.checks.push({name:'Completion map reports all stories explored',passed:(await page.locator('.exploration-map h2').innerText()).startsWith(`${ids.length} of ${ids.length}`)});await page.screenshot({path:out+'/all-stories-complete.png'});report.sourceAfter=await source();report.checks.push({name:'Native completion stayed source-coherent',passed:report.sourceBefore===report.sourceAfter});report.passed=report.checks.every(c=>c.passed);
+}catch(error){report.failure=error.stack;console.error(error);}finally{await browser.close();await writeFile(out+'/report.json',JSON.stringify(report,null,2));if(!report.passed)process.exitCode=1;console.log(JSON.stringify({passed:report.passed,checks:report.checks}));}

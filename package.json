@@ -30,7 +30,10 @@
     "test:fluid": "node scripts/verify-fluid-browsing.mjs",
     "test:name": "node scripts/verify-name-workshop.mjs",
     "test:scan": "node scripts/verify-scan-continuity.mjs",
-    "test:exploration": "node scripts/verify-exploration.mjs"
+    "test:exploration": "node scripts/verify-discovery.mjs",
+    "test:discovery": "node scripts/verify-discovery.mjs",
+    "test:hero": "node scripts/verify-hero-completion.mjs",
+    "test:discovery:complete": "node scripts/verify-discovery-completion.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

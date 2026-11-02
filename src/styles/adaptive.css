@@ -37,7 +37,7 @@
 @media (prefers-reduced-motion: reduce), print { .scan-agent, .scan-trails { display: none; } .scroll-ring svg { animation: none !important; } }
 
 /* A small optional invitation. No overlay, countdown or scroll interception. */
-.quick-pass-cue { max-width: 340px; left: auto; right: 16px; bottom: 84px; padding: 8px; gap: 4px; }
+.quick-pass-cue { max-width: 340px; left: auto; right: 16px; bottom: 84px; padding: 9px 12px 9px 9px; gap: 4px; border-radius: 28px 28px 8px 28px; box-shadow: 0 4px 16px #11192016; }
 .quick-pass-cue .cue-revisit { flex: 1; min-width: 0; gap: 9px; text-align: left; }
 .cue-circle { position: relative; flex: 0 0 32px; width: 32px; height: 32px; color: #11192030; }
 .cue-circle > svg:last-child { position: absolute; left: 9px; top: 9px; color: #111920; }
@@ -51,26 +51,29 @@
 @media (prefers-reduced-motion: reduce), print { [data-mobile-enter] > h2 { animation: none !important; } }
 .exploration-control { position: fixed; left: 16px; bottom: 20px; z-index: 49; opacity: 0; visibility: hidden; pointer-events: none; color: #111920; }
 .exploration-control.is-visible { opacity: 1; visibility: visible; pointer-events: auto; }
-.exploration-trigger { position: relative; display: flex; align-items: center; gap: 8px; padding: 5px 9px 5px 5px; border: 1px solid #111920; background: #f7f7f7; box-shadow: 3px 3px 0 #111920; }
-.exploration-trigger strong { position: absolute; left: 5px; top: 5px; display: flex; justify-content: center; align-items: center; width: 48px; height: 48px; font: bold 13px/1 monospace; }
+.exploration-trigger { position: relative; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid #11192024; border-radius: 50%; background: #f7f7f7; box-shadow: 0 3px 12px #11192018; }
+.exploration-trigger strong { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; width: 56px; height: 56px; font: bold 12px/1 monospace; }
 .exploration-trigger strong span { font-size: 8px; }
 .exploration-label { text-align: left; font: 9px/1.4 monospace; }
 .exploration-arc { transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset .25s ease; }
-.exploration-map { position: absolute; bottom: 74px; left: 0; width: min(350px,calc(100vw - 32px)); max-height: calc(100dvh - 180px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #111920; padding: 16px; background: #fff; box-shadow: 5px 5px 0 #111920; }
+.exploration-map { position: absolute; bottom: 74px; left: 0; width: min(350px,calc(100vw - 32px)); max-height: calc(100dvh - 180px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #11192030; border-radius: 24px 24px 24px 8px; padding: 18px; background: #fff; box-shadow: 0 8px 32px #11192020; }
 .exploration-map-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
 .exploration-map h2 { font-size: 15px; line-height: 1.4; font-weight: 800; }
-.map-close { padding: 3px; }
+.map-close { padding: 7px; border-radius: 50%; }
 .exploration-explainer { font-size: 11px; line-height: 1.55; margin: 10px 0 14px; color: #111920bb; }
 .exploration-routes { display: flex; flex-wrap: wrap; gap: 6px; }
-.exploration-routes button { font: 9px/1.4 monospace; border: 1px solid #11192040; padding: 5px 7px; }
+.exploration-routes button { font: 9px/1.4 monospace; border: 1px solid #11192040; padding: 5px 7px; border-radius: 12px; }
 .exploration-routes button[aria-pressed="true"] { background: var(--accent-mint); border-color: #111920; }
-.exploration-next { width: 100%; display: flex; gap: 8px; align-items: center; justify-content: space-between; text-align: left; padding: 10px; margin: 14px 0; background: var(--accent-cream); border: 1px solid #111920; font-size: 11px; line-height: 1.45; }
+.exploration-next { width: 100%; display: flex; gap: 8px; align-items: center; justify-content: space-between; text-align: left; padding: 12px; margin: 14px 0; background: var(--accent-cream); border: 1px solid #11192020; border-radius: 16px; font-size: 11px; line-height: 1.45; }
 .exploration-items li + li { border-top: 1px solid #11192016; }
 .exploration-items button { width: 100%; display: flex; align-items: center; gap: 8px; padding: 9px 0; text-align: left; font-size: 11px; line-height: 1.4; }
 .exploration-check { flex: 0 0 16px; width: 16px; height: 16px; border: 1px solid #11192050; }
 .exploration-check.is-explored { display: flex; align-items: center; justify-content: center; background: var(--accent-mint); border-color: #111920; }
 .map-back-top { display: flex; align-items: center; gap: 6px; font: 10px/1.4 monospace; margin-top: 12px; }
 .exploration-done { font-size: 12px; line-height: 1.5; margin: 14px 0; }
+.discovery-rules, .discovery-all { font-size: 11px; line-height: 1.55; margin: 10px 0 14px; }
+.discovery-rules summary, .discovery-all summary { cursor: pointer; font: 10px/1.5 monospace; }
+.discovery-rules p { margin-top: 8px; color: #111920bb; }
 .exploration-control button:focus-visible { outline: 2px solid #111920; outline-offset: 3px; }
 .exploration-control button:hover { text-decoration: underline; text-underline-offset: 3px; }
 body:has([data-exploration-map]) .quick-pass-cue { visibility: hidden; }

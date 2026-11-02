@@ -121,3 +121,12 @@ AllF01-F09currentoutcomesverified withinNativeEdge/Chromiumtouch/reducedmotionsc
 ### Liveimagefollow-up
 
 Root inspected initial liveprojects screenshot and noticed incompleteimage streams. Native defaultEdgeHTTP2 all6decodewait exceeded60s with noHTTP/requesterror; no appsource altered. Actual curl105KBimageHTTP200~0.63s. NativeEdge --disable-http2 (no routing/mockeddata) then decodedall6actualPNG atauthenticresolutions; completedprojectsframe inspected, reportfluid-live/project-images.json. Independent3-threadrealHTTPdownloads all6matchlocalSHA256 andfinish0.34-16.28s, project-image-bytes.json. FirstPythonbytecheck incorrectlyusedWindowsbackslashesinURLand404ed; correctedas_posix paths thenall6genuineGETspass. Transport/environmentlimitationrecorded; no universalimage-load-speed orHTTP2/physicaldeviceclaim. No runtimechangeafter release.
+
+
+## Discovery score and hero completion - final pre-release
+
+Source50f4982fc2861f381b2beb1e35d0e25a561deff68b59592ad45f145854c72e29:22productiondiscovery,3actual33story100completion,65fluid,60productioninteractions,28dynamic,21cinematic,2268layoutPASS/coherent;6unit/build/types/lintPASS,7existingwarnings.12scopedhero trace checks and23name probesPASS onunchangedinputs. Actualdeadline defect reproduced9desktop/7mobileunfinishedat0-90%finishbatch; nowownprogress/parentdependencies,0unearnedfinish. Nativecircle56x56, curvedmap/cue, downonnewfastunfinishedgap/upontimeexpanded; actualexample3to2.6then2.5to4.9; all33can100withoutinjection. Active/present/expanded/readablepace/overlayexclusions, noinstantclickaward. Zero inputblocks/autoreturn.
+
+Newregistryfallbacksectionheading incorrectlyplacedGitHubActivity nearSkillsstart andcausedfalsepassedcue; use actualstorysurface cachedboundsnow, native reverseclearscorrectly. Format-onlybenchmarkhashmismatchresolvedbycanonicalLFsourcefunctionhash67331494e3c6ddaad4f44c933db8fa26bafc63c10fdd28552287a40e42a54a82 matchingpreservedbaseline; no thresholdsweakened, full65rerunPASS. Finalmobile343/300geometryreads68/50appRAF,0idle/longtasks. NegativewrongdirectionScore/olddeadline/forcedscrollcorrectlyfail. Failedfirstreceiptsretainedpre-surface-offset/discovery-first/hero-before/negative. Current-sourced screenshot/motion artifacts inspected.
+
+No objectivebestUX/year or actualreadinginferenceclaimed; usergamecaptionmayinviteguessingbehaviorwithoptionalrules. NN/gusabilitytesting/benchmarkingprimaryguidanceconsulted; realuserevaluationnotperformed. Authorizedpublicationnextafterthesepasses.

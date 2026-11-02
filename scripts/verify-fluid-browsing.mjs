@@ -9,7 +9,8 @@ const negative=process.argv.includes('--negative-control');
 const url=process.env.PORTFOLIO_URL||'http://127.0.0.1:8080/Clean_Portofoio/';
 const oldUrl='http://127.0.0.1:8082/Clean_Portofoio/';
 const out=negative?'output/research/fluid-review/negative':'output/research/fluid-review';await mkdir(out,{recursive:true});
-const hash=b=>createHash('sha256').update(b).digest('hex');
+// Preserve the original LF benchmark identity across Windows checkout newlines.
+const hash=b=>createHash('sha256').update(typeof b==='string'?b.replace(/\r\n/g,'\n'):b).digest('hex');
 async function source(){const files=[];async function walk(d){for(const f of await readdir(d,{withFileTypes:true})){const p=d+'/'+f.name;if(f.isDirectory())await walk(p);else files.push(p);}}await walk('src');const h=createHash('sha256');for(const f of files.sort()){h.update(f);h.update(await readFile(f));}return h.digest('hex');}
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const report={url,sourceBefore:baselineOnly?null:await source(),checks:[],errors:[],observations:[],passed:false};

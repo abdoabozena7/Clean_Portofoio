@@ -1,6 +1,6 @@
 # Current revision
 
-See FLUID_MOTION_PLAN.md and the newest CHANGE_REPORT.md entry. Directed word workshop, native mobile pan continuity, optional reminders and a transparent five-highlight exploration map are implemented and verified. Runtime checkpointd49b1e9 and report2eea6ac are pushed. Authorized Pages releasea2432dd is successful;18native livechecks and testedassetbyte comparisons pass. Prior mandatory return/scroll-lock behavior is explicitly cancelled. The original plan below is historical and later instructions supersede its exceptions.
+See DISCOVERY_PLAN.md and the newest CHANGE_REPORT.md entry. Reversible all-story exposure score, round controls/curved side panel and complete per-element hero construction are implemented and verified; existing authorized Pages release/live verification is the finalstep. Prior5-highlight/source-click instant-award contract is superseded by the user's expanded-visible-content requirement. Existing free native scrolling/mobile hero-only agents remain. Earlier plans below are historical.
 
 # Portfolio construction enhancement — local only
 
