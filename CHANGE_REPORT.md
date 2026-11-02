@@ -1,5 +1,8 @@
 # Fluid scrolling and transparent exploration - 2 November 2026
 
+Additional live image verification: all6original project PNGs match local SHA256s and all6fully decode at their real dimensions in native Edge over HTTP/1.1, without routing/mocks. Actual completed screenshot inspected (fluid-live/desktop-projects-decoded.png). The default automated Edge HTTP/2 connection in this environment stalled image streams beyond60s; independent real HTTP downloads completed in0.34-16.28s and HTTP/1.1 Edge completed. This is a recorded transport/environment limitation; no universal cold-image-loading or physical-device speed guarantee is claimed. Runtime assets were not changed to hide it. Receipts: fluid-live/project-images.json and project-image-bytes.json.
+
+
 Published and verified: https://abdoabozena7.github.io/Clean_Portofoio/ . Runtime sourced49b1e9 and report2eea6ac are pushed to codex/scroll-agent-construction. Pagesreleasea2432dd7557161d91ec92f1b190fcb31a5d6cd12 completed successfully;18actual desktop/mobile live checks pass and all3production JS/CSS SHA256s match the tested build. Previous published5d84feb is preserved at baseline/pre-fluid-motion-2026-11-02. Latest user cancels the previous mandatory return idea and requests encouragement without blocking scrolling.
 
 ## Result

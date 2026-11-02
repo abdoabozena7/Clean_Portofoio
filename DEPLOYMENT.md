@@ -1,5 +1,8 @@
 # Verified fluid browsing and exploration release - 2 November2026
 
+Additional live image verification: all6original project PNGs match local SHA256s and all6fully decode at their real dimensions in native Edge over HTTP/1.1, without routing/mocks. Actual completed screenshot inspected (fluid-live/desktop-projects-decoded.png). The default automated Edge HTTP/2 connection in this environment stalled image streams beyond60s; independent real HTTP downloads completed in0.34-16.28s and HTTP/1.1 Edge completed. This is a recorded transport/environment limitation; no universal cold-image-loading or physical-device speed guarantee is claimed. Runtime assets were not changed to hide it. Receipts: fluid-live/project-images.json and project-image-bytes.json.
+
+
 Live: https://abdoabozena7.github.io/Clean_Portofoio/
 
 - Runtime source:d49b1e9 on codex/scroll-agent-construction, with final all-src SHA2561dedeceff47cfc7d6fe35a8d7e3d3efd66312e8092cd6dd69925ca16b0d56de1. Report checkpoint2eea6ac; final verification documentation changes no runtime.
