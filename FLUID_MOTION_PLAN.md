@@ -1,0 +1,24 @@
+# Fluid browsing, directed word workshop and transparent exploration
+
+Continue the original portfolio goal from318b54e / published5d84feb. The latest user explicitly cancels mandatory popups, scroll locks and automatic return, requests cinematic word/chunk editing, mobile agents only in the landing scene with collapse retained, stable native touch movement, and a percentage encouraging exploration. Prior publication authorization persists. Existing detailed content/geometry stays protected.
+
+Visual thesis: the existing monochrome engineering identity and supplied palette; an actual editing scene instead of scattered letters. Storyboard: carry a selected word, pin/resize opposing handles, duplicate/replace the surname, place the period, align, then hand off to the untouched real h1.
+Interaction thesis: preserve visible rows during a mobile gesture, compact only unseen upcoming rows, expand after idle. No fake half-screen spacer, blocked input or automatic navigation. A small optional circle and an explicitly opened exploration map invite one next step.
+
+## Dependency-aware TODO
+
+- [x] F01 Inspect supplied video screenshots/contact sheet and current app. HarrTest2.6.1 public tree verified, instruction-only workflow; no sealed root-gate claim.
+- [x] F02 Root: remove mandatory modal/timers/locks/protected forced-open behavior; small optional circular reminder. Explicit Revisit/reverse/dismiss clears it; X dismisses the entire current pending batch, future new unseen items may invite again.
+- [x] F03 cinematic_name_v3: measured word workshop and new style/verifier; root controller uses5500ms timeline.23 scoped native checks, actual pointer tips attached to handles, native Range error at most0.015625px, reduced motion and stationary-transform negative control. Own name module/style/verifier only.
+- [x] F04 adaptive_anchor_v2: native current-group material anchoring; visible/passed mobile rows keep footprint, unseen upcoming rows compact in one layout write, expansion waits for idle. No active-pan scrollTo corrections, zero extra material drift.16 scoped native checks and222px continuity fault detected. Own adaptive hook/verifier only.
+- [x] F05 Root: restore normal-speed desktop construction; anticipation only fast intent. Mobile registry onlyhero, lightweight heading entrances below; pause measurement during reflow and never rebuild completed name. Microsoft story bubble waits for real badge and positions after mount.
+- [x] F06 Root: agent-authored65-check fluid suite rerun on final source after reviewer quota handoff. Native wheel/CDP touch/PageDown, paired timestamp inertia control, no locks/automatic return, all5 groups natural restoration, desktop slow builders/fastsync, mobile hero-only agents. Built production60interactions/28dynamic/21cinematic;2268 detailed geometry/content/namepixel comparisons4sizes. Build/types/lint/unit4PASS,7existing warnings. Negative controls preserved.
+- [x] F08 Root: transparent session-only5-highlight exposure snapshot/percentage, one optional next-story and explicit AI/career routes.3seconds visible full detail or actual source/image open counts; Revisit/dismiss/reverse is not an instant score. No storage or analytics, no reading/personality claim.
+- [x] F09 Root:25 native production exploration checks: fast footer stays incomplete, short/hidden/inert/compact/Zoom/open-map exposure excluded,5exposed can reach100, reload0, explicit route/revisit/keyboard/no-lock; fake100 fault fails. All images/screens inspected. No fieldCWV/physicaldevice or psychological-effect claim.
+- [ ] F07 Root: source checkpoint/release through existing gh-pages, then verify current public JS/CSS bytes and actual live desktop/mobile journeys, update report and preserve previous published version.
+
+Final all-src SHA256:1dedeceff47cfc7d6fe35a8d7e3d3efd66312e8092cd6dd69925ca16b0d56de1. Runtime source checkpointd49b1e9. Name/scoped fingerprintbfb2e7b5e8d43189857285ea606c79ec454fef14a72bf19a32f8454b1209fce4; adaptive hook38c5f56c6a2faa724460edf2bceada80bb2b1ad3b70d1649092d9c5d277d1365 remain unchanged.
+
+Native same-journey benchmark390x844: Skills geometryreads8319to438, RAF212to59; Projects9576to391, RAF179to42, zero idleRAF. Before and after both had zero long tasks; no general CWV/FPS claim. Native520px finger pan retains505px content movement and paired timestamp-controlled postrelease inertia, with no programmatic correction during input. Historical input-jitter/oracle/source-drift failures retained and distinguished from product fixes.
+
+Design basis: W3C Help Users Focus and NN/g Visibility of System Status. Visible progress/choice/one next-step are UX hypotheses, not proof of psychological understanding or increased retention. All prior forced-journey receipts are historical and superseded; latest65/25/60/28/21/2268 checks apply. User-facing copy explicitly calls the measure exposure, not reading. No social post sent.

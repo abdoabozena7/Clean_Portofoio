@@ -1,6 +1,6 @@
 # Current revision
 
-The attention/choreography continuation is implemented, tested and deployed with the latest user's explicit authorization. See ATTENTION_PLAN.md, DEPLOYMENT.md and the newest CHANGE_REPORT.md entry.16 native live checks pass and published JS/CSS byte hashes match the tested production build. ADAPTIVE_PLAN.md, CINEMATIC_PLAN.md and REVISION_PLAN.md record earlier deliveries. The original first-delivery plan below is historical; later user instructions explicitly supersede frozen legacy content, section order, role typewriter, compact-all behavior and no-forced-scroll for five named highlights, while protecting the finished name and project image dimensions.
+See FLUID_MOTION_PLAN.md and the newest CHANGE_REPORT.md entry. Directed word workshop, native mobile pan continuity, optional reminders and a transparent five-highlight exploration map are implemented and verified. Runtime checkpointd49b1e9 is pushed; authorized Pages deployment and live verification are the finalstep. Prior mandatory return/scroll-lock behavior is explicitly cancelled. The original plan below is historical and later instructions supersede its exceptions.
 
 # Portfolio construction enhancement — local only
 

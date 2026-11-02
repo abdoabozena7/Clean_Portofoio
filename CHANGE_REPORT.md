@@ -1,3 +1,34 @@
+# Fluid scrolling and transparent exploration - 2 November 2026
+
+Current implementation is verified; release/live checks are next. Runtime source d49b1e9 is pushed to codex/scroll-agent-construction. Previous published5d84feb is preserved at baseline/pre-fluid-motion-2026-11-02. Latest user cancels the previous mandatory return idea and requests encouragement without blocking scrolling.
+
+## Result
+
+- Removed every mandatory modal, countdown, automatic return, reading lock and input interception. The small circular reminder is optional; X clears the current pending batch. Only an explicit Revisit navigates. A newly skipped unseen item may offer another invitation.
+- The name now plays a directed word workshop: pick/carry a selected first word, pin one corner and resize the opposite handle, duplicate/replace the surname, place its period and align baselines. Generic hero props wait for the scene.2-4 purposeful editors; original h1/text/layout unchanged. Maximum native Range landing error0.015625px; final name pixels match at all4sizes. Microsoft story tip waits for its actual badge and positions after construction.
+- Ordinary slow desktop entry again shows agents constructing actual UI. Only genuinely fast intent prepares upcoming content immediately. Mobile registers agents only in the landing scene; lower content stays available with a lightweight180ms heading entrance. Collapse remains: visible/passed rows keep their footprint during pan/fling; unseen upcoming rows compact. Expansion waits for idle. No active-touch scrollTo correction fights native inertia. Reflow pauses expensive construction measurement; completed name is not rebuilt on later resizes.
+- The bottom circle now says Highlights explored. Five core stories count after3seconds visible in full detail or an actual source/image open. Revisit/reverse/dismiss removes a reminder without instantly awarding exposure. Hidden/inert/compact details, background tabs, Zoom and the opened map do not count. Quick scrolling to the footer can leave the percentage incomplete; the map explains why. All5real exposures can reach100; reload resets the session.
+- The nonmodal map offers one next story, checked/unexplored highlights and explicit All / AI & agents / Career & learning choices. Routes are visitor-selected, not inferred personality. Escape/Close/outside works, keyboard focus is preserved, no storage/analytics or reading-detection claim. No forced scroll, artificial urgency or manufactured percentage.
+
+## Design rationale and limits
+
+Visible progress, a small next step and clear choice aim to encourage curiosity. W3C advises maintaining user focus/control (https://www.w3.org/WAI/WCAG2/supplemental/objectives/o5-user-focus/) and NN/g describes visible system status (https://www.nngroup.com/articles/visibility-system-status/). This is a UX hypothesis, not a user-study result or proof of psychological understanding. Suggested honest LinkedIn caption: A portfolio that adapts to your pace, remembers highlights you passed quickly, and lets you choose what to explore next. Built with a team of tiny visual agents. No post sent.
+
+## Files and proof
+
+Runtime: newexploration.ts/name-construction.css; updated nameConstruction/useScrollConstruction/useAdaptiveBrowsing/useAttentionJourney, AdaptiveBrowsing/ScrollToTop/MicrosoftHeadline andadaptive.css. No dependencies added. Existing profile/media/cursor content is preserved. New name-workshop/scan-continuity/fluid/exploration/layout verifiers; old forced-journey files remain historical while current aliases use the new acceptance contract.
+
+Final all-src SHA256:1dedeceff47cfc7d6fe35a8d7e3d3efd66312e8092cd6dd69925ca16b0d56de1.
+
+-65fluid native checks;25production exploration;60production interactions;28production dynamic;21production cinematic;2268layout/content/namepixel comparisons at1440x900,1366x768,768x1024,390x844 allPASS, coherent final-source receipts and no runtime errors. Build/types/lint/unit4PASS;7original Fast Refresh warnings/old Browserslist dataset. All9 natural detailed sections retain exact prior boxes/fonts/text/media dimensions. No content redesign.
+-23native word-workshop probes and16scan-continuity probes remain scoped-input coherent; actual SVGtips stay on opposite handles. Root reran the fresh-reviewer-authored65-check suite after reviewer quota handoff; no invented independent final-worker pass. Name fingerprintbfb2e7b5e8d43189857285ea606c79ec454fef14a72bf19a32f8454b1209fce4, hook38c5f56c6a2faa724460edf2bceada80bb2b1ad3b70d1649092d9c5d277d1365 unchanged.
+-Instrumented same390x844 journey: Skills geometryreads8319to438 (94.73%fewer), appRAF212to59; Projects9576to391 (95.92%fewer), appRAF179to42.0idleRAF,0longtasks bothbefore/after. This is measured DOMwork, not fieldCWV/FPS. Native520px finger gesture preserves505px content travel and paired timestamp-controlled postrelease inertia with0active-scrollTo. Prior actual loss157px fixed; an intermediate untimestamped CDPcontrol was jitter-prone and replaced by paired timestamps with raw attempts retained.
+-Negative controls detect fake100percent, automatic-return injection, stationary word transforms, disabled visible-row preservation (222pxjump) and10pximagewidth. Initial hidden-trigger innerText oracle was corrected to textContent;25production outcomes pass. Pending-X queue issue fixed/re-exercised. Source-drift runs were rejected and rerun, not counted as final proof. A local documentation encoding failure was corrected in the next source checkpoint; runtime files/build never changed.
+
+Evidence: output/research/fluid-review, scan-continuity; output/playwright/name-workshop, exploration, fluid-production, dynamic, cinematic, fluid-after, fluid-layout. Actual desktop/mobile screenshots inspected. NativeEdge/Chromium touch/reduced-motion emulation; no physicalSafari or universal performance claim. HarrTest2.6.1 latest public tree verified, instruction-only workflow: native task VERIFIED_WITHIN_SCOPE, formal sealed ROOT_GOAL_STATUS=UNVERIFIED (not executed), no skill-uplift or psychological-effect claim. Release verification still pending.
+
+---
+
 # Highlight journeys and agent choreography — 2 November 2026
 
 Published and verified: https://abdoabozena7.github.io/Clean_Portofoio/ . The latest user explicitly authorized deployment. Runtime source checkpoint1ea3052 is pushed to codex/scroll-agent-construction; gh-pages5d84feb3593ed140482b4262077ac1c9076702bb completed the successful Pages workflow41367635115.16 actual live desktop/mobile checks pass and all3 JS/CSS assets match the tested dist SHA256s. Start source17d1349 is preserved; previous live revisionafdb5dcbcd0dc26f9d17e1839f75b164cb7af9f9 is preserved at baseline/live-before-attention-2026-11-02. See DEPLOYMENT.md.
