@@ -1,6 +1,6 @@
 # Current revision
 
-See FLUID_MOTION_PLAN.md and the newest CHANGE_REPORT.md entry. Directed word workshop, native mobile pan continuity, optional reminders and a transparent five-highlight exploration map are implemented and verified. Runtime checkpointd49b1e9 is pushed; authorized Pages deployment and live verification are the finalstep. Prior mandatory return/scroll-lock behavior is explicitly cancelled. The original plan below is historical and later instructions supersede its exceptions.
+See FLUID_MOTION_PLAN.md and the newest CHANGE_REPORT.md entry. Directed word workshop, native mobile pan continuity, optional reminders and a transparent five-highlight exploration map are implemented and verified. Runtime checkpointd49b1e9 and report2eea6ac are pushed. Authorized Pages releasea2432dd is successful;18native livechecks and testedassetbyte comparisons pass. Prior mandatory return/scroll-lock behavior is explicitly cancelled. The original plan below is historical and later instructions supersede its exceptions.
 
 # Portfolio construction enhancement — local only
 

@@ -1,3 +1,19 @@
+# Verified fluid browsing and exploration release - 2 November2026
+
+Live: https://abdoabozena7.github.io/Clean_Portofoio/
+
+- Runtime source:d49b1e9 on codex/scroll-agent-construction, with final all-src SHA2561dedeceff47cfc7d6fe35a8d7e3d3efd66312e8092cd6dd69925ca16b0d56de1. Report checkpoint2eea6ac; final verification documentation changes no runtime.
+- Publishedgh-pages:a2432dd7557161d91ec92f1b190fcb31a5d6cd12, via existing npm run deploy under continuing user authorization.
+- GitHub Pages workflow https://github.com/abdoabozena7/Clean_Portofoio/actions/runs/41449790530 completed/success with the matchinghead.
+- NormalpublicURL and all3JS/CSSfiles match tested dist bytes: index-D6dkfCKp.js, index-DQFJFabr.css, Tooltip-BAxPWbMb-CxFNsw1c.js. SHA256s and genuine livebrowser receipt: output/playwright/fluid-live/report.json.
+-18actual live desktop/mobile checksPASS: original name/Microsoft, shortAbout/projectorder, optionalcircle/noauto-return/freescroll, explicitmapRevisit, genuineIMPACTphoto, mobilehero-onlyagents/compaction/opaque restoration, labelledpercentage and exposure-rulemap, nooverflow/runtimeerrors. Actual live screenshots inspected.
+- Final-source25productionexploration/65fluid/60productioninteractions/28dynamic/21cinematic/2268layout across4requiredviewportsPASS. Name23 andhook16scopedproofremainvalid. Build/types/lint/unit4PASS;7originalFastRefreshwarnings/oldBrowserslistdataset. No fieldCWV, physicalSafari or psychological-effect claim. See CHANGE_REPORT.md for scopedinstrumentedperformance and failed-attempt findings.
+- Previouspublished5d84feb remains at baseline/pre-fluid-motion-2026-11-02; originalbaseline and intermediate source checkpoints remain in Git. Only the named sourcebranch and existing gh-pages flow updated; no direct default-source-branch mutation.
+
+Existing8080 localpreview stays available; temporary8082 productionpreview is stopped after verification. No social post sent, no new runtime service, storage, analytics or LLM API.
+
+---
+
 # Verified production release — 2 November 2026
 
 Live: https://abdoabozena7.github.io/Clean_Portofoio/
