@@ -1,4 +1,43 @@
-# Cinematic construction revision — 2 November 2026
+# Dynamic construction and adaptive browsing — 2 November 2026
+
+Local preview: http://127.0.0.1:8080/Clean_Portofoio/ . Nothing pushed or deployed. Previous review is preserved at `6269c4e`; original source remains at `baseline/pre-agent-construction`.
+
+## Current result
+
+- Scroll speed and direction now control advance preparation. Real upcoming images are loaded and containers revealed ahead of fast input. Programmatic jumps and our own anchor corrections do not inflate user speed. Slow entry retains the cinematic construction. Reverse scrolling preserves completed content.
+- Experience, Education, Honors, Projects and Skills regroup during sustained fast browsing, on desktop and touch. Company/logo rows, credential titles, title/image project rows and semantic skill branches expand when input settles. Visible headings remain anchored (measured drift0.125px); native scrolling continues. Only the current group is regrouped, preserving future construction scenes. Three measured editors visibly perform the reordering; touch construction uses three cursors instead of hiding the layer.
+- The story bubble itself and the Microsoft badge both link to the supplied post. The bubble appears automatically after entry and stays available while the credential is onscreen. Actual mouse and touch activation are verified; Escape dismisses it. The reserved34px badge height and all six hero slots retain their geometry.
+- Eight employer names are larger than roles, adjacent to the real logos, with the subdued date above. Spacing between companies is reduced. Order after About is now Experience → Education → Honors & Certifications. Education contains only ECU and HIT (with its actual certificate). Honors contains the other six entries, IMPACT first with its supplied winning photo and gold treatment. All verified facts and certificates remain in the single profile data source.
+- The unchanged real name is assembled from measured decorative glyphs by the agents. The independent role typewriter is removed, so it does not compete with that construction. Every landed glyph matches its real text range before one atomic handoff. Actual heading text/layout remain untouched.
+- Image and icon props use the real inner asset rectangles and SVG dimensions, including padding. They reach exact full scale, align, then hand off in one frame. The previous smaller-ghost/full-image jump is fixed. Compact screenshot taps keep their target still through touch-generated focus/click; closing a project preview restores the actual opener, including the image trigger.
+- Contribution weeks build progressively from the actual GitHub calendar, using the supplied five-color scale. Dates, levels and counts are preserved. All four final social links use palette hovers with readable dark icons. The existing real user cursor is unchanged.
+- Optional session-only “Passed quickly” project reminders offer Revisit/Dismiss. Exposure time and explicit opens suppress unnecessary reminders; no claim is made about reading, no analytics/storage is added and nothing moves the visitor without choosing Revisit.
+
+## Files changed
+
+Runtime: new `AdaptiveBrowsing.tsx`, `AgentPointer.tsx`, `CredentialList.tsx`, `HonorsSection.tsx`, `useAdaptiveBrowsing.ts`, `scrollIntent.ts`, `nameConstruction.ts`, `adaptive.css`; updates to `useScrollConstruction.ts`, `AgentConstruction.tsx`, `HeroSection.tsx`, `MicrosoftHeadline.tsx`, `ExperienceSection.tsx`, `EducationSection.tsx`, `ProjectsSection.tsx`, `SkillsSection.tsx`, `GithubGraph.tsx`, `Finale.tsx`, `Navbar.tsx`, `Index.tsx`, `profileContent.ts`, construction/palette styles.
+
+Checks: new adaptive, independent review, profile, dynamic and dynamic-layout scripts; updated cinematic/interaction scripts and npm aliases. Plans and evidence ledger updated. No new dependencies or media/canvas layer. Tablet navigation uses the existing Menu below1024px so all eight navigation links remain reachable.
+
+## Current verification
+
+All-src SHA-256: `6587eb84ef4471702e5e01b67a8a4d0ac0acfc2bb4235d2e543400513eede2af`.
+
+- Build, lint, TypeScript and4 Vitest tests pass. Lint retains7 existing Fast Refresh warnings; Browserslist data is old, as before.
+- `npm run test:dynamic`:28 checks on the built production preview. Real name glyph motion/alignment, unchanged heading box/text, exact padded logo prop, atomic handoff, future scene preservation, genuine contribution weeks/data/colors, all final hovers, actual persistent desktop bubble click and native touch bubble tap.
+- `npm run test:construction`:60 production interaction checks. Original cursor, masks, slow/fast/reverse input, anchors/history, keyboard, actual project/certificate dialogs and focus, terminal, contact validation, genuine PDF download, reduced motion, print and three touch builders; zero runtime errors/failed requests.
+- `npm run test:construction:review`:33 adaptive probes. Trusted wheel/native touch, decoded forecasts and opaque ancestors, signed reverse input, compensation feedback, active-group accessibility, future-group preservation, exact full-size restoration,0idle RAF, genuine compact image tap and actual opener focus, semantic disclosures and real fresh hash positions.
+- `npm run test:cinematic`:21 probes preserve the accepted image duplication/carry/resize/replacement scenes, including grayscale carried portrait and new certificate zooms.
+- `npm run test:layout`: 1231 source-bound protected geometry and screenshot comparisons pass at1440×900,1366×768,768×1024 and390×844, including all original hero slots. The finished name has zero changed pixels at all four sizes. About, Projects, Skills, Contact and Finale retain original dimensions, text, typography, spacing and element positions relative to their sections. Unchanged project media sizes remain protected. Natural screenshots of all nine sections are saved. The injected10px image-width negative control fails on the exact expected geometry assertion.
+- Independent profile review:66/66 checks at390 and1440, zero errors. Actual section ordering,2education/6honors, IMPACT first/authentic photo, all local images, active wheel compaction, unclipped titles, opacity/accessibility restoration, settled Zoom dialogs, Skills visibility after restoration and no overflow. Its scoped code/assets/verifier fingerprint remains `fcd42020aa86f4f75136d9d12dc61843f0914864403745696a993d763fea4eee` in the final checkout. The later story visibility change lies outside that scope and is covered by the current28 production probes.
+
+Evidence: `output/playwright/dynamic/`, `dynamic-production/`, `adaptive-review/`, `dynamic-layout/`, `cinematic/`; `output/research/profile-sections/`. Coherent before and natural after captures: `output/playwright/adaptive-before/` and `dynamic-after/`.
+
+Screenshot comparison first checks actual natural DOM geometry, then uses an invisible spacer of the old combined education/experience height to align protected raster coordinates after the explicitly requested section reordering. Existing infinite marquee strips and the intentionally recolored calendar are excluded from the pixel golden. Removing the old Skills entrance animation fixes repeated fading; its compositor/font rasterization can differ slightly while all font/box metrics match. Remaining minor full-page differences include existing fixed-widget capture artifacts. No field Core Web Vitals score, physical-device/Safari test or sealed HarrTest root-gate result is claimed. No unresolved product failures remain in the exercised Edge/Chromium scope.
+
+---
+
+# Previous cinematic construction revision — historical
 
 Local preview: http://127.0.0.1:8080/Clean_Portofoio/ . No push or deployment. Previous review is preserved at `15c0d84`; original remains at `baseline/pre-agent-construction`.
 

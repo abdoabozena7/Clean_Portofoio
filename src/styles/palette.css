@@ -26,6 +26,13 @@ html .palette-tag:hover, html .accent-button:hover {
   padding: 3px; border: 1px solid #111920; background: white; z-index: 1;
 }
 .company-logo img { width: 100%; height: 100%; object-fit: contain; }
+.experience-brand { display: flex; align-items: flex-start; gap: 12px; }
+.experience-brand .company-logo { position: static; width: 40px; height: 40px; flex: 0 0 40px; padding: 4px; }
+.experience-company { min-width: 0; font-size: 32px; line-height: 1.15; overflow-wrap: anywhere; }
+.experience-date { padding-left: 52px; }
+.experience-detail { margin-left: 52px; margin-top: 8px; }
+.experience-item + .experience-item { border-top: 1px solid #11192016; padding-top: 16px; }
+@media (max-width: 767px) { .experience-company { font-size: 26px; } }
 .credential { display: grid; grid-template-columns: minmax(0, 1fr) 160px; gap: 24px; align-items: start; }
 .credential-copy { min-width: 0; }
 .certificate-image-trigger { position: relative; display: flex; justify-content: center; align-items: center; width: 160px; height: 112px; max-width: 100%; border: 1px solid #111920; background: #fff; padding: 5px; }
@@ -38,6 +45,8 @@ html .palette-tag:hover, html .accent-button:hover {
 .microsoft-headline:hover { border-color: #111920; background: var(--accent-cream); }
 .microsoft-headline:focus-visible { outline: 2px solid #111920; outline-offset: 4px; }
 .microsoft-story-tip { position: fixed; z-index: 60; pointer-events: none; padding: 6px 9px; border: 1px solid #111920; box-shadow: 3px 3px 0 #111920; background: var(--accent-cream); color: #111920; font: 11px/1.2 ui-monospace, monospace; white-space: nowrap; }
+.microsoft-story-tip a { pointer-events: auto; }
+.microsoft-story-tip a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .certificate-image-trigger:hover { box-shadow: 5px 5px 0 var(--accent-mint); }
 .certificate-image-trigger:focus-visible { outline: 2px solid #111920; outline-offset: 5px; }
 @media (min-width: 768px) { .company-logo { left: auto; right: -16px; } }

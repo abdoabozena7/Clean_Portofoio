@@ -1,0 +1,28 @@
+/* Full-detail rules do not change the accepted natural geometry. */
+.skills-grid { position: relative; }
+.project-card { scroll-margin-top: 96px; }
+@media (max-width: 767px) { [data-construction-section] { scroll-margin-top: 16px; } }
+.skill-disclosure { display: block; width: 100%; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; color: inherit; }
+.skill-disclosure:focus-visible { outline: 2px solid #111920; outline-offset: 5px; }
+.skill-count { position: absolute; right: 0; opacity: 0; pointer-events: none; }
+.skills-grid::before { content: ""; position: absolute; left: 4px; top: 26px; bottom: 24px; width: 1px; background: var(--accent-teal); opacity: var(--scan, 0); }
+.skill-category { position: relative; }
+.skill-category::before { content: ""; position: absolute; top: 25px; left: 4px; width: 17px; border-top: 1px solid var(--accent, #2bbaa5); opacity: var(--scan, 0); }
+[data-scan-active] .skill-count { opacity: var(--scan); }
+[data-scan-active] .skill-category { animation: none !important; opacity: 1; }
+[data-scan-active] .skill-category > div { border-color: transparent; }
+[data-scan-active] .skill-category h3 { margin-bottom: 24px; text-decoration-color: transparent; color: #111920; }
+[data-scan-active] [data-project], [data-scan-active] .project-media, [data-scan-active] h3 { transition: none !important; }
+.scan-agent { --agent-color: var(--accent-amber); position: fixed; left: 0; top: 0; z-index: 42; pointer-events: none; opacity: 0; will-change: transform; }
+.scan-agent * { pointer-events: none; }
+.scan-agent span { display: block; margin-left: 14px; padding: 4px 6px; background: var(--agent-color); border: 1px solid #111920; font: 9px/1.2 monospace; color: #111920; white-space: nowrap; }
+.quick-pass-cue { position: fixed; bottom: 88px; left: 16px; right: 16px; z-index: 45; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid #111920; background: var(--accent-cream); box-shadow: 4px 4px 0 #111920; color: #111920; }
+.quick-pass-cue > div { min-width: 0; flex: 1; }
+.quick-pass-cue strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick-pass-cue button { min-height: 36px; display: flex; align-items: center; gap: 4px; font: 11px monospace; }
+.quick-pass-cue button:focus-visible { outline: 2px solid #111920; outline-offset: 3px; }
+.quick-pass-cue .cue-dismiss { min-width: 28px; justify-content: center; }
+@media (min-width: 768px) { .quick-pass-cue { left: auto; width: 340px; } }
+[data-scan-active] [data-scan-item] { transition: none !important; }
+.skill-disclosure { text-decoration: inherit; text-decoration-color: inherit; text-decoration-thickness: inherit; text-underline-offset: inherit; }
+@media (prefers-reduced-motion: reduce), print { .scan-agent { display: none; } }

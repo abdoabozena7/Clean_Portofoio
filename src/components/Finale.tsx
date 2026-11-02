@@ -64,16 +64,17 @@ const Finale = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full mb-24">
-          {socialLinks.map((link) => (
+          {socialLinks.map((link, index) => (
             <a
               key={link.label}
+              data-tone={index % 5}
               href={link.href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex flex-col items-center justify-center p-8 border-2 border-black bg-white hover:bg-black transition-all duration-300 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
+              className="accent-button group flex flex-col items-center justify-center p-8 border-2 border-black bg-white transition-all duration-300 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[4px] hover:translate-y-[4px]"
             >
-              <link.icon className="w-8 h-8 group-hover:text-white transition-colors duration-300" />
-              <span className="mt-4 font-mono text-xs uppercase tracking-widest font-black group-hover:text-white">
+              <link.icon className="w-8 h-8 transition-colors duration-300" />
+              <span className="mt-4 font-mono text-xs uppercase tracking-widest font-black">
                 {link.label}
               </span>
             </a>

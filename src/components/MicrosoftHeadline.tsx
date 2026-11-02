@@ -6,7 +6,8 @@ import { createPortal } from "react-dom";
 export default function MicrosoftHeadline() {
   const badge = useRef<HTMLAnchorElement>(null);
   const [engaged, setEngaged] = useState(false);
-  const [tease, setTease] = useState(false);
+  const [autoReady, setAutoReady] = useState(false);
+  const [dismissed, setDismissed] = useState(false);
   const tip = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(true);
   useLayoutEffect(() => {
@@ -31,25 +32,25 @@ export default function MicrosoftHeadline() {
     window.addEventListener("scroll", update, { passive: true }); window.addEventListener("resize", update);
     const observer = new ResizeObserver(update); if (badge.current) observer.observe(badge.current);
     return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); observer.disconnect(); };
-  }, [engaged, tease, visible]);
+  }, [engaged, visible, autoReady, dismissed]);
   useEffect(() => {
-    const start = window.setTimeout(() => setTease(true), 4000);
-    const end = window.setTimeout(() => setTease(false), 9500);
-    return () => { clearTimeout(start); clearTimeout(end); };
+    const ready = window.setTimeout(() => setAutoReady(true), 1400);
+    return () => clearTimeout(ready);
   }, []);
+  const showTip = visible && !dismissed && (engaged || autoReady);
   return (
     <>
     <a ref={badge} href={profileContent.microsoftStoryUrl} target="_blank" rel="noopener noreferrer" aria-label="SWE Intern at Microsoft — read my story on LinkedIn"
-      aria-describedby={visible && (engaged || tease) ? "microsoft-story-tip" : undefined}
-      onMouseEnter={() => setEngaged(true)} onMouseLeave={() => setEngaged(false)} onFocus={() => setEngaged(true)} onBlur={() => setEngaged(false)}
-      onKeyDown={event => { if (event.key === "Escape") { setEngaged(false); setTease(false); } }}
+      aria-describedby={showTip ? "microsoft-story-tip" : undefined}
+      onMouseEnter={() => { setEngaged(true); setDismissed(false); }} onMouseLeave={() => setEngaged(false)} onFocus={() => { setEngaged(true); setDismissed(false); }} onBlur={() => setEngaged(false)}
+      onKeyDown={event => { if (event.key === "Escape") { setEngaged(false); setDismissed(true); } }}
       data-microsoft-headline data-construction="structure" className="microsoft-headline inline-flex items-center gap-2 px-4 py-2 mb-8 border border-foreground/30 bg-background/80 backdrop-blur-md shadow-sm h-[34px] whitespace-nowrap">
       <img data-construction="asset" src={`${import.meta.env.BASE_URL}images/microsoft-symbol.svg`} width="14" height="14" alt="" className="w-3.5 h-3.5 shrink-0" />
       <span data-construction="text" className="font-mono text-xs text-foreground/90 tracking-[0.08em] font-medium">
         {profileContent.headline}
       </span>
     </a>
-    {visible && (engaged || tease) && createPortal(<span ref={tip} id="microsoft-story-tip" role="tooltip" className="microsoft-story-tip">Want the story? <span aria-hidden="true">↗</span></span>, document.body)}
+    {showTip && createPortal(<span ref={tip} id="microsoft-story-tip" className="microsoft-story-tip"><a href={profileContent.microsoftStoryUrl} target="_blank" rel="noopener noreferrer" tabIndex={-1} aria-label="Want the story? Read my Microsoft internship story">Want the story? <span aria-hidden="true">↗</span></a></span>, document.body)}
     </>
   );
 }

@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import AboutSection from "@/components/AboutSection";
 import EducationSection from "@/components/EducationSection";
+import HonorsSection from "@/components/HonorsSection";
 import ExperienceSection from "@/components/ExperienceSection";
 import SkillsSection from "@/components/SkillsSection";
 import ProjectsSection from "@/components/ProjectsSection";
@@ -11,6 +12,7 @@ import Terminal from "@/components/Terminal";
 import Finale from "@/components/Finale";
 import ArrowPointerCursor from "@/components/ArrowPointerCursor";
 import AgentConstruction from "@/components/AgentConstruction";
+import AdaptiveBrowsing from "@/components/AdaptiveBrowsing";
 import "@/styles/palette.css";
 
 const Index = () => {
@@ -22,12 +24,14 @@ const Index = () => {
       <Terminal />
       <HeroSection />
       <AboutSection />
-      <EducationSection />
       <ExperienceSection />
+      <EducationSection />
+      <HonorsSection />
       <ProjectsSection />
       <SkillsSection />
       <ContactSection />
       <Finale />
+      <AdaptiveBrowsing />
       <AgentConstruction />
     </div>
   );

@@ -1,4 +1,6 @@
 import { Github, ZoomIn } from "lucide-react";
+import { useRef } from "react";
+import { requestDetailedView } from "@/lib/scrollIntent";
 import { projects } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
 import HarrTestFlow from "./HarrTestFlow";
@@ -9,12 +11,15 @@ import "@/styles/projects.css";
 const actionClass = "accent-button flex items-center justify-center gap-2 px-4 py-2 border-2 border-black bg-white text-[10px] font-black uppercase tracking-wider transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
 
 const ProjectsSection = () => {
+  const openers = useRef(new Map<string, HTMLButtonElement>());
   return (
   <SectionBlock id="projects" title="Projects">
-    <div className="project-grid grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div data-scan-group="projects" className="project-grid grid grid-cols-1 md:grid-cols-2 gap-6">
       {projects.map((project, projectIndex) => (
         <div
           key={project.id}
+          id={`project-${project.id}`}
+          data-priority={project.inProgress || undefined}
           data-project={project.id}
           data-tone={(projectIndex + 2) % 5}
           data-construction="structure"
@@ -29,10 +34,10 @@ const ProjectsSection = () => {
             <h3 data-construction="text" className="text-xl font-black text-foreground group-hover:underline decoration-4 underline-offset-4 break-words">
               {project.title}
             </h3>
-            <p data-construction="text" className="body-text mt-4 text-sm font-normal">
+            <p data-scan-detail data-construction="text" className="body-text mt-4 text-sm font-normal">
               {project.description}
             </p>
-            <div className="flex flex-wrap gap-2 mt-4">
+            <div data-scan-detail className="flex flex-wrap gap-2 mt-4">
               {project.tags.map((tag, tagIndex) => (
                 <Badge key={tag} data-tone={(projectIndex + tagIndex) % 5} variant="secondary" className="palette-tag font-mono text-[10px] font-bold border border-black/10 px-1.5 py-0">
                   {tag}
@@ -45,22 +50,28 @@ const ProjectsSection = () => {
             <Dialog>
               <div className="project-media" data-construction="asset">
                 <DialogTrigger asChild>
-                  <button className="project-image-trigger" aria-label={`Zoom in on ${project.title} screenshot`}>
+                  <button className="project-image-trigger" onClick={event => openers.current.set(project.id, event.currentTarget)} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} aria-label={`Zoom in on ${project.title} screenshot`}>
                     <img src={`${import.meta.env.BASE_URL}${project.image}`} alt={project.imageAlt} loading="lazy" decoding="async" width="1920" height="1080" />
                   </button>
                 </DialogTrigger>
               </div>
-              <div className="project-actions flex gap-3 border-t border-black/10">
+              <div data-scan-detail className="project-actions flex gap-3 border-t border-black/10">
                 <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className={actionClass} aria-label={`${project.title} source on GitHub`}>
                   <Github className="w-3.5 h-3.5" /> Source
                 </a>
                 <DialogTrigger asChild>
-                  <button className={actionClass} aria-label={`Zoom in ${project.title}`}>
+                  <button className={actionClass} onClick={event => openers.current.set(project.id, event.currentTarget)} aria-label={`Zoom in ${project.title}`}>
                     <ZoomIn className="w-3.5 h-3.5" /> Zoom in
                   </button>
                 </DialogTrigger>
               </div>
-              <DialogContent className="project-preview-dialog">
+              <DialogContent className="project-preview-dialog" onCloseAutoFocus={event => {
+                event.preventDefault(); requestDetailedView();
+                const opener = openers.current.get(project.id);
+                opener?.focus({ preventScroll: true });
+                const rect = opener?.getBoundingClientRect();
+                if (rect && (rect.top < 76 || rect.bottom > innerHeight)) opener?.scrollIntoView({ behavior: "instant", block: "nearest" });
+              }}>
                 <DialogHeader>
                   <DialogTitle>{project.title}</DialogTitle>
                   <DialogDescription>{project.imageAlt}</DialogDescription>
@@ -71,7 +82,7 @@ const ProjectsSection = () => {
           ) : (
             <>
               <div className="project-media project-flow-media"><HarrTestFlow /></div>
-              <div className="project-actions flex gap-3 border-t border-black/10">
+              <div data-scan-detail className="project-actions flex gap-3 border-t border-black/10">
                 <a href={project.githubUrl} target="_blank" rel="noopener noreferrer" className={actionClass} aria-label="Read the HarrTest skill on GitHub">
                   <Github className="w-3.5 h-3.5" /> Explore Skill
                 </a>

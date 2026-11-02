@@ -17,7 +17,10 @@ html [data-construction="structure"], html [data-building] { transition-property
 .agent-click { position: absolute; top: -3px; left: 4px; width: 12px; height: 12px; border: 1px solid var(--agent-color); border-radius: 50%; opacity: 0; }
 .virtual-agent[data-click="true"] .agent-click { opacity: .5; }
 .construction-caret { position: absolute; top: 0; left: 0; width: 1px; background: #171717; opacity: 0; }
-.construction-prop { position: absolute; top: 0; left: 0; opacity: 0; transform-origin: 0 0; will-change: transform; border: 1px solid var(--agent-color); box-shadow: 0 0 0 1px #11192025; }
+.construction-letters { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.construction-letters > span { position: absolute; left: 0; top: 0; display: block; white-space: pre; transform-origin: 0 0; will-change: transform; }
+.virtual-agent[data-edge="right"] .agent-label { left: auto; right: 0; }
+.construction-prop { position: absolute; top: 0; left: 0; opacity: 0; transform-origin: 0 0; will-change: transform; outline: 1px solid var(--agent-color); box-shadow: 0 0 0 1px #11192025; }
 .construction-prop-surface { position: absolute; inset: 0; overflow: hidden; background: #fff; }
 .construction-prop img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .construction-prop span.prop-label, .construction-prop span.prop-template-label { position: absolute; inset: 0; display: flex; align-items: center; overflow: hidden; white-space: pre; padding: 0 5px; }
@@ -33,7 +36,7 @@ html [data-construction="structure"], html [data-building] { transition-property
 .construction-prop[data-phase="pick"] .prop-copy { opacity: .65; }
 .prop-operation { position: absolute; left: 0; bottom: calc(100% + 5px); padding: 2px 5px; background: var(--agent-color); color: #111920; font: 9px/1.2 ui-monospace, monospace; white-space: nowrap; }
 .construction-prop[data-media="label"] .prop-operation, .construction-prop[data-media="icon"] .prop-operation { display: none; }
-@media (pointer: coarse), (max-width: 767px) { .agent-construction { display: none; } }
+@media (pointer: coarse), (max-width: 767px) { .agent-label { font-size: 8px; padding: 3px 4px; } }
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto !important; }
   *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; transition-duration: .001ms !important; }

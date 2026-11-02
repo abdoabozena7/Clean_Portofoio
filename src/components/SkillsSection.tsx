@@ -1,26 +1,22 @@
 import { skillCategories } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
 import GithubGraph from "./GithubGraph";
+import { requestDetailedView } from "@/lib/scrollIntent";
 
 const SkillsSection = () => (
   <SectionBlock id="skills" title="Technical Skills">
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+    <div data-scan-group="skills" className="skills-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
       {skillCategories.map((category, idx) => (
         <div
           key={category.title}
-          className="skill-category group opacity-0 animate-in fade-in slide-in-from-bottom-4 fill-mode-forwards"
+          className="skill-category group"
           data-tone={idx % 5}
-          style={{
-            animationDelay: `${idx * 100}ms`,
-            animationDuration: "600ms",
-            animationFillMode: "forwards",
-          }}
         >
           <div className="flex flex-col h-full border-t-2 border-black pt-4">
             <h3 className="text-xs font-mono uppercase tracking-[0.2em] mb-6 text-black/40 group-hover:text-black transition-colors duration-300">
-              {category.title}
+              <button type="button" data-scan-toggle className="skill-disclosure" aria-expanded="true" aria-controls={`skill-details-${idx}`} onClick={requestDetailedView}>{category.title}<span className="skill-count" aria-hidden="true">{category.skills.length} skills ↗</span></button>
             </h3>
-            <div className="flex flex-wrap gap-2">
+            <div id={`skill-details-${idx}`} data-scan-detail className="flex flex-wrap gap-2">
               {category.skills.map((skill, skillIndex) => (
                 <span
                   key={skill}
@@ -36,7 +32,7 @@ const SkillsSection = () => (
       ))}
     </div>
 
-    <div className="w-full pt-12 border-t border-black/5">
+    <div data-scan-static className="w-full pt-12 border-t border-black/5">
       <div className="flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-mono uppercase tracking-[0.2em] text-black/40">

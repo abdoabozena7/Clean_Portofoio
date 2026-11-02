@@ -111,6 +111,19 @@ export const education: EducationItem[] = [
     source: "Owner-supplied HIT completion certificate",
     brief: "Completed the international summer school exploring the frontiers of artificial intelligence.",
   },
+];
+
+/** Awards and completed professional learning; achievements lead the list. */
+export const honors: EducationItem[] = [
+  {
+    degree: "IMPACT Hackathon — 1st Place", school: "GDG on Campus · Egyptian Chinese University",
+    year: "2026 · Hivo Studio", achievement: true,
+    brief: "Won first place with Hivo Studio, an AI coding workspace that plans and coordinates complex development tasks.",
+    image: "images/certificates/impact-first-place-2026.png", imageWidth: 1280, imageHeight: 853,
+    imageAlt: "Abdelrahman and teammate celebrating first place at IMPACT with the First Winner award.",
+    source: "Owner-supplied winning photo and publicly accessible LinkedIn IMPACT post",
+    storyUrl: "https://lnkd.in/p/eDP9zBzM",
+  },
   {
     degree: "AI Agents Intensive", school: "Google × Kaggle",
     year: "Certification", source: profileSources.suppliedProfile,
@@ -150,15 +163,6 @@ export const education: EducationItem[] = [
     image: "images/certificates/orange-ai-2024.png", imageWidth: 1001, imageHeight: 563,
     imageAlt: "Orange Digital Center Artificial Intelligence Level 1 completion certificate, 24-hour course in September 2024, grade 99 percent.",
     source: "Owner-supplied Orange Digital Center certificate, November 2, 2026",
-  },
-  {
-    degree: "IMPACT Hackathon — 1st Place", school: "GDG on Campus · Egyptian Chinese University",
-    year: "2026 · Hivo Studio", achievement: true,
-    brief: "Won first place with Hivo Studio, an AI coding workspace that plans and coordinates complex development tasks.",
-    image: "images/certificates/impact-first-place-2026.png", imageWidth: 1280, imageHeight: 853,
-    imageAlt: "Abdelrahman and teammate celebrating first place at IMPACT with the First Winner award.",
-    source: "Owner-supplied winning photo and publicly accessible LinkedIn IMPACT post",
-    storyUrl: "https://lnkd.in/p/eDP9zBzM",
   },
 ];
 
@@ -308,13 +312,13 @@ export const profileContent = {
   animatedRoles,
   repositoryStats,
   repositories: repositoryStats,
-  projects, education, training, experiences, skillCategories,
+  projects, education, honors, training, experiences, skillCategories,
   verifiedExperience: [...experiences, ...training],
   verifiedEducation: [
     { institution: "Egyptian Chinese University", subject: "Computer Science", period: null },
     { institution: "Harbin Institute of Technology", subject: "Artificial Intelligence", period: "July 7-18, 2025" },
   ],
-  verifiedCertifications: education.slice(1).filter(item => !item.achievement).map(item => ({ title: item.degree, credentialUrl: null, source: item.source })),
+  verifiedCertifications: [...education.slice(1), ...honors].filter(item => !item.achievement).map(item => ({ title: item.degree, credentialUrl: null, source: item.source })),
   verifiedRecordSource: profileSources.suppliedProfile,
   verifiedAchievements: [{ title: "IMPACT Hackathon 2026 — 1st Place with Hivo Studio", date: null, sourceUrl: "https://lnkd.in/p/eDP9zBzM" }],
   // Add only owner-confirmed or publicly sourced updates. Drafts do not render.

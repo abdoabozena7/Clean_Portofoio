@@ -1,12 +1,14 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
 import { constructionScene, type SceneBox } from "@/lib/constructionScene";
+import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
+import { createNameConstruction } from "@/lib/nameConstruction";
 
 type Kind = "text" | "asset" | "structure";
 type Target = {
   el: HTMLElement; section: HTMLElement; kind: Kind; top: number; left: number; width: number; height: number;
   lines: TextLine[]; count: number; progress: number; elapsed: number; visibleSince: number | null;
-  duration: number; delay: number; order: number; cinematic: boolean;
+  duration: number; delay: number; order: number; cinematic: boolean; weeks?: SVGGElement[];
 };
 type Position = { x: number; y: number; angle: number; initialized: boolean; target: Target | null };
 
@@ -53,7 +55,18 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const sources: (HTMLElement | null)[] = cursors.map(() => null);
     const positions: Position[] = cursors.map(() => ({ x: 0, y: 0, angle: 0, initialized: false, target: null }));
     let frame = 0, dirty = true, stopped = false, jump = !!location.hash || scrollY > 20;
-    let lastY = scrollY, lastScrollTime = performance.now(), lastTick = performance.now(), velocity = 0;
+    const initialHash = location.hash;
+    let initialNavigationTouched = false;
+    const markNavigationTouched = () => { initialNavigationTouched = true; };
+    const resolveInitialHash = () => {
+      if (!initialHash || initialNavigationTouched || location.hash !== initialHash) return;
+      try { document.getElementById(decodeURIComponent(initialHash.slice(1)))?.scrollIntoView({ behavior: "instant", block: "start" }); } catch { /* Malformed or absent fragments leave navigation alone. */ }
+    };
+    let lastTick = performance.now();
+    const byElement = new Map<HTMLElement, Target>();
+    const preparedImages = new WeakSet<HTMLImageElement>();
+    const nameHeading = document.querySelector<HTMLElement>('[data-construction-scene="letters"]');
+    const nameScene = nameHeading ? createNameConstruction(nameHeading, layer) : null;
 
     for (const section of sections) {
       const candidates = new Set<HTMLElement>(section.querySelectorAll<HTMLElement>("[data-construction],h1,h2,h3,h4,p,img,a,button,input,textarea,span"));
@@ -72,35 +85,53 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const kind = el.dataset.construction || (/^H[1234]$|^P$/.test(el.tagName) ? "text" : el.tagName === "DIV" ? "structure" : "asset");
         if (!["text", "asset", "structure"].includes(kind)) continue;
         const count = el.textContent?.trim().length || 1;
-        const cinematic = (kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction"));
+        const cinematic = el.dataset.constructionScene !== "activity" && ((kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction")));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
           progress: 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
-          duration: cinematic ? 2350 : kind === "structure" ? 1050 : Math.max(2000, Math.min(4400, count * 24)),
+          duration: el.dataset.constructionScene === "letters" ? 2200 : el.dataset.constructionScene === "activity" ? 1300 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
           delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
       }
     }
+    targets.forEach(t => byElement.set(t.el, t));
 
     const measure = () => {
       for (const t of targets) {
+        if (t.progress === 1) continue;
         const rect = t.el.getBoundingClientRect();
         t.top = rect.top + scrollY; t.left = rect.left; t.width = rect.width; t.height = rect.height;
         if (t.kind === "text") t.lines = measureLines(t.el);
+        if (t.el.dataset.constructionScene === "activity") t.weeks = [...new Set(Array.from(t.el.querySelectorAll<SVGRectElement>("rect[data-date]")).map(rect => rect.parentElement as unknown as SVGGElement))];
       }
       dirty = false;
+      nameScene?.measure();
     };
     const finish = (t: Target) => {
       t.progress = 1; delete t.el.dataset.building;
       t.el.style.removeProperty("--construction-clip"); t.el.style.removeProperty("--construction-opacity");
       t.el.dataset.constructed = "true";
+      t.weeks?.forEach(week => { week.style.removeProperty("opacity"); });
+      if (t.el === nameHeading) nameScene?.hide();
+    };
+    const ready = (t: Target) => {
+      finish(t);
+      // A prepared child must never remain behind a transparent container.
+      for (let parent = t.el.parentElement; parent && parent !== t.section; parent = parent.parentElement) {
+        const target = byElement.get(parent); if (target) finish(target);
+      }
     };
     const paint = (t: Target) => {
       if (t.progress === 1) return;
       t.el.dataset.building = t.kind;
+      if (t.el === nameHeading) { t.el.style.setProperty("--construction-clip", "inset(0 100% 0 0)"); nameScene?.paint(t.progress); return; }
+      if (t.weeks?.length) {
+        t.el.style.removeProperty("--construction-clip");
+        t.weeks.forEach((week, i) => { week.style.opacity = String(clamp01((t.progress - i / t.weeks!.length * .7) / .25)); });
+        return;
+      }
       if (t.kind === "text") t.el.style.setProperty("--construction-clip", textFrame(t.lines, t.width, t.height, typedProgress(t.progress, t.count)).clip);
-      else if (t.cinematic && !coarse.matches && innerWidth >= 768) {
-        const handoff = clamp01((t.progress - .94) / .06);
-        if (t.kind === "structure") t.el.style.setProperty("--construction-opacity", String(handoff));
-        else t.el.style.setProperty("--construction-clip", `inset(0 ${100 - handoff * 100}% 0 0)`);
+      else if (t.cinematic) {
+        if (t.kind === "structure") t.el.style.setProperty("--construction-opacity", "0");
+        else t.el.style.setProperty("--construction-clip", "inset(0 100% 0 0)");
       }
       else if (t.kind === "asset") t.el.style.setProperty("--construction-clip", `inset(0 ${100 - t.progress * 100}% 0 0)`);
       else t.el.style.setProperty("--construction-opacity", String(t.progress));
@@ -138,12 +169,22 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         templateImg.style.objectFit = getComputedStyle(image).objectFit;
         actualImg.style.filter = getComputedStyle(image).filter;
         templateImg.style.filter = getComputedStyle(templateImage || image).filter;
+        const targetRect = t.el.getBoundingClientRect(), imageRect = image.getBoundingClientRect();
+        for (const item of [actualImg, templateImg]) {
+          item.style.left = `${imageRect.left - targetRect.left}px`; item.style.top = `${imageRect.top - targetRect.top}px`;
+          item.style.width = `${imageRect.width}px`; item.style.height = `${imageRect.height}px`; item.style.inset = "auto";
+          item.style.left = `${imageRect.left - targetRect.left}px`; item.style.top = `${imageRect.top - targetRect.top}px`;
+        }
       } else { actualImg.removeAttribute("src"); templateImg.removeAttribute("src"); }
       prop.querySelector<HTMLElement>(".prop-label")!.textContent = t.el.textContent?.trim() || "";
       prop.querySelector<HTMLElement>(".prop-template-label")!.textContent = template.textContent?.trim() || "";
       const style = getComputedStyle(t.el), surface = prop.querySelector<HTMLElement>(".construction-prop-surface")!;
       surface.style.background = style.backgroundColor === "rgba(0, 0, 0, 0)" ? "#ffffffed" : style.backgroundColor;
       surface.style.font = style.font; surface.style.color = style.color;
+      surface.style.letterSpacing = style.letterSpacing; surface.style.textTransform = style.textTransform;
+      icon.style.gap = style.columnGap;
+      const sourceSvg = t.el.querySelector("svg"), copiedSvg = icon.querySelector("svg");
+      if (sourceSvg && copiedSvg) { const r = sourceSvg.getBoundingClientRect(); copiedSvg.style.width = `${r.width}px`; copiedSvg.style.height = `${r.height}px`; }
       prop.querySelector<HTMLElement>(".prop-label")!.style.padding = style.padding;
       prop.querySelector<HTMLElement>(".prop-template-label")!.style.padding = style.padding;
     };
@@ -158,9 +199,14 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       return constructionScene(rect, source, t.progress);
     };
     const point = (t: Target, index: number) => {
-      const rect = t.el.getBoundingClientRect();
+      let rect = t.el.getBoundingClientRect();
       let x = rect.left, y = rect.top;
-      if (t.cinematic) {
+      if (t.el === nameHeading && nameScene) {
+        const at = nameScene.point(t.progress, 0); if (at) { x = at.x; y = at.y; }
+      } else if (t.weeks?.length) {
+        rect = t.weeks[Math.min(t.weeks.length - 1, Math.floor(t.progress * t.weeks.length))].getBoundingClientRect();
+        x = rect.right; y = rect.bottom;
+      } else if (t.cinematic) {
         const scene = sceneFor(t, index, rect);
         x = scene.gripX; y = scene.gripY;
       } else if (t.kind === "text") {
@@ -173,7 +219,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         x += rect.width * (index % 2 ? 1 - t.progress : t.progress);
         y += index % 2 ? Math.min(rect.height, 32) : 0;
       }
-      return { rect, x: Math.max(10, Math.min(innerWidth - 112, x)), y: Math.max(78, Math.min(innerHeight - 42, y)) };
+      return { rect, x: Math.max(10, Math.min(innerWidth - 20, x)), y: Math.max(78, Math.min(innerHeight - 42, y)) };
     };
     const schedule = () => { if (!frame && !stopped && !document.hidden) frame = requestAnimationFrame(tick); };
     const tick = (now: number) => {
@@ -181,20 +227,36 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       if (stopped || document.hidden) return;
       const dt = Math.min(50, Math.max(0, now - lastTick)); lastTick = now;
       const repaint = dirty;
-      if (dirty) measure();
+      if (dirty) { measure(); positions.forEach((p, i) => { if (p.target) bindProp(p.target, i); }); }
       if (reduced.matches) { targets.forEach(finish); hideAgents(); return; }
       const simplified = coarse.matches || innerWidth < 768;
-      const fast = velocity > 1.65;
+      const intent = getScrollIntent(), velocity = Math.abs(intent.speed);
+      const urgency = intent.active && intent.userDriven ? clamp01((velocity - .4) / 1.1) : 0;
+      const lead = intent.userDriven ? Math.min(innerHeight * 2.5, velocity * 650) : 0;
+      const fast = velocity > 1.1 && intent.active && intent.userDriven;
+      for (const section of sections) {
+        const rect = section.getBoundingClientRect();
+        if (rect.top < innerHeight + Math.max(220, lead) && rect.bottom > -lead) {
+          section.querySelectorAll("img").forEach(img => {
+            if (preparedImages.has(img)) return;
+            preparedImages.add(img); img.loading = "eager"; void img.decode().catch(() => {});
+          });
+        }
+      }
       const work: Target[] = [];
       for (const t of targets) {
         if (t.progress === 1) continue;
         const top = t.top - scrollY;
         const visible = t.width > 0 && t.height > 0 && top < innerHeight * .98 && top + t.height > 76;
-        if ((!t.width || !t.height) || top + t.height < 76 || (visible && (jump || fast))) { finish(t); continue; }
+        const approaching = intent.active && intent.userDriven && velocity > .65 && (intent.direction > 0
+          ? top < innerHeight * .85 + lead && top + t.height > 76
+          : top + t.height > 76 - lead && top < innerHeight * .85);
+        if ((!t.width || !t.height) || top + t.height < 76 || approaching || (visible && (jump || fast))) { ready(t); continue; }
         if (visible) {
           t.visibleSince ??= now;
+          if (t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - t.visibleSince < 2500) { work.push(t); continue; }
           // Bounded visible work is fail-open; offscreen tasks never keep running.
-          if (now - t.visibleSince > (simplified ? 1200 : 9500)) { finish(t); continue; }
+          if (now - t.visibleSince > (simplified ? 5500 : 8000)) { finish(t); continue; }
           work.push(t);
         }
         if (repaint || !t.el.dataset.building) paint(t);
@@ -202,12 +264,19 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       hideAgents();
       const used = new Set<Target>();
       for (let index = 0; index < cursors.length; index++) {
+        if (simplified && ![0, 2, 5].includes(index)) continue;
+        const assembling = targets.find(t => t.el === nameHeading && t.progress < 1 && work.includes(t));
+        if (index === 3 && assembling && nameScene) {
+          const at = nameScene.point(assembling.progress, 1), c = cursors[index], p = positions[index];
+          if (at) { if (!p.initialized) { p.x = at.x - 40; p.y = at.y - 30; p.initialized = true; } const distance = Math.hypot(at.x - p.x, at.y - p.y), ratio = distance ? Math.min(1, (420 + urgency * 1480) * dt / 1000 / distance) : 1; p.x += (at.x - p.x) * ratio; p.y += (at.y - p.y) * ratio; c.style.opacity = "1"; c.style.transform = `translate3d(${p.x}px,${p.y}px,0)`; }
+          continue;
+        }
         const cursor = cursors[index], position = positions[index];
         const role = cursor.dataset.role;
         const previous = position.target;
-        const available = work.filter(t => !used.has(t));
+        const available = work.filter(t => !used.has(t) && (t.el !== nameHeading || role === "text") && !(t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500));
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
-          const rank = (t: Target) => (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
+          const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);
         })[0];
         if (!target) continue;
@@ -221,28 +290,29 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         }
         const dx = aim.x - position.x, dy = aim.y - position.y;
         const distance = Math.hypot(dx, dy);
-        const step = Math.min(distance, (fast ? 1400 : 420) * dt / 1000);
+        const step = Math.min(distance, (420 + urgency * 1480) * dt / 1000);
         if (distance > .2) {
           position.x += dx / distance * step; position.y += dy / distance * step;
           const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
           position.angle += ((angle - position.angle + 540) % 360 - 180) * Math.min(1, dt / 160);
         }
         // Text waits for its editor to arrive, including a deliberate move to a new line.
-        if (simplified || (!target.cinematic && target.kind !== "text") || distance < 48 || target.elapsed < target.delay) {
-          target.elapsed += dt * (simplified ? 4 : velocity > .6 ? 1.5 : 1);
+        if (target.el === nameHeading || simplified || urgency > .25 || (!target.cinematic && target.kind !== "text") || distance < 48 || target.elapsed < target.delay) {
+          target.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
           target.progress = autonomousProgress(target.progress, target.elapsed, target.delay, target.duration);
           if (target.progress >= 1) { finish(target); continue; } else paint(target);
         }
-        if (!simplified) {
+        {
           cursor.style.opacity = "1";
           cursor.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
+          cursor.dataset.edge = position.x > innerWidth - 135 ? "right" : "left";
           cursor.querySelector<SVGElement>("svg")!.style.transform = `rotate(${position.angle}deg)`;
           cursor.dataset.click = String(target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0);
           cursor.querySelector<HTMLElement>(".agent-action")!.textContent = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
           let guideRect: SceneBox = aim.rect;
           if (target.cinematic) {
             const prop = props[index], scene = sceneFor(target, index, aim.rect);
-            prop.style.opacity = String(scene.opacity * (1 - scene.handoff));
+            prop.style.opacity = String(scene.opacity);
             prop.style.width = aim.rect.width + "px"; prop.style.height = aim.rect.height + "px";
             prop.style.transform = `translate3d(${scene.left}px,${scene.top}px,0) scale(${scene.scale})`;
             prop.dataset.phase = scene.phase;
@@ -261,21 +331,22 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           guide.setAttribute("opacity", String(Math.min(.65, (1 - target.progress) * 4)));
           const l = rect.left - 5, r = rect.left + rect.width + 5, top = rect.top - 5, b = rect.top + rect.height + 5;
           guide.querySelector("path")!.setAttribute("d", `M${l + 6},${top}h-6v6 M${r - 6},${top}h6v6 M${l},${b - 6}v6h6 M${r - 6},${b}h6v-6`);
-          if (target.kind === "text" && target.progress > 0 && target.progress < 1) {
+          if (target.kind === "text" && target.el !== nameHeading && target.progress > 0 && target.progress < 1) {
             const text = textFrame(target.lines, rect.width, rect.height, typedProgress(target.progress, target.count));
             carets[index].style.cssText = `background:${getComputedStyle(cursor).getPropertyValue("--agent-color")};transform:translate3d(${rect.left + text.x}px,${rect.top + text.y + text.height * .14}px,0);height:${Math.max(12, text.height * .73)}px;opacity:${Math.floor(now / 430) % 2 ? .3 : .9}`;
           }
         }
       }
-      jump = false; velocity *= .85;
+      jump = false;
       if (work.some(t => t.progress < 1)) schedule();
     };
-    const onScroll = () => {
-      const now = performance.now(), delta = Math.abs(scrollY - lastY);
-      velocity = delta / Math.max(8, now - lastScrollTime);
-      if (delta > innerHeight * .6) jump = true;
-      lastY = scrollY; lastScrollTime = now; schedule();
+    const unsubscribe = subscribeScrollIntent(() => { if (getScrollIntent().hardJump) jump = true; schedule(); });
+    const onRegroup = (event: Event) => {
+      const active = (event as CustomEvent<string[]>).detail || [];
+      targets.filter(t => active.includes(t.el.closest<HTMLElement>("[data-scan-group]")?.dataset.scanGroup || "")).forEach(ready);
+      hideAgents(); dirty = true; schedule();
     };
+    const onActivityReady = () => { dirty = true; schedule(); };
     const onMeasure = () => { dirty = true; schedule(); };
     const onJump = () => { jump = true; schedule(); };
     const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) onJump(); };
@@ -289,21 +360,26 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     };
     const observer = new ResizeObserver(onMeasure);
     sections.forEach(section => observer.observe(section));
-    window.addEventListener("scroll", onScroll, { passive: true }); window.addEventListener("resize", onMeasure, { passive: true });
+    window.addEventListener("resize", onMeasure, { passive: true }); window.addEventListener("portfolio:regroup", onRegroup);
+    window.addEventListener("portfolio:activity-ready", onActivityReady);
     window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump); window.addEventListener("pageshow", onPageShow);
     document.addEventListener("focusin", onFocus); document.addEventListener("visibilitychange", onVisibility);
     reduced.addEventListener("change", onMeasure); coarse.addEventListener("change", onMeasure);
-    document.fonts.ready.then(() => { if (!stopped) onMeasure(); });
+    window.addEventListener("wheel", markNavigationTouched, { passive: true }); window.addEventListener("touchstart", markNavigationTouched, { passive: true }); window.addEventListener("keydown", markNavigationTouched);
+    document.fonts.ready.then(() => { if (!stopped) { resolveInitialHash(); onMeasure(); } });
     sections.forEach(s => s.querySelectorAll("img").forEach(img => img.addEventListener("load", onMeasure)));
-    measure(); targets.forEach(paint); tick(performance.now());
+    resolveInitialHash(); measure(); targets.forEach(paint); tick(performance.now());
     return () => {
       stopped = true; cancelAnimationFrame(frame); observer.disconnect();
-      window.removeEventListener("scroll", onScroll); window.removeEventListener("resize", onMeasure);
+      unsubscribe(); window.removeEventListener("resize", onMeasure); window.removeEventListener("portfolio:regroup", onRegroup);
+      window.removeEventListener("portfolio:activity-ready", onActivityReady);
       window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump); window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("focusin", onFocus); document.removeEventListener("visibilitychange", onVisibility);
       reduced.removeEventListener("change", onMeasure); coarse.removeEventListener("change", onMeasure);
+      window.removeEventListener("wheel", markNavigationTouched); window.removeEventListener("touchstart", markNavigationTouched); window.removeEventListener("keydown", markNavigationTouched);
       sections.forEach(s => s.querySelectorAll("img").forEach(img => img.removeEventListener("load", onMeasure)));
       targets.forEach(t => { finish(t); delete t.el.dataset.constructed; });
+      nameScene?.dispose();
     };
   }, [layerRef]);
 }

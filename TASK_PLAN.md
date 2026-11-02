@@ -1,6 +1,6 @@
 # Current revision
 
-The cinematic follow-up is complete. See CINEMATIC_PLAN.md and CHANGE_REPORT.md for the current scope and evidence. REVISION_PLAN.md records the prior autonomous/palette/content/media delivery. The original first-delivery plan below is historical; its frozen content/project footprint requirements were explicitly superseded by the later user requests.
+The adaptive/dynamic follow-up is complete. See ADAPTIVE_PLAN.md and CHANGE_REPORT.md for the current scope and evidence. CINEMATIC_PLAN.md and REVISION_PLAN.md record earlier deliveries. The original first-delivery plan below is historical; later user instructions explicitly supersede frozen legacy content, section order, role typewriter and fixed project footprints while protecting the finished name and project media geometry.
 
 # Portfolio construction enhancement — local only
 

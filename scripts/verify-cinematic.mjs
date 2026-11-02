@@ -56,9 +56,9 @@ try {
   await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(100);
   const badge = page.locator('[data-microsoft-headline]'); await badge.focus();
   check('Microsoft badge links to the exact supplied story', await badge.getAttribute('href') === 'https://lnkd.in/p/e-7HV-sM');
-  check('Keyboard focus exposes the small story callout', await page.getByRole('tooltip').isVisible());
+  check('Keyboard focus exposes the small story callout', await page.locator('#microsoft-story-tip').isVisible());
   await page.screenshot({ path: `${output}/microsoft-story.png` });
-  await page.keyboard.press('Escape'); check('Escape dismisses the callout', await page.getByRole('tooltip').count() === 0);
+  await page.keyboard.press('Escape'); check('Escape dismisses the callout', await page.locator('#microsoft-story-tip').count() === 0);
   for (const [title, suffix] of [['Microsoft Machine Learning Engineer', 'certificate'], ['Artificial Intelligence Level 1', 'certificate'], ['IMPACT Hackathon — 1st Place', 'photo']]) {
     const button = page.getByRole('button', { name: `Zoom in ${title} ${suffix}`, exact: true }); await button.click();
     check(`${title} opens the supplied full image`, await page.getByRole('dialog').locator('img').evaluate(async img => { await img.decode(); return img.naturalWidth > 0; }));

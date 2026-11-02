@@ -55,9 +55,12 @@ try {
     return [...document.querySelectorAll('[data-agent]')].every(agent => JSON.stringify([...agent.querySelectorAll('path')].map(p => p.getAttribute('d'))) === JSON.stringify(original));
   }));
   check('Agents use all five colors from the supplied palette', await page.locator('[data-agent]').evaluateAll(els => [...new Set(els.map(el => getComputedStyle(el).getPropertyValue('--agent-color').trim()))].sort()), ['#2bbaa5','#93d3ae','#f96635','#f9a822','#faecb6'].sort());
-  const firstClip = await page.locator('#hero h1').evaluate(el => el.style.getPropertyValue('--construction-clip'));
+  // The name may already have landed while tracing/screenshots warm up. Observe
+  // all real hero jobs; the dedicated dynamic journey checks the early glyphs.
+  const heroProgress = () => page.evaluate(() => JSON.stringify([...document.querySelectorAll('#hero [data-building]')].map(el => [el.tagName, el.getAttribute('style')])) + document.querySelector('[data-name-assembly]').innerHTML + document.querySelector('[data-name-assembly]').style.opacity);
+  const firstClip = await heroProgress();
   await page.waitForTimeout(1600);
-  check('Text builds autonomously without any mouse or scroll input', await page.locator('#hero h1').evaluate(el => el.style.getPropertyValue('--construction-clip')) !== firstClip);
+  check('Real hero construction advances autonomously without any mouse or scroll input', await heroProgress() !== firstClip);
   check('The slower intro remains in construction after two seconds', (await page.locator('#hero [data-building]').count()) > 0);
   await page.waitForFunction(() => !document.querySelector('#hero [data-building]'), null, { timeout: 12000 });
   await page.waitForTimeout(80);
@@ -111,9 +114,9 @@ try {
   check('HarrTest is first and explicitly in progress', await page.locator('[data-project]').first().evaluate(el => el.dataset.project === 'harrtest' && el.textContent.includes('In progress')));
   check('Portrait is rendered in black and white', await page.locator('#about img').evaluate(el => getComputedStyle(el).filter), 'grayscale(1)');
   check('Microsoft is the first displayed professional employer', await page.locator('#experience h3').nth(1).innerText(), 'Microsoft');
-  check('All eight verified roles appear in the actual timeline', await page.locator('#experience h4').count(), 8);
+  check('All eight verified roles appear in the actual timeline', await page.locator('#experience .experience-role').count(), 8);
   check('The new C# certificate is displayed', await page.getByRole('heading', { name: 'Learning C#', exact: true }).count(), 1);
-  check('Certificate photographs are rendered inline by default', await page.locator('#education .certificate-thumb').count(), 6);
+  check('Certificate photographs are rendered inline by default', await page.locator('#education .certificate-thumb,#honors .certificate-thumb').count(), 6);
   check('The Crossover role clearly states its freelance basis', await page.locator('#experience').innerText().then(text => text.includes('Part-time freelance') && text.includes('through Crossover')));
   for (const img of await page.locator('.project-media img').all()) {
     await img.scrollIntoViewIfNeeded();
@@ -185,7 +188,7 @@ try {
 
   const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const mp = await touch.newPage(); await mp.goto(url, { waitUntil: 'networkidle' });
-  check('Touch uses simplified construction without mouse pointers', await mp.locator('[data-agent-layer]').evaluate(el => getComputedStyle(el).display), 'none');
+  check('Touch keeps a simplified team of at most three decorative builders', await mp.locator('[data-agent]').evaluateAll(es => { const n = es.filter(el => +getComputedStyle(el).opacity > 0).length; return n > 0 && n <= 3; }));
   await mp.getByRole('button', { name: 'Menu', exact: true }).tap();
   await mp.locator('nav a[href="#projects"]:visible').tap(); await mp.waitForTimeout(1000);
   check('Mobile menu navigates to Projects', new URL(mp.url()).hash, '#projects');

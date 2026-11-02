@@ -6,10 +6,6 @@ import { profileContent, animatedRoles as roles } from "@/data/profileContent";
 
 const HeroSection = () => {
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const [roleIndex, setRoleIndex] = useState(0);
-  const [displayText, setDisplayText] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches ? roles[0] : "");
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [cursorVisible, setCursorVisible] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -18,44 +14,6 @@ const HeroSection = () => {
     query.addEventListener("change", update);
     return () => query.removeEventListener("change", update);
   }, []);
-
-  // Blinking cursor
-  useEffect(() => {
-    if (reducedMotion) return;
-    const cursorInterval = setInterval(() => {
-      setCursorVisible((prev) => !prev);
-    }, 530);
-    return () => clearInterval(cursorInterval);
-  }, [reducedMotion]);
-
-  // Typewriter effect
-  useEffect(() => {
-    if (reducedMotion) {
-      setDisplayText(roles[0]);
-      setIsDeleting(false);
-      setRoleIndex(0);
-      setCursorVisible(true);
-      return;
-    }
-    const currentRole = roles[roleIndex];
-    const typeSpeed = isDeleting ? 40 : 80;
-
-    const timeout = setTimeout(() => {
-      if (!isDeleting) {
-        if (displayText.length === currentRole.length) {
-          setIsDeleting(true);
-        } else setDisplayText(currentRole.slice(0, displayText.length + 1));
-      } else {
-        setDisplayText(currentRole.slice(0, displayText.length - 1));
-        if (displayText.length === 0) {
-          setIsDeleting(false);
-          setRoleIndex((prev) => (prev + 1) % roles.length);
-        }
-      }
-    }, !isDeleting && displayText.length === currentRole.length ? 2000 : typeSpeed);
-
-    return () => clearTimeout(timeout);
-  }, [displayText, isDeleting, roleIndex, reducedMotion]);
 
   // Matrix-style rain effect
   useEffect(() => {
@@ -154,6 +112,7 @@ const HeroSection = () => {
         <MicrosoftHeadline />
 
         <h1
+          data-construction="text" data-construction-scene="letters"
           className="heading-brutal leading-[0.85]"
           style={{ fontSize: "clamp(48px, 10vw, 130px)" }}
         >
@@ -162,19 +121,12 @@ const HeroSection = () => {
           <span className="text-foreground/20">Abozena.</span>
         </h1>
 
-        <div data-construction="asset" data-construction-skip className="mt-6 h-8 flex items-center justify-center">
+        <div data-construction="text" className="mt-6 h-8 flex items-center justify-center">
           <span className="font-mono text-sm md:text-base tracking-[0.2em] text-foreground/50">
             {"< "}
           </span>
           <span className="font-mono text-sm md:text-base tracking-[0.15em] text-foreground/70 font-medium">
-            {displayText}
-          </span>
-          <span
-            className={`font-mono text-sm md:text-base text-foreground/70 ${
-              cursorVisible ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            |
+            {roles[0]}
           </span>
           <span className="font-mono text-sm md:text-base tracking-[0.2em] text-foreground/50">
             {" />"}

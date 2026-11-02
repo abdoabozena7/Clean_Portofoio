@@ -2,8 +2,9 @@ import { useState } from "react";
 
 const links = [
   { label: "About", href: "#about" },
-  { label: "Education", href: "#education" },
   { label: "Experience", href: "#experience" },
+  { label: "Education", href: "#education" },
+  { label: "Honors", href: "#honors" },
   { label: "Projects", href: "#projects" },
   { label: "Technical Skills", href: "#skills" },
   {
@@ -19,7 +20,7 @@ const Navbar = () => {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 py-6 bg-background/80 backdrop-blur-sm">
       <div className="max-w-6xl mx-auto px-6">
-        <div className="hidden md:flex items-center justify-center gap-0">
+        <div className="hidden lg:flex items-center justify-center gap-0">
           {links.map((link, i) => (
             <span key={link.href} className="flex items-center">
               <a
@@ -41,14 +42,14 @@ const Navbar = () => {
           ))}
         </div>
 
-        <div className="md:hidden flex justify-center">
+        <div className="lg:hidden flex justify-center">
           <button onClick={() => setOpen(!open)} className="nav-link">
             {open ? "Close" : "Menu"}
           </button>
         </div>
 
         {open && (
-          <div className="md:hidden flex flex-col items-center gap-4 mt-6">
+          <div className="lg:hidden flex flex-col items-center gap-4 mt-6">
             {links.map((link) => (
               <a
                 key={link.href}
