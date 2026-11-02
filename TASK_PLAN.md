@@ -1,6 +1,6 @@
 # Current revision
 
-The adaptive/dynamic follow-up is complete. See ADAPTIVE_PLAN.md and CHANGE_REPORT.md for the current scope and evidence. CINEMATIC_PLAN.md and REVISION_PLAN.md record earlier deliveries. The original first-delivery plan below is historical; later user instructions explicitly supersede frozen legacy content, section order, role typewriter and fixed project footprints while protecting the finished name and project media geometry.
+See ATTENTION_PLAN.md and the newest CHANGE_REPORT.md entry for the current continuation. Native implementation and regression checks are complete; deployment is the final active step, explicitly authorized by the user's latest request. ADAPTIVE_PLAN.md, CINEMATIC_PLAN.md and REVISION_PLAN.md record earlier deliveries. The original first-delivery plan below is historical; later user instructions explicitly supersede frozen legacy content, section order, role typewriter, compact-all behavior and no-forced-scroll for five named highlights, while protecting the finished name and project image dimensions.
 
 # Portfolio construction enhancement — local only
 

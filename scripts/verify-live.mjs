@@ -1,0 +1,52 @@
+import { createRequire } from 'node:module';
+import { readFile, mkdir, writeFile, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url);
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const url='https://abdoabozena7.github.io/Clean_Portofoio/';
+const out='output/playwright/attention-live';await mkdir(out,{recursive:true});
+const digest=b=>createHash('sha256').update(b).digest('hex');
+const report={url,sourceCommit:execFileSync('git',['rev-parse','HEAD']).toString().trim(),assets:[],checks:[],errors:[],passed:false};
+const check=(name,value)=>{assert.ok(value,name);report.checks.push(name);console.log(name);};
+const html=await readFile('dist/index.html','utf8');const entry=html.match(/assets\/index-[\w-]+\.js/)[0];
+// Pages builds asynchronously after the existing gh-pages push. Check the normal URL.
+let live='';for(let attempt=0;attempt<60;attempt++){
+ const response=await fetch(url,{cache:'no-store'});live=await response.text();
+ if(response.ok&&live.includes(entry))break;
+ console.log(`Pages is still serving the previous build (${attempt+1}); waiting for ${entry}`);
+ await new Promise(resolve=>setTimeout(resolve,10000));
+}
+let browser;
+try{
+ check('Normal live URL serves the exact new production entry',live.includes(entry));
+ for(const name of (await readdir('dist/assets')).filter(n=>/\.(js|css)$/.test(n))){
+  const response=await fetch(url+'assets/'+name,{cache:'no-store'});const remote=Buffer.from(await response.arrayBuffer()),local=await readFile('dist/assets/'+name);
+  check(`Published ${name} matches the tested production bytes`,response.ok&&digest(remote)===digest(local));report.assets.push({name,sha256:digest(local),liveSha256:digest(remote)});
+ }
+ browser=await chromium.launch({channel:'msedge',headless:true});
+ const context=await browser.newContext({viewport:{width:1440,height:900}}),page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
+ await page.goto(url,{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);await page.waitForFunction(()=>!document.querySelector('#hero [data-building]'),null,{timeout:12000});
+ check('Live hero keeps the actual name and Microsoft credential',(await page.locator('#hero h1').textContent()).replace(/\s/g,'')==='AbdelrahmanAbozena'&&(await page.locator('#hero').innerText()).includes('SWE Intern at Microsoft'));
+ check('Live About has concise copy and no Showcase link',await page.locator('#about p').count()===2&&await page.getByText('View Showcase Profile',{exact:true}).count()===0);
+ check('Live project order starts with Hivo then HarrTest',await page.locator('[data-project]').evaluateAll(es=>es[0].dataset.project==='hivo'&&es[1].dataset.project==='harrtest'));
+ await page.screenshot({path:out+'/desktop-hero.png'});
+ await page.locator('#project-hivo').evaluate(el=>scrollTo({top:scrollY+el.getBoundingClientRect().top-300,behavior:'instant'}));await page.waitForTimeout(250);await page.mouse.wheel(0,650);
+ await page.locator('[data-attention-dialog]').waitFor();check('Live fast skipping opens the actual Hivo highlight dialog',(await page.locator('[data-attention-dialog]').innerText()).includes('Hivo Studio'));
+ await page.screenshot({path:out+'/desktop-warning.png'});await page.getByRole('button',{name:/Take me back/}).click();
+ await page.waitForFunction(()=>document.documentElement.dataset.attentionPhase==='reviewing');const y=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,450);await page.waitForTimeout(150);
+ check('Live spotlight holds its viewport while the real project is visible',Math.abs(await page.evaluate(()=>scrollY)-y)<1&&await page.locator('#project-hivo').evaluate(e=>e.getBoundingClientRect().top>=76));
+ await page.waitForFunction(()=>document.documentElement.dataset.attentionPhase==='complete',null,{timeout:6000});
+ check('Live review completes with green check and seen state',await page.locator('[data-attention-ring="complete"]').count()===1&&await page.locator('#project-hivo').getAttribute('data-attention-seen')==='true');await page.screenshot({path:out+'/desktop-complete.png'});
+ await page.mouse.wheel(0,180);await page.waitForTimeout(150);check('Live scrolling resumes after exposure',Math.abs(await page.evaluate(()=>scrollY)-y)>100);
+ const certificate=await context.newPage();await certificate.goto(url+'#honors',{waitUntil:'networkidle'});await certificate.getByRole('button',{name:/Zoom in IMPACT/}).click();await certificate.getByRole('dialog').locator('img').evaluate(e=>e.decode());check('Published winning photo opens at genuine resolution',await certificate.getByRole('dialog').locator('img').evaluate(e=>e.naturalWidth===1280&&e.naturalHeight===853));await certificate.keyboard.press('Escape');
+ await context.close();
+ const mobile=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),m=await mobile.newPage();m.on('pageerror',e=>report.errors.push(e.message));await m.goto(url+'#skills',{waitUntil:'networkidle'});await m.evaluate(()=>document.fonts.ready);
+ let moving=false;for(let i=0;i<10;i++){await m.mouse.wheel(0,65);await m.waitForTimeout(55);moving ||= await m.locator('[data-scan-editor]').evaluateAll(es=>es.some(e=>+getComputedStyle(e).opacity>.9));}
+ check('Published mobile Skills has visible reflow builders',moving);check('Published mobile has no horizontal overflow',await m.evaluate(()=>document.documentElement.scrollWidth===innerWidth));await m.screenshot({path:out+'/mobile-skills.png'});
+ await m.waitForTimeout(800);check('Published mobile Skills restores opaque accessible details',await m.locator('#skills [data-scan-detail]').evaluateAll(es=>es.every(e=>!e.inert&&+getComputedStyle(e).opacity>.99)));
+ await mobile.close();check('Published desktop/mobile journeys have no runtime errors',report.errors.length===0);
+ report.passed=true;
+}catch(error){report.failure=error.stack;throw error;}
+finally{await browser?.close();await writeFile(out+'/report.json',JSON.stringify(report,null,2));console.log(JSON.stringify({passed:report.passed,checks:report.checks.length,failure:report.failure}));}

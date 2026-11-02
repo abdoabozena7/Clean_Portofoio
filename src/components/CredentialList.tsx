@@ -15,6 +15,8 @@ const CredentialList = ({ items, group }: CredentialListProps) => (
         key={`${item.degree}-${item.school}`}
         data-certificate
         data-scan-item="credential"
+        data-attention-id={item.achievement ? "honors-impact" : item.school === "Harbin Institute of Technology" ? "education-harbin" : item.degree === "Microsoft Machine Learning Engineer" ? "honors-depi" : undefined}
+        data-attention-critical={item.achievement || item.school === "Harbin Institute of Technology" || item.degree === "Microsoft Machine Learning Engineer" || undefined}
         data-achievement={item.achievement || undefined}
         className="credential border-l-2 border-black/10 pl-6 py-2 hover:border-black transition-colors duration-300"
       >

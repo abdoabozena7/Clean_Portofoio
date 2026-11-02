@@ -80,3 +80,14 @@
 - Inspected actual name assembly/landing/finish, padded logo handoff, week-building palette, footer hovers, mobile compact/detail projects, compact Experience/Education, full Honors/IMPACT dialogs and restored Skills images. Current-source review found0idle construction RAF after settle. No field CWV score or physical Safari/device claim. Seven original Fast Refresh warnings and old Browserslist dataset remain.
 - Final layout run:1231 checks pass, before/after source fingerprints both6587eb84ef4471702e5e01b67a8a4d0ac0acfc2bb4235d2e543400513eede2af. Finished-name pixel changed ratio is0 at desktop, laptop, tablet and mobile.
 - Local-only work; no push or deploy. Experimental changes to the historical comparator were restored; current npm layout aliases point to the new source-bound verifier for the current authorized scope.
+
+
+## Highlight continuation — final pre-deployment evidence, 2 November2026
+
+Latest user explicitly authorizes publishing after completion and supersedes no-scroll-lock for5 named highlights. See ATTENTION_PLAN.md for source provenance/ownership. Final app d5e552652d4763809d582536736c6a49038800d342ed81593ec9a5ee21709c97:60 production interactions,28 production dynamic,21 cinematic,83 independent attention,10 featured layout,1839 four-viewport comparisons allPASS/current coherent. Name19 scoped probes and profile14 scoped probes remain input-coherent. Build/lint/types/unit4PASS,7 original Fast Refresh warnings.
+
+Independent negative controls correctly fail uniform letter motion, stationary fold/unfold editors and+10px Hivo image width. Original mandatory timer started27.5ms too early from an already-running exposure clock; reset at warning entry. Original column gap24to12 increased protected Hivo image3.375px high; now row gaps only change. Continued programmatic scrolls can be inferred as scrollbar intent, so attention requires explicit recent wheel/touch/key input. Popup specificity now enforces350px width/20px mobile margins/cream. Editors restart on same-goal fast input after revisit. Hidden construction/dialog time is excluded from actual3second exposure.
+
+Visual root review caught a new half-row blank after Hivo reorder; reused the featured pattern with68px interior gap so original368px copy/366x205 image and wrapping remain exact. Independent10 checks confirmed desktop848x256.5, HarrTest24px below, and untouched342x463.625 mobile card. First failed/intermediate receipts kept by reviewer; source-drift root journeys invalidated and rerun on frozen final source. Layout comparison originally included the deliberately reordered grid aggregate height; it now scopes that authorized parent-height change while retaining exact media/child dimensions.
+
+Previous publishedgh-pages commitafdb5dcbcd0dc26f9d17e1839f75b164cb7af9f9 preserved at baseline/live-before-attention-2026-11-02. Deploy is next; no successful deployment claimed until live byte hashes/native journey verify it.

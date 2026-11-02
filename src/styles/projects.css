@@ -35,6 +35,12 @@ html .project-card:hover { box-shadow: 7px 7px 0 var(--accent, var(--accent-teal
 }
 .project-flow-media { background: color-mix(in srgb, var(--accent-cream) 30%, white); }
 @media (min-width: 768px) {
+  /* Promote the first project without changing its existing copy/image widths:
+     68px equals the original24px grid gap plus both22px card insets. */
+  .project-grid .project-card--featured { grid-column: 1 / -1; display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); column-gap: 68px; align-items: start; }
+  .project-card--featured .project-copy { grid-column: 1; grid-row: 1; }
+  .project-card--featured .project-media { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; align-self: center; }
+  .project-card--featured .project-actions { grid-column: 1; grid-row: 2; }
   .project-grid .project-card--skill { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; column-gap: 28px; align-items: center; }
   .project-card--skill .project-copy { grid-column: 1; grid-row: 1; }
   .project-card--skill .project-flow-media { grid-column: 2; grid-row: 1 / span 2; margin-top: 0; }

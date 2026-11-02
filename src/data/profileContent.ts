@@ -21,13 +21,6 @@ export type Project = {
 
 export const projects: Project[] = [
   {
-    id: "harrtest", title: "HarrTest",
-    description: "Your agent says ‘tested’ but never ran the app? Make it show the evidence.",
-    tags: ["Agent Skill", "Verification", "Open Source"],
-    githubUrl: "https://github.com/abdoabozena7/HarrTest", kind: "skill", inProgress: true,
-    source: "Public HarrTest README and SKILL.md: plan, build, run, observe, verify. A skill does not guarantee correctness or host enforcement.",
-  },
-  {
     id: "hivo", title: "Hivo Studio",
     description: "Running out of coding credits? Build with local models and a coordinated agent team.",
     tags: ["TypeScript", "Rust", "LLM Agents", "Ollama"],
@@ -36,6 +29,13 @@ export const projects: Project[] = [
     imageAlt: "Hivo Studio desktop workspace connected to a local project, with its coding prompt composer.",
     imageSource: "Owner-supplied Hivo Studio screenshot", inProgress: true,
     source: "Public README identifies Hivo Studio despite the legacy repository slug; owner confirms ongoing work.",
+  },
+  {
+    id: "harrtest", title: "HarrTest",
+    description: "Your agent says ‘tested’ but never ran the app? Make it show the evidence.",
+    tags: ["Agent Skill", "Verification", "Open Source"],
+    githubUrl: "https://github.com/abdoabozena7/HarrTest", kind: "skill", inProgress: true,
+    source: "Public HarrTest README and SKILL.md: plan, build, run, observe, verify. A skill does not guarantee correctness or host enforcement.",
   },
   {
     id: "ya-rab-ostorha", title: "YA RAB OSTORHA",
@@ -297,9 +297,8 @@ export const profileContent = {
   avatar: "images/portrait-cutout.png",
   avatarStatus: "SWE Intern",
   about: [
-    "I am a SWE Intern at Microsoft and an AI engineer specializing in Agentic AI and Retrieval-Augmented Generation (RAG).",
-    "I build LLM-powered applications, multi-agent architectures, and scalable backend systems with Python and FastAPI, from data processing to deployment and real-time inference.",
-    "I study Computer Science at Egyptian Chinese University. My work combines machine learning, MLOps, and practical AI engineering, with a focus on reliable, evidence-backed systems.",
+    "I’m a SWE Intern at Microsoft and an AI engineer building practical agentic systems.",
+    "I study Computer Science at Egyptian Chinese University and build with LLMs, RAG, Python, and FastAPI.",
   ],
   contactIntro: "Currently a SWE Intern at Microsoft. For AI, backend, or open-source collaboration, feel free to reach out.",
   footerNote: "Based in Giza, Egypt | Let's talk AI, agents, and engineering",

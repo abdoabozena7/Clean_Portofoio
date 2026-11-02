@@ -20,10 +20,11 @@ const ProjectsSection = () => {
           key={project.id}
           id={`project-${project.id}`}
           data-priority={project.inProgress || undefined}
+          data-attention-critical={project.id === "hivo" || undefined}
           data-project={project.id}
           data-tone={(projectIndex + 2) % 5}
           data-construction="structure"
-          className={`project-card ${project.kind === "skill" ? "project-card--skill" : ""} group relative border-2 border-black p-5 flex flex-col hover:-translate-x-1 hover:-translate-y-1 transition-all duration-300 bg-white`}
+          className={`project-card ${project.kind === "skill" ? "project-card--skill" : ""} ${project.id === "hivo" ? "project-card--featured" : ""} group relative border-2 border-black p-5 flex flex-col hover:-translate-x-1 hover:-translate-y-1 transition-all duration-300 bg-white`}
         >
           {project.inProgress && (
             <span className="project-building" title="Currently working on this project">

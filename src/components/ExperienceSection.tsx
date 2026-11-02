@@ -37,6 +37,8 @@ const Timeline = ({ items }: { items: TimelineItem[] }) => (
         key={`${exp.role}-${exp.company}`}
         data-tone={index % 5}
         data-experience-item
+        data-attention-id={exp.company === "Microsoft" ? "experience-microsoft" : undefined}
+        data-attention-critical={exp.company === "Microsoft" || undefined}
         data-scan-item="experience"
         className="experience-item relative pb-4 last:pb-0"
       >

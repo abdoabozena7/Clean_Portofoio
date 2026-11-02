@@ -11,9 +11,10 @@ const SkillsSection = () => (
           key={category.title}
           className="skill-category group"
           data-tone={idx % 5}
+          data-attention-id={idx === 0 ? "skills-ai" : idx === 1 ? "skills-data" : idx === 2 ? "skills-backend" : undefined}
         >
           <div className="flex flex-col h-full border-t-2 border-black pt-4">
-            <h3 className="text-xs font-mono uppercase tracking-[0.2em] mb-6 text-black/40 group-hover:text-black transition-colors duration-300">
+            <h3 className="text-sm font-bold font-mono uppercase tracking-[0.12em] mb-6 text-black/80 group-hover:text-black transition-colors duration-300">
               <button type="button" data-scan-toggle className="skill-disclosure" aria-expanded="true" aria-controls={`skill-details-${idx}`} onClick={requestDetailedView}>{category.title}<span className="skill-count" aria-hidden="true">{category.skills.length} skills ↗</span></button>
             </h3>
             <div id={`skill-details-${idx}`} data-scan-detail className="flex flex-wrap gap-2">
@@ -21,7 +22,7 @@ const SkillsSection = () => (
                 <span
                   key={skill}
                   data-tone={(idx + skillIndex) % 5}
-                  className="palette-tag px-3 py-1.5 border border-black/5 text-xs font-medium transition-all duration-300 cursor-default"
+                  className="palette-tag px-3 py-1.5 border border-black/5 text-xs font-semibold transition-colors duration-200 cursor-default"
                 >
                   {skill}
                 </span>

@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Check, ArrowUpLeft } from "lucide-react";
+import type { AttentionView } from "@/hooks/useAttentionJourney";
 
 const ScrollToTop = () => {
   const [visible, setVisible] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [attention, setAttention] = useState<AttentionView | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -17,7 +19,9 @@ const ScrollToTop = () => {
     };
 
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const updateAttention = (event: Event) => setAttention((event as CustomEvent<AttentionView>).detail);
+    window.addEventListener("portfolio:attention-status", updateAttention);
+    return () => { window.removeEventListener("scroll", handleScroll); window.removeEventListener("portfolio:attention-status", updateAttention); };
   }, []);
 
   // Circle configuration
@@ -26,17 +30,19 @@ const ScrollToTop = () => {
   const center = size / 2;
   const radius = center - strokeWidth - 2; // -2 for padding
   const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (progress / 100) * circumference;
+  const highlight = attention && ["warning", "relocating", "reviewing", "complete"].includes(attention.phase);
+  const offset = circumference - (highlight ? attention.progress : progress / 100) * circumference;
 
   return (
     <button
-      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className={`fixed bottom-6 left-6 z-50 group transition-all duration-500 ease-out ${
-        visible
+      onClick={() => highlight && attention.phase !== "complete" ? window.dispatchEvent(new Event("portfolio:attention-return")) : window.scrollTo({ top: 0, behavior: "smooth" })}
+      data-attention-ring={highlight ? attention.phase : undefined}
+      className={`scroll-ring fixed bottom-6 left-6 z-50 group transition-all duration-500 ease-out ${
+        visible || highlight
           ? "opacity-100 translate-y-0"
           : "opacity-0 translate-y-8 pointer-events-none"
       }`}
-      aria-label="Scroll to top"
+      aria-label={highlight ? attention.phase === "complete" ? "Highlight complete · scroll to top" : `Return to ${attention.item?.title}` : "Scroll to top"}
     >
       <div className="relative flex items-center justify-center bg-background/80 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:scale-110 transition-all duration-300">
         <svg width={size} height={size} className="rotate-[-90deg]">
@@ -67,7 +73,7 @@ const ScrollToTop = () => {
 
         {/* Icon */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <ArrowUp className="w-5 h-5 text-foreground/80 group-hover:-translate-y-0.5 transition-transform duration-300" />
+          {highlight ? attention.phase === "complete" ? <Check className="w-5 h-5" /> : <ArrowUpLeft className="w-5 h-5" /> : <ArrowUp className="w-5 h-5 text-foreground/80 group-hover:-translate-y-0.5 transition-transform duration-300" />}
         </div>
       </div>
     </button>

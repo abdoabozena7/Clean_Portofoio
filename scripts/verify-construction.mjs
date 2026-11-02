@@ -111,7 +111,7 @@ try {
   check('Anchor targets immediately expose readable content', await visiblePending(), []);
   await snap('projects-anchor');
   check('All requested projects and the skill are present', await page.locator('[data-project]').count(), 7);
-  check('HarrTest is first and explicitly in progress', await page.locator('[data-project]').first().evaluate(el => el.dataset.project === 'harrtest' && el.textContent.includes('In progress')));
+  check('Hivo is first and HarrTest follows, both explicitly in progress', await page.locator('[data-project]').evaluateAll(es => es[0].dataset.project === 'hivo' && es[1].dataset.project === 'harrtest' && es.slice(0,2).every(el => el.textContent.includes('In progress'))));
   check('Portrait is rendered in black and white', await page.locator('#about img').evaluate(el => getComputedStyle(el).filter), 'grayscale(1)');
   check('Microsoft is the first displayed professional employer', await page.locator('#experience h3').nth(1).innerText(), 'Microsoft');
   check('All eight verified roles appear in the actual timeline', await page.locator('#experience .experience-role').count(), 8);

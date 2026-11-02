@@ -88,7 +88,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const cinematic = el.dataset.constructionScene !== "activity" && ((kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction")));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
           progress: 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
-          duration: el.dataset.constructionScene === "letters" ? 2200 : el.dataset.constructionScene === "activity" ? 1300 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
+          duration: el.dataset.constructionScene === "letters" ? 3200 : el.dataset.constructionScene === "activity" ? 1300 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
           delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
       }
     }
@@ -202,7 +202,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       let rect = t.el.getBoundingClientRect();
       let x = rect.left, y = rect.top;
       if (t.el === nameHeading && nameScene) {
-        const at = nameScene.point(t.progress, 0); if (at) { x = at.x; y = at.y; }
+        const at = nameScene.point(t.progress, index); if (at) { x = at.x; y = at.y; }
       } else if (t.weeks?.length) {
         rect = t.weeks[Math.min(t.weeks.length - 1, Math.floor(t.progress * t.weeks.length))].getBoundingClientRect();
         x = rect.right; y = rect.bottom;
@@ -262,19 +262,34 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (repaint || !t.el.dataset.building) paint(t);
       }
       hideAgents();
+      const assembling = targets.find(t => t.el === nameHeading && t.progress < 1 && work.includes(t));
+      if (assembling && nameScene) {
+        // Advance one shared clock once, then let every pointer manipulate its own glyph.
+        assembling.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
+        assembling.progress = autonomousProgress(assembling.progress, assembling.elapsed, assembling.delay, assembling.duration);
+        if (assembling.progress >= 1) finish(assembling); else paint(assembling);
+      }
       const used = new Set<Target>();
       for (let index = 0; index < cursors.length; index++) {
         if (simplified && ![0, 2, 5].includes(index)) continue;
-        const assembling = targets.find(t => t.el === nameHeading && t.progress < 1 && work.includes(t));
-        if (index === 3 && assembling && nameScene) {
-          const at = nameScene.point(assembling.progress, 1), c = cursors[index], p = positions[index];
-          if (at) { if (!p.initialized) { p.x = at.x - 40; p.y = at.y - 30; p.initialized = true; } const distance = Math.hypot(at.x - p.x, at.y - p.y), ratio = distance ? Math.min(1, (420 + urgency * 1480) * dt / 1000 / distance) : 1; p.x += (at.x - p.x) * ratio; p.y += (at.y - p.y) * ratio; c.style.opacity = "1"; c.style.transform = `translate3d(${p.x}px,${p.y}px,0)`; }
-          continue;
+        const action = cursors[index].querySelector<HTMLElement>(".agent-action")!;
+        action.style.removeProperty("display"); delete cursors[index].dataset.letter;
+        if (assembling && assembling.progress < 1 && nameScene) {
+          const at = nameScene.point(assembling.progress, index), c = cursors[index], p = positions[index];
+          if (at) {
+            p.x = at.x; p.y = at.y; p.initialized = true; p.target = null;
+            c.style.opacity = "1"; c.style.transform = `translate3d(${p.x}px,${p.y}px,0)`;
+            c.dataset.letter = String(at.letter); c.dataset.edge = p.x > innerWidth - 135 ? "right" : "left";
+            c.dataset.click = String(at.moving);
+            c.querySelector<SVGElement>("svg")!.style.transform = "none";
+            action.textContent = ` · ${at.operation}`; action.style.display = "inline";
+            continue;
+          }
         }
         const cursor = cursors[index], position = positions[index];
         const role = cursor.dataset.role;
         const previous = position.target;
-        const available = work.filter(t => !used.has(t) && (t.el !== nameHeading || role === "text") && !(t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500));
+        const available = work.filter(t => !used.has(t) && t.el !== nameHeading && !(t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500));
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
           const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);

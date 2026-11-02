@@ -1,5 +1,5 @@
 /** One input-driven signal shared by construction and mobile regrouping. No React frames. */
-export type ScrollIntent = { speed: number; direction: number; scan: boolean; active: boolean; hardJump: boolean; userDriven: boolean };
+export type ScrollIntent = { speed: number; direction: number; scan: boolean; active: boolean; hardJump: boolean; userDriven: boolean; inputDriven: boolean };
 const listeners = new Set<() => void>();
 let speed = 0, direction = 1, scan = false, hardJump = false, lastY = 0, lastAt = 0;
 let inputAt = -Infinity, burstAt = 0, travel = 0, samples = 0, slowAt = 0;
@@ -10,7 +10,7 @@ const publish = () => { listeners.forEach(listener => listener()); };
 
 export function getScrollIntent(): ScrollIntent {
   const elapsed = performance.now() - lastAt;
-  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: scan && !held, active: elapsed < 220, hardJump, userDriven };
+  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: scan && !held, active: elapsed < 220, hardJump, userDriven, inputDriven: performance.now() - inputAt < 900 };
 }
 
 /** Our anchor corrections are geometry bookkeeping, never evidence of user speed. */

@@ -1,3 +1,33 @@
+# Highlight journeys and agent choreography — 2 November 2026
+
+Deployment is authorized in the latest user request. Implementation is verified; the existing gh-pages release is the next step. Start source17d1349 is preserved; existing live revisionafdb5dcbcd0dc26f9d17e1839f75b164cb7af9f9 is preserved at baseline/live-before-attention-2026-11-02.
+
+## Result
+
+- About is two short verified sentences; Showcase CTA is removed. Hivo Studio comes first, HarrTest second. The first Hivo card uses the existing copy/media feature pattern, avoiding an empty half-row on desktop. Copy width, text wrapping and image dimensions remain exact; mobile layout is unchanged.
+- Regrouping editors visibly pull/fold/unfold along measured real row edges, with selection grips and paths in the gutters. They resume when fast input resumes, including after revisiting. Stronger Skills headings/tokens remain readable; no agent labels obscure compact skill text. Column gaps stay fixed so protected media does not resize.
+- Each name letter has an assigned cursor and a distinct pull, grow, shrink, turn, slide, unfold, drop or lift operation. Owners transfer between letters, coordinate one shared timeline and land at exact native character ranges before atomic handoff. Real heading text/geometry remain unchanged;8 desktop/3 touch builders, reduced-motion fallback.
+- Short session-only reminders cover important Experience, Education, Honors, Projects and Skills items. Their English invitations use verified facts, including HIT in China and the supplied IMPACT15,000EGP first-prize photo. Revisit, reverse return, actual exposure and dismissal remove reminders. No persistence, analytics or claim of knowing what was read.
+- Five named highlights have the explicitly requested return journey: Microsoft role, DEPI Microsoft ML training, HIT summer school, IMPACT and Hivo. Fast real input crossing an unseen highlight opens a red-ring warning; its button or the actual ring returns immediately, otherwise after3seconds. The selected item stays detailed with neighboring rows compact.3seconds of actual visible content gives a green check and releases scrolling. Hidden construction, background tabs and a covering Zoom dialog do not count. Escape/Close exits without claiming exposure or repeatedly trapping navigation. Programmatic fragments/history/capture traversal do not trigger stops.
+
+## Files and verification
+
+Runtime: AboutSection, AdaptiveBrowsing, CredentialList, ExperienceSection, ProjectsSection, ScrollToTop, SkillsSection, profileContent, useAdaptiveBrowsing, useScrollConstruction, nameConstruction, scrollIntent, adaptive/projects styles; new attentionContent.ts and useAttentionJourney.ts. Verifiers: new attention review/layout, letter choreography and live-production probes; interaction order expectation and npm aliases updated. No dependencies added.
+
+Final all-src SHA-256: d5e552652d4763809d582536736c6a49038800d342ed81593ec9a5ee21709c97.
+
+- Build, TypeScript, lint and4 Vitest tests pass.7 existing Fast Refresh warnings and old Browserslist data remain.
+- Built production8082:60 interaction checks and28 dynamic checks pass, coherent final-source receipts, no runtime/request errors. Actual cursor, CV PDF, terminal, forms, anchors/history, dialogs/focus, palette, real calendar data and full-size atomic image handoff are covered.
+-83 independent attention checks plus10 featured-layout checks pass on the final source; trusted wheel, native CDP touch, PageDown, auto/direct return, both timers, locks/unlock, all5 targets, no-repeat, Escape, optional AI/Backend/HarrTest cues, actual fold/unfold movement and restoration. Hidden-Zoom probe:3.3s hidden does not complete;3252ms after closing reaches green. Desktop/mobile captures inspected.
+-19 letter checks pass on the unchanged scoped name source/verifier fingerprint ddeb0c820bd37b9c6b45dbb8507037182cd5eec7f2f90532124d6e30b0a8709d, including distinct operations, each moving glyph's assigned pointer,0px final alignment and reduced motion. Uniform/stationary letters correctly fail the negative control.
+-21 cinematic checks pass on the final source, including genuine certificate photos and palette/portrait integration. Concise About/project data also independently checked14 outcomes at390/1440 on its unchanged scoped source.
+-1839 protected layout/content comparisons pass at1440x900,1366x768,768x1024,390x844. All9 natural sections captured, no overflow or failed images. Existing Experience/Education/Honors/Contact/Finale detailed metrics/copy/fonts remain exact; original project media dimensions and internal copy widths/wrapping are preserved. The explicitly moved Hivo image/actions and shortened About/stronger Skills are scoped exceptions. Finished name pixels are identical at all4 sizes. Injecting+10px image width fails the exact geometry check.
+- Forcing stationary reflow editor transforms fails precisely fold+unfold motion checks on the final source. Initial real timer, column-gap, modal-specificity, input-classification and editor-resumption findings were fixed and re-exercised. Historical compact-all verifiers and old comparison files remain in Git; current adaptive/profile/review and layout aliases point to the replacement current-contract verifiers. An old HarrTest-first assertion was updated only because the user explicitly requested Hivo-first. Intermediate source-drift runs were not promoted to final proof.
+
+Evidence: output/research/attention-review, output/playwright/attention-production, dynamic, cinematic, letter-choreography, attention-after and attention-layout. Native Edge/Chromium desktop/touch emulation; no physical Safari or field CWV claim. HarrTest latest2.6.1 public tree verified; instruction-only workflow, CHILD_TASK_STATUS=VERIFIED_WITHIN_SCOPE; formal sealed ROOT_GOAL_STATUS=UNVERIFIED (not executed), no skill-uplift claim.
+
+---
+
 # Dynamic construction and adaptive browsing — 2 November 2026
 
 Local preview: http://127.0.0.1:8080/Clean_Portofoio/ . Nothing pushed or deployed. Previous review is preserved at `6269c4e`; original source remains at `baseline/pre-agent-construction`.

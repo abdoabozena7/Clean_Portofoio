@@ -1,24 +1,22 @@
-import { useLayoutEffect, useState, type RefObject } from "react";
+import { useLayoutEffect, type RefObject } from "react";
 import { compensateScroll, getScrollIntent, requestDetailedView, subscribeScrollIntent } from "@/lib/scrollIntent";
 import { clamp01 } from "@/lib/construction";
 
-type Cue = { id: string; title: string };
 type Box = { el: HTMLElement; height: number; width: number; title: HTMLElement; media?: HTMLElement; actions?: HTMLElement; mediaX: number; mediaY: number; mediaW: number; mediaH: number; actionsY: number; details: HTMLElement[]; kind: string; titleSize: number; compactHeight: number; brand?: HTMLElement; logo?: HTMLElement; lift: number };
 type Anchor = { el: HTMLElement; fraction: number; y: number; lastScroll: number };
 
 /** Real mobile layouts regroup with one viewport anchor; full-detail styles restore exactly. */
 export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
-  const [cue, setCue] = useState<Cue | null>(null);
   useLayoutEffect(() => {
     const groups = [...document.querySelectorAll<HTMLElement>("[data-scan-group]")];
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const original = new Map<HTMLElement, string | null>();
-    const passed = new Set<HTMLElement>(), opened = new Set<string>(), dismissed = new Set<string>();
-    const exposure = new Map<HTMLElement, { since: number | null; total: number }>();
     let boxes: Box[] = [], anchor: Anchor | null = null, progress = 0, goal = 0, frame = 0, tickAt = 0;
     let pointerHeld = false, overflowAnchor = "", cachedWidth = innerWidth;
     let activationTarget: HTMLElement | null = null, activationTimer: ReturnType<typeof setTimeout> | undefined;
     let activeGroup: HTMLElement | null = null;
+    let focusId: string | null = null, focusGroup: HTMLElement | null = null, editorStarted = 0;
+    const isProtected = (el: HTMLElement) => focusId ? el.id === focusId || el.dataset.attentionId === focusId : el.dataset.attentionCritical === "true";
     const remember = (el: HTMLElement) => { if (!original.has(el)) original.set(el, el.getAttribute("style")); };
     const relevant = () => groups.some(g => { const r = g.getBoundingClientRect(); return r.top < innerHeight * .9 && r.bottom > 110; });
     const currentGroup = () => groups.find(g => { const r = g.getBoundingClientRect(); return r.top <= 150 && r.bottom > 150; }) || groups.find(g => { const r = g.getBoundingClientRect(); return r.top < innerHeight * .8 && r.bottom > 110; }) || null;
@@ -36,7 +34,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       return { el: pinned, fraction, y: r.top + r.height * fraction, lastScroll: scrollY };
     };
     const capture = () => {
-      activeGroup = currentGroup();
+      activeGroup = focusGroup || currentGroup();
       const active = activeGroup ? [activeGroup.dataset.scanGroup] : [];
       window.dispatchEvent(new CustomEvent("portfolio:regroup", { detail: active }));
       overflowAnchor = document.documentElement.style.overflowAnchor;
@@ -82,10 +80,11 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const paint = () => {
       for (const group of activeGroup ? [activeGroup] : []) {
         group.dataset.scanActive = "true"; group.style.setProperty("--scan", String(progress));
-        group.style.gap = `${group.dataset.scanGroup === "projects" ? 24 - 12 * progress : 32 - 28 * progress}px`;
+        group.style.rowGap = `${group.dataset.scanGroup === "projects" ? 24 - 12 * progress : 32 - 28 * progress}px`;
         group.querySelectorAll("[data-scan-toggle]").forEach(b => b.setAttribute("aria-expanded", String(progress < .6)));
       }
       for (const b of boxes) {
+        if (isProtected(b.el)) continue;
         const project = b.kind === "project";
         b.el.style.height = `${b.height + (b.compactHeight - b.height) * progress}px`;
         b.el.style.overflow = "hidden";
@@ -100,7 +99,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           media.style.transform = `translate(${(b.width - 114 - b.mediaX) * progress}px,${(26 - b.mediaY) * progress}px) scale(${1 + (scale - 1) * progress})`;
           if (b.actions) { b.actions.style.position = "absolute"; b.actions.style.top = `${b.actionsY}px`; b.actions.style.left = "20px"; b.actions.style.width = `${b.width - 44}px`; b.actions.style.marginTop = "0"; }
           const badge = b.el.querySelector<HTMLElement>(".project-building"); if (badge) badge.style.top = `${-10 + 96 * progress}px`;
-        } else if (b.kind === "skill") b.title.style.transform = `translateX(${16 * progress}px)`;
+        } else if (b.kind === "skill") { b.title.style.transform = `translateX(${16 * progress}px)`; b.title.style.width = `calc(100% - ${16 * progress}px)`; }
         else {
           const font = b.kind === "experience" ? 20 : 17;
           b.title.style.fontSize = `${b.titleSize + (font - b.titleSize) * progress}px`;
@@ -121,60 +120,70 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       }
       compensate();
       const editors = editorRef.current?.querySelectorAll<HTMLElement>("[data-scan-editor]");
-      if (editors && anchor) {
+      if (editors && anchor && !reduced.matches) {
         const visible = boxes.filter(b => { const r = b.el.getBoundingClientRect(); return r.bottom > 85 && r.top < innerHeight - 80; });
+        const moving = progress !== goal, cycle = (performance.now() - editorStarted) / 650;
         editors.forEach((editor, i) => {
           const box = visible[i % Math.max(1, visible.length)], r = (box?.el || anchor!.el).getBoundingClientRect();
-          editor.style.opacity = progress > 0 && progress < 1 ? "1" : "0";
-          editor.style.transform = `translate3d(${i % 2 ? Math.max(12, r.left + 14) : Math.min(innerWidth - 145, r.right - 18)}px,${Math.max(85, Math.min(innerHeight - 100, i % 2 ? r.top + 15 : r.bottom - 12))}px,0)`;
-          editor.querySelector("span")!.textContent = `${i % 2 ? "type.ai" : "layout.ai"} · ${goal ? "condense" : "expand"}`;
+          const phase = moving ? progress : (cycle + i * .24) % 1;
+          const skills = box?.kind === "skill", right = i % 2 === 0;
+          const edge = right ? Math.min(innerWidth - 18, r.right + 6) : Math.max(5, r.left - 17);
+          // A grip follows the real row edge while independently pulling/folding it.
+          // Stay in the gutters: neither pointers nor trails cross skill labels.
+          const x = edge + (right ? -1 : 1) * Math.sin(phase * Math.PI) * (skills ? 10 : 28);
+          const startY = Math.max(92, Math.min(innerHeight - 140, r.top + 10));
+          const endY = Math.min(innerHeight - 70, Math.max(startY + 64, Math.min(r.bottom - 8, startY + 170)));
+          const y = startY + (endY - startY) * (i === 1 ? 1 - phase : phase);
+          editor.style.opacity = visible.length ? "1" : "0";
+          editor.style.transform = `translate3d(${x}px,${y}px,0) rotate(${(right ? -1 : 1) * Math.sin(phase * Math.PI * 2) * 14}deg)`;
+          editor.dataset.action = goal ? "fold" : "unfold";
+          editor.dataset.gutter = skills ? "true" : "false";
+          editor.dataset.side = right ? "right" : "left";
+          editor.querySelector("span")!.textContent = `${i === 1 ? "type.ai" : i === 2 ? "style.ai" : "layout.ai"} · ${goal ? "fold" : "unfold"}`;
+          const trail = editorRef.current?.querySelector<SVGPathElement>(`[data-scan-trail="${i}"]`);
+          trail?.setAttribute("d", `M ${edge} ${startY} L ${edge} ${y} L ${x} ${y}`);
+          if (trail) trail.style.opacity = visible.length ? ".7" : "0";
         });
       }
     };
-    const showCue = () => {
-      if (!relevant()) return;
-      const item = [...passed].find(el => {
-        const viewed = exposure.get(el), duration = (viewed?.total || 0) + (viewed?.since ? performance.now() - viewed.since : 0);
-        return el.dataset.priority === "true" && !opened.has(el.id) && !dismissed.has(el.id) && duration < 1800;
-      });
-      if (item) setCue({ id: item.id, title: item.querySelector("h3")?.textContent || "Project" });
-    };
+    const hideEditors = () => editorRef.current?.querySelectorAll<HTMLElement>("[data-scan-editor],[data-scan-trail]").forEach(e => { e.style.opacity = "0"; });
     const animate = (now: number) => {
       frame = 0; const dt = Math.min(40, now - tickAt); tickAt = now;
       const step = dt / 300; progress = goal > progress ? Math.min(goal, progress + step) : Math.max(goal, progress - step);
       paint();
-      if (progress !== goal) frame = requestAnimationFrame(animate);
+      if (progress !== goal || (goal === 1 && getScrollIntent().active && !blocked())) frame = requestAnimationFrame(animate);
       else {
-        editorRef.current?.querySelectorAll<HTMLElement>("[data-scan-editor]").forEach(e => { e.style.opacity = "0"; });
-        if (!goal) { restore(); compensate(); showCue(); }
+        hideEditors();
+      if (!goal) { restore(); compensate(); }
         window.dispatchEvent(new Event("portfolio:layout-settled"));
       }
     };
     const transition = (next: number, instant = false) => {
-      if (next === goal && !instant) return;
+      if (next === goal && !instant) {
+        if (next === 1 && boxes.length && !frame && getScrollIntent().active && !blocked()) { tickAt = performance.now(); frame = requestAnimationFrame(animate); }
+        return;
+      }
       if (!boxes.length && next) capture();
       if (!boxes.length) return;
       anchor = pickAnchor(); goal = next;
+      editorStarted = performance.now();
       document.documentElement.dataset.browsing = next ? "scan" : "detail";
       cancelAnimationFrame(frame); frame = 0;
-      if (instant || reduced.matches) { progress = next; paint(); if (!next) { restore(); compensate(); } return; }
+      if (instant || reduced.matches) { progress = next; paint(); hideEditors(); if (!next) { restore(); compensate(); } return; }
       tickAt = performance.now(); frame = requestAnimationFrame(animate);
     };
     const onIntent = () => {
       if (activationTarget) return; // Keep a touched thumbnail still through synthetic click dispatch.
       const intent = getScrollIntent();
-      if (intent.scan && boxes.length && currentGroup() && currentGroup() !== activeGroup) transition(0, true);
-      if (!relevant()) setCue(null);
-      if (innerWidth < 768 && !reduced.matches && intent.active && intent.userDriven && Math.abs(intent.speed) > .75) {
-        document.querySelectorAll<HTMLElement>("[data-project]").forEach(el => {
-          const r = el.getBoundingClientRect();
-          if (r.bottom > 100 && r.top < innerHeight * .8) el.dataset.quickVisible = "true";
-          else if (r.bottom <= 100 && el.dataset.quickVisible) { passed.add(el); delete el.dataset.quickVisible; }
-        });
+      if (focusId) {
+        if (intent.userDriven && ((intent.active && !intent.scan && Math.abs(intent.speed) < .75) || (currentGroup() && currentGroup() !== focusGroup))) { focusId = null; focusGroup = null; }
+        else { if (intent.userDriven && intent.active) transition(1); return; }
       }
+      if (intent.scan && boxes.length && currentGroup() && currentGroup() !== activeGroup) transition(0, true);
       transition(!reduced.matches && intent.scan && relevant() && !blocked() ? 1 : 0);
     };
     const onFocus = (event?: FocusEvent) => {
+      if (focusId || document.querySelector('[data-attention-dialog]')) return;
       if (activationTarget && (event?.target as HTMLElement | undefined)?.closest("[data-scan-group]")) return;
       requestDetailedView(); transition(0, true);
     };
@@ -193,47 +202,36 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     };
     const onPointerCancel = () => { clearTimeout(activationTimer); activationTarget = null; pointerHeld = false; onIntent(); resume(); };
     const onClick = (event: MouseEvent) => {
-      const el = event.target as HTMLElement, project = el.closest<HTMLElement>("[data-project]");
-      if (project && el.closest("a,button")) { opened.add(project.id); setCue(c => c?.id === project.id ? null : c); }
+      const el = event.target as HTMLElement;
       if (el.closest("[data-scan-toggle]")) { requestDetailedView(); transition(0, true); }
       if (el.closest('a[href^="#"]')) { requestDetailedView(); transition(0, true); }
       if (activationTarget) { clearTimeout(activationTimer); activationTimer = setTimeout(releaseActivation, 0); }
     };
     const onResize = () => { if (innerWidth !== cachedWidth) { cachedWidth = innerWidth; transition(0, true); } };
-    const onJump = () => { requestDetailedView(); transition(0, true); };
+    const onJump = () => { focusId = null; focusGroup = null; requestDetailedView(); transition(0, true); };
     const onVisibility = () => { if (document.hidden) onJump(); };
-    const onDismiss = () => { setCue(c => { if (c) dismissed.add(c.id); return null; }); };
-    const onRevisit = (event: Event) => {
+    const onAttentionFocus = (event: Event) => {
       const id = (event as CustomEvent<string>).detail;
       requestDetailedView(); transition(0, true);
-      const el = document.getElementById(id); if (el) { opened.add(id); el.scrollIntoView({ behavior: reduced.matches ? "instant" : "smooth", block: "center" }); }
-      setCue(null);
+      const el = document.getElementById(id) || document.querySelector<HTMLElement>(`[data-attention-id="${id}"]`);
+      focusId = id; focusGroup = el?.closest<HTMLElement>("[data-scan-group]") || null;
+      transition(1, reduced.matches);
     };
     const unsubscribe = subscribeScrollIntent(onIntent);
-    const observer = new IntersectionObserver(entries => {
-      const now = performance.now();
-      entries.forEach(entry => {
-        const el = entry.target as HTMLElement, value = exposure.get(el) || { since: null, total: 0 };
-        if (entry.intersectionRatio >= .5) value.since ??= now;
-        else if (value.since !== null) { value.total += now - value.since; value.since = null; }
-        exposure.set(el, value);
-      });
-    }, { threshold: [0, .5] });
-    document.querySelectorAll("[data-project]").forEach(el => observer.observe(el));
     document.addEventListener("focusin", onFocus); document.addEventListener("click", onClick, true);
     document.addEventListener("pointerdown", onPointerDown, { passive: true }); document.addEventListener("pointerup", onPointerUp, { passive: true }); document.addEventListener("pointercancel", onPointerCancel, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("resize", onResize); window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump);
-    window.addEventListener("portfolio:dismiss-cue", onDismiss); window.addEventListener("portfolio:revisit", onRevisit); reduced.addEventListener("change", onJump);
+    window.addEventListener("portfolio:attention-focus", onAttentionFocus); reduced.addEventListener("change", onJump);
+    window.addEventListener("portfolio:attention-release", onJump);
     return () => {
-      unsubscribe(); observer.disconnect(); cancelAnimationFrame(frame); clearTimeout(activationTimer); if (boxes.length) restore();
+      unsubscribe(); cancelAnimationFrame(frame); clearTimeout(activationTimer); if (boxes.length) restore(); hideEditors();
       document.removeEventListener("focusin", onFocus); document.removeEventListener("click", onClick, true);
       document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("pointerup", onPointerUp); document.removeEventListener("pointercancel", onPointerCancel);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onResize); window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump);
-      window.removeEventListener("portfolio:dismiss-cue", onDismiss); window.removeEventListener("portfolio:revisit", onRevisit); reduced.removeEventListener("change", onJump);
-      document.querySelectorAll("[data-quick-visible]").forEach(el => el.removeAttribute("data-quick-visible"));
+      window.removeEventListener("portfolio:attention-focus", onAttentionFocus); reduced.removeEventListener("change", onJump);
+      window.removeEventListener("portfolio:attention-release", onJump);
     };
   }, [editorRef]);
-  return cue;
 }
