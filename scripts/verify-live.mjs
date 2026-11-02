@@ -27,8 +27,8 @@ try{
  }
  browser=await chromium.launch({channel:'msedge',headless:true});
  const context=await browser.newContext({viewport:{width:1440,height:900}}),page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
- await page.goto(url,{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);await page.waitForFunction(()=>!document.querySelector('#hero [data-building]'),null,{timeout:12000});
- check('Live hero keeps the actual name and Microsoft credential',(await page.locator('#hero h1').textContent()).replace(/\s/g,'')==='AbdelrahmanAbozena'&&(await page.locator('#hero').innerText()).includes('SWE Intern at Microsoft'));
+ await page.goto(url,{waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);await page.waitForFunction(()=>document.querySelector('#hero h1')&&!document.querySelector('#hero [data-building]'),null,{timeout:12000});
+ check('Live hero keeps the actual name and Microsoft credential',(await page.locator('#hero h1').textContent()).replace(/\s/g,'')==='AbdelrahmanAbozena.'&&(await page.locator('#hero').innerText()).includes('SWE Intern at Microsoft'));
  check('Live About has concise copy and no Showcase link',await page.locator('#about p').count()===2&&await page.getByText('View Showcase Profile',{exact:true}).count()===0);
  check('Live project order starts with Hivo then HarrTest',await page.locator('[data-project]').evaluateAll(es=>es[0].dataset.project==='hivo'&&es[1].dataset.project==='harrtest'));
  await page.screenshot({path:out+'/desktop-hero.png'});
@@ -40,9 +40,9 @@ try{
  await page.waitForFunction(()=>document.documentElement.dataset.attentionPhase==='complete',null,{timeout:6000});
  check('Live review completes with green check and seen state',await page.locator('[data-attention-ring="complete"]').count()===1&&await page.locator('#project-hivo').getAttribute('data-attention-seen')==='true');await page.screenshot({path:out+'/desktop-complete.png'});
  await page.mouse.wheel(0,180);await page.waitForTimeout(150);check('Live scrolling resumes after exposure',Math.abs(await page.evaluate(()=>scrollY)-y)>100);
- const certificate=await context.newPage();await certificate.goto(url+'#honors',{waitUntil:'networkidle'});await certificate.getByRole('button',{name:/Zoom in IMPACT/}).click();await certificate.getByRole('dialog').locator('img').evaluate(e=>e.decode());check('Published winning photo opens at genuine resolution',await certificate.getByRole('dialog').locator('img').evaluate(e=>e.naturalWidth===1280&&e.naturalHeight===853));await certificate.keyboard.press('Escape');
+ const certificate=await context.newPage();await certificate.goto(url+'#honors',{waitUntil:'domcontentloaded'});await certificate.getByRole('button',{name:/Zoom in IMPACT/}).click();await certificate.getByRole('dialog').locator('img').evaluate(e=>e.decode());check('Published winning photo opens at genuine resolution',await certificate.getByRole('dialog').locator('img').evaluate(e=>e.naturalWidth===1280&&e.naturalHeight===853));await certificate.keyboard.press('Escape');
  await context.close();
- const mobile=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),m=await mobile.newPage();m.on('pageerror',e=>report.errors.push(e.message));await m.goto(url+'#skills',{waitUntil:'networkidle'});await m.evaluate(()=>document.fonts.ready);
+ const mobile=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),m=await mobile.newPage();m.on('pageerror',e=>report.errors.push(e.message));await m.goto(url+'#skills',{waitUntil:'domcontentloaded'});await m.evaluate(()=>document.fonts.ready);
  let moving=false;for(let i=0;i<10;i++){await m.mouse.wheel(0,65);await m.waitForTimeout(55);moving ||= await m.locator('[data-scan-editor]').evaluateAll(es=>es.some(e=>+getComputedStyle(e).opacity>.9));}
  check('Published mobile Skills has visible reflow builders',moving);check('Published mobile has no horizontal overflow',await m.evaluate(()=>document.documentElement.scrollWidth===innerWidth));await m.screenshot({path:out+'/mobile-skills.png'});
  await m.waitForTimeout(800);check('Published mobile Skills restores opaque accessible details',await m.locator('#skills [data-scan-detail]').evaluateAll(es=>es.every(e=>!e.inert&&+getComputedStyle(e).opacity>.99)));

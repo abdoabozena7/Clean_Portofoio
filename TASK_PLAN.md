@@ -1,6 +1,6 @@
 # Current revision
 
-See ATTENTION_PLAN.md and the newest CHANGE_REPORT.md entry for the current continuation. Native implementation and regression checks are complete; deployment is the final active step, explicitly authorized by the user's latest request. ADAPTIVE_PLAN.md, CINEMATIC_PLAN.md and REVISION_PLAN.md record earlier deliveries. The original first-delivery plan below is historical; later user instructions explicitly supersede frozen legacy content, section order, role typewriter, compact-all behavior and no-forced-scroll for five named highlights, while protecting the finished name and project image dimensions.
+The attention/choreography continuation is implemented, tested and deployed with the latest user's explicit authorization. See ATTENTION_PLAN.md, DEPLOYMENT.md and the newest CHANGE_REPORT.md entry.16 native live checks pass and published JS/CSS byte hashes match the tested production build. ADAPTIVE_PLAN.md, CINEMATIC_PLAN.md and REVISION_PLAN.md record earlier deliveries. The original first-delivery plan below is historical; later user instructions explicitly supersede frozen legacy content, section order, role typewriter, compact-all behavior and no-forced-scroll for five named highlights, while protecting the finished name and project image dimensions.
 
 # Portfolio construction enhancement — local only
 
