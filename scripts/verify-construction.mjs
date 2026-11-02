@@ -113,7 +113,7 @@ try {
   await snap('projects-anchor');
   check('All requested projects and the skill are present', await page.locator('[data-project]').count(), 7);
   check('Hivo is first and HarrTest follows, both explicitly in progress', await page.locator('[data-project]').evaluateAll(es => es[0].dataset.project === 'hivo' && es[1].dataset.project === 'harrtest' && es.slice(0,2).every(el => el.textContent.includes('In progress'))));
-  check('Portrait is rendered in black and white', await page.locator('#about img').evaluate(el => getComputedStyle(el).filter), 'grayscale(1)');
+  check('Portrait is rendered in black and white', await page.locator('#about img[alt="Abdelrahman Abozena"]').evaluate(el => getComputedStyle(el).filter), 'grayscale(1)');
   check('Microsoft is the first displayed professional employer', await page.locator('#experience h3').nth(1).innerText(), 'Microsoft');
   check('All eight verified roles appear in the actual timeline', await page.locator('#experience .experience-role').count(), 8);
   check('The new C# certificate is displayed', await page.getByRole('heading', { name: 'Learning C#', exact: true }).count(), 1);
@@ -189,6 +189,10 @@ try {
 
   const touch = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
   const mp = await touch.newPage(); await mp.goto(url, { waitUntil: 'networkidle' });
+  // Reload into a warmed page and observe the actual early hero window rather
+  // than waiting for unrelated eager below-fold images to reach networkidle.
+  await mp.reload({ waitUntil: 'domcontentloaded' });
+  await mp.waitForFunction(() => document.querySelector('#hero [data-building]') && [...document.querySelectorAll('[data-agent]')].some(el => +getComputedStyle(el).opacity > 0));
   check('Touch keeps a simplified team of at most three decorative builders', await mp.locator('[data-agent]').evaluateAll(es => { const n = es.filter(el => +getComputedStyle(el).opacity > 0).length; return n > 0 && n <= 3; }));
   await mp.getByRole('button', { name: 'Menu', exact: true }).tap();
   await mp.locator('nav a[href="#projects"]:visible').tap(); await mp.waitForTimeout(1000);

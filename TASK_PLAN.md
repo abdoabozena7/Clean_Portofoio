@@ -1,5 +1,7 @@
 # Current revision
 
+Current local work: see SCENE_IMPLEMENTATION_PLAN.md and the newest CHANGE_REPORT.md entry for the completed semantic construction, quality metric, logo-loader, fast-recovery and preload revision. Baseline52cfa85 is preserved. All required local acceptance is verified; this revision has not been published. User-confirmed concurrent About and Hero additions are retained. Entries below describe prior completed releases.
+
 See DISCOVERY_PLAN.md and the newest CHANGE_REPORT.md entry. Reversible all-story exposure score, round controls/curved side panel and complete per-element hero construction are implemented, tested and deployed under existing authorization. Sourcefbac916; publishedgh-pagesd2b58a9, successfulPagesrun41457057276 and21livechecks/productionbytehashes verified. Prior5-highlight/source-click instant-award contract is superseded by the user's expanded-visible-content requirement. Existing free native scrolling/mobile hero-only agents remain. Earlier plans below are historical.
 
 # Portfolio construction enhancement — local only
@@ -42,3 +44,10 @@ The user's follow-up **“use all mentioned”** supersedes the earlier five-pro
 Evidence lives in `output/`; reusable browser checks in `scripts/`. Skill version attestation returned LATEST_VERIFIED 2.6.1. Product verification is recorded explicitly; no claim of a sealed HarrTest mechanical root gate or measured skill uplift is made.
 
 Final state: all eight tasks VERIFIED. Four required viewport comparisons plus four additional responsive widths pass. Final app source fingerprint: `c9a0a8e10008702d6b267673916482f88e224810db4f8cc9a9a411fc3e3bfcd7`. See `EVIDENCE.md` and `CHANGE_REPORT.md` for scope, raw reports and existing limitations.
+
+## About story update (2026-11-02)
+Scope: user's Arabic request and attached About screenshot. AI Engineer first; three concise English story paragraphs; pre-university coding, logic and gentle humor, analysis to ML/deep learning/LLMs, practical RAG/agents, fourth-year ECU with one year remaining, current Microsoft SWE internship and inline existing logo. Preserve other work.
+Visual thesis: retain monochrome editorial About composition. Content: introduction, journey, current chapter. Interaction: retain existing reveal and portrait hover.
+TODO: edit copy/component, build, inspect real desktop/mobile rendering. Serial bounded change. Instruction-only verification; no sealed mechanical root claim.
+
+Verification: VERIFIED_WITHIN_SCOPE by real Edge at 1440px and 390px; three paragraphs visible, AI Engineer leads and portrait badge updated, current Microsoft internship and fourth-year/one-year wording present, portrait/logo loaded, no horizontal overflow. Both screenshots visually inspected in output/playwright/about-story-*.png. npm run build passed (existing bundle-size/Browserslist warnings). All scoped TODOs complete. ROOT_GOAL_UNVERIFIED mechanically: no sealed root gate; direct product evidence above.

@@ -17,6 +17,16 @@ html [data-construction="structure"], html [data-building] { transition-property
 .agent-click { position: absolute; top: -3px; left: 4px; width: 12px; height: 12px; border: 1px solid var(--agent-color); border-radius: 50%; opacity: 0; }
 .virtual-agent[data-click="true"] .agent-click { opacity: .5; }
 .construction-caret { position: absolute; top: 0; left: 0; width: 1px; background: #171717; opacity: 0; }
+/* Empty frames hide paint, never a parent opacity or its reserved document box. */
+[data-scene-shell] { border-color: transparent !important; background-color: transparent !important; box-shadow: none !important; }
+[data-scene-svg-paint] { opacity: var(--scene-paint, 0); }
+[data-scene-edge] { stroke-dasharray: var(--scene-path-length); stroke-dashoffset: var(--scene-path-offset); }
+.scene-agent-layer { position: absolute; inset: 0; pointer-events: none; }
+.scene-actor { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+.scene-prop { position: absolute; left: 0; top: 0; transform-origin: 0 0; outline: 1px solid var(--agent-color); background: color-mix(in srgb, var(--agent-color) 8%, transparent); overflow: hidden; will-change: transform; }
+.scene-snapshot { position: relative; overflow: hidden; background: white; color: #111920; }
+.scene-snapshot * { pointer-events: none !important; }
+.scene-pointer .agent-pointer-shape { transform: none !important; }
 .construction-letters { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .construction-letters > span { position: absolute; left: 0; top: 0; display: block; white-space: pre; transform-origin: 0 0; will-change: transform; }
 .virtual-agent[data-edge="right"] .agent-label { left: auto; right: 0; }

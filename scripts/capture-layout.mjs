@@ -8,19 +8,21 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const value = (flag, fallback) => { const i = process.argv.indexOf(flag); return i < 0 ? fallback : process.argv[i + 1]; };
 const label = value('--label', 'baseline');
+const settleConstruction = process.argv.includes('--settle-construction');
+const sourceRoot = path.resolve(value('--source-root', '.'));
 const url = value('--url', 'http://127.0.0.1:8080/Clean_Portofoio/');
 const output = path.resolve('output/playwright', label);
 await mkdir(output, { recursive: true });
 async function fingerprint(dir = 'src') {
   const files = [];
   async function walk(current) { for (const f of await readdir(current, { withFileTypes: true })) { const p = path.join(current, f.name); if (f.isDirectory()) await walk(p); else files.push(p); } }
-  await walk(dir);
+  await walk(path.join(sourceRoot, dir));
   const hash = createHash('sha256');
-  for (const file of files.sort()) { hash.update(file.replaceAll('\\', '/')); hash.update(await readFile(file)); }
+  for (const file of files.sort()) { hash.update(path.relative(sourceRoot, file).replaceAll('\\', '/')); hash.update(await readFile(file)); }
   return hash.digest('hex');
 }
 const sourceBefore = await fingerprint();
-const report = { label, url, capturedAt: new Date().toISOString(), head: execFileSync('git', ['rev-parse', 'HEAD']).toString().trim(), sourceBefore, testNormalizations: ['Hide stochastic hero canvas without changing geometry', 'Freeze CSS animations at completed state after scrolling through actual page', 'Hide user cursor and decorative construction overlays for final-state comparison'], viewports: {} };
+const report = { label, url, capturedAt: new Date().toISOString(), head: execFileSync('git', ['-C', sourceRoot, 'rev-parse', 'HEAD']).toString().trim(), sourceRoot, sourceBefore, testNormalizations: ['Hide stochastic hero canvas without changing geometry', 'Freeze CSS animations at completed state after scrolling through actual page', 'Hide user cursor and decorative construction overlays for final-state comparison'], viewports: {} };
 const browser = await chromium.launch({ channel: 'msedge', headless: !process.argv.includes('--headed') });
 try {
   for (const [name, width, height] of [['desktop', 1440, 900], ['laptop', 1366, 768], ['tablet', 768, 1024], ['mobile', 390, 844]]) {
@@ -54,9 +56,16 @@ try {
       new Promise((_, reject) => setTimeout(() => reject(new Error('Image decoding after traversal exceeded 10 seconds')), 10000)),
     ]));
     await page.waitForTimeout(1100);
+    if (settleConstruction) {
+      // Use the product's own accessibility path to capture its complete state.
+      // This does not fake completion with CSS or change document geometry.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForFunction(() => !document.querySelector('[data-building],[data-scene-building],[data-scene-shell]'));
+      report.testNormalizations.push('Requested real reduced-motion completion after natural traversal for fully constructed screenshot comparison');
+    }
     await page.addStyleTag({ content: `
       *, *::before, *::after {animation-duration:0.001ms!important;animation-delay:0ms!important;transition-duration:0ms!important;caret-color:transparent!important}
-      canvas, .curzr-arrow-pointer, [data-agent-layer], .agent-cursor-layer, .construction-overlay {visibility:hidden!important}
+      canvas, .curzr-arrow-pointer, [data-agent-layer], [data-hero-agents], .agent-cursor-layer, .construction-overlay {visibility:hidden!important}
     ` });
     await page.waitForTimeout(100);
     const metrics = await page.evaluate(() => {
@@ -72,7 +81,9 @@ try {
       const hero = document.querySelector('section:not([aria-live])');
       const center = hero?.querySelector('.text-center');
       const heroSlots = center ? [...center.children].map((el, i) => ({ index: i, tag: el.tagName, rect: rect(el), text: el.textContent?.trim().slice(0, 100) })) : [];
-      return { sections, elements, grids, heroSlots, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, innerWidth, innerHeight, fonts: document.fonts.status, loadedImages: [...document.images].filter(image => !image.closest("[data-agent-layer]")).map(el => ({src: el.src, complete: el.complete, width: el.naturalWidth, height: el.naturalHeight})) };
+      const companyLogoBoxes = [...document.querySelectorAll('.company-logo')].map(rect);
+      const calendar = document.querySelector('[data-construction-scene="activity"]');
+      return { sections, elements, grids, heroSlots, companyLogoBoxes, calendarBox: calendar ? rect(calendar) : null, calendarContent: calendar?.textContent, scrollWidth: document.documentElement.scrollWidth, scrollHeight: document.documentElement.scrollHeight, innerWidth, innerHeight, fonts: document.fonts.status, loadedImages: [...document.images].filter(image => !image.closest("[data-agent-layer]")).map(el => ({src: el.src, complete: el.complete, width: el.naturalWidth, height: el.naturalHeight})) };
     });
     const folder = path.join(output, name); await mkdir(folder, { recursive: true });
     stage('metrics captured; screenshots');
@@ -85,7 +96,17 @@ try {
       await page.evaluate(y => window.scrollTo(0, Math.max(0, y - 80)), section.rect.y);
       await page.waitForTimeout(70);
       await page.screenshot({ path: path.join(folder, `${section.key}-viewport.png`) });
+      // The authorized longer About shifts following sections by fractional CSS
+      // pixels. Rasterize each section at an integer local origin on BOTH sources;
+      // raw document coordinates above remain the geometry acceptance oracle.
+      const originalTransform = await locator.evaluate(el => {
+        const previous = el.style.transform;
+        const y = el.getBoundingClientRect().top + scrollY;
+        el.style.transform = `translateY(${-((y % 1 + 1) % 1)}px)`;
+        return previous;
+      });
       await locator.screenshot({ path: path.join(folder, `${section.key}-section.png`), timeout: 15000 });
+      await locator.evaluate((el, previous) => { el.style.transform = previous; }, originalTransform);
     }
     stage('capture full page');
     await page.screenshot({ path: path.join(folder, 'full-page.png'), fullPage: true });

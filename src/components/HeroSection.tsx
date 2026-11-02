@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import { Github, Linkedin, Mail, ChevronDown, Globe } from "lucide-react";
 import MicrosoftHeadline from "./MicrosoftHeadline";
+import HeroAgentsOverlay from "./HeroAgentsOverlay";
 import { profileContent, animatedRoles as roles } from "@/data/profileContent";
 
 
 const HeroSection = () => {
   const [reducedMotion, setReducedMotion] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const query = matchMedia("(prefers-reduced-motion: reduce)");
@@ -112,6 +114,7 @@ const HeroSection = () => {
         <MicrosoftHeadline />
 
         <h1
+          ref={headingRef}
           data-construction="text" data-construction-scene="letters"
           className="heading-brutal leading-[0.85]"
           style={{ fontSize: "clamp(48px, 10vw, 130px)" }}
@@ -120,6 +123,7 @@ const HeroSection = () => {
           <br />
           <span className="text-foreground/20">Abozena.</span>
         </h1>
+        <HeroAgentsOverlay headingRef={headingRef} />
 
         <div data-construction="text" className="mt-6 h-8 flex items-center justify-center">
           <span className="font-mono text-sm md:text-base tracking-[0.2em] text-foreground/50">

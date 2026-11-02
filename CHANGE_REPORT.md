@@ -1,3 +1,60 @@
+# Semantic construction scenes and exploration quality — 3 November 2026
+
+Implemented and verified locally on `codex/scroll-agent-construction`. No deployment or push was performed for this revision. Stable tested production preview: http://127.0.0.1:8083/Clean_Portofoio/ . The development preview at8080can advance with concurrent work. The release notes below this entry describe earlier published versions.
+
+## Result
+
+- Lower sections now use semantic construction recipes: establish empty measured frames, place first content, duplicate appropriate structures, customize destinations, align, and release guides. The same eight decorative mouse pointers share the existing construction loop. Company and credential templates copy empty geometry, preserving correct professional facts. Projects demonstrate a populated source moving into a sibling before replacement. HarrTest builds real SVG nodes, connections and labels; genuine GitHub contribution weeks build in batches.
+- Native scrolling takes priority. Fast movement hides obsolete workers and prepares upcoming content; slowing down re-arms still-unexplored work. Anchors, focus, history and reduced motion immediately expose correct functional content. Mobile keeps hero construction and existing lightweight lower entrances/collapse, with no lower-page decorative agents or touch-momentum corrections.
+- Delayed images decode before their placement/handoff; decorative copies reach the real image's exact padded bounds. Below-fold images begin eager, low-priority loading while the hero is visible, including mobile. Missing resources fail open, and a GitHub HTTP500 leaves a readable real error state.
+- The circular primary metric now consistently says **Exploration quality**, with separate coverage of33stories. Per-block/line exposure accumulates only for expanded, constructed, sufficiently visible foreground content at a qualified pace. Encountered stories have equal weight; revisits retain and improve evidence. No artificial gap debt, reading/comprehension claim, persistent storage, telemetry or mandatory action. Curated reminders remain optional, delayed until idle,20seconds apart, maximum three per visit, and dismissible for the visit.
+- Existing40px company-logo outlines trace qualified exposure, muted logos gradually recover color, and small completion marks vary. Text keeps its normal contrast. The user explicitly confirmed keeping concurrent About narrative/inline Microsoft logo/AI Engineer label and the new decorative HeroAgentsOverlay. These are intentional exceptions to the older accepted source.
+
+## Files
+
+Construction: `src/lib/constructionRecipes.ts`, `constructionDirector.ts`, `constructionScene.ts`; `src/hooks/useScrollConstruction.ts`, `usePortfolioMediaPreload.ts`; `src/components/AgentConstruction.tsx`, `GithubGraph.tsx`; `src/styles/construction.css`.
+
+Exposure: `src/hooks/useAttentionJourney.ts`; `src/lib/discoveryScore.ts`, `exploration.ts`; `src/components/CompanyEvidence.tsx`, `ExperienceSection.tsx`, `ScrollToTop.tsx`; `src/data/attentionContent.ts`; `src/styles/exploration-evidence.css`.
+
+Approved concurrent content/hero files are retained: `AboutSection.tsx`, `profileContent.ts`, `HeroSection.tsx`, `HeroAgentsOverlay.tsx`, `heroAgents.ts`, `hero-agents.css`. The separate ongoing hero-illustration plan/verifier is not certified as a completed task by this report.
+
+Verification lives in `scripts/verify-scenes.mjs`, `verify-scene-layout.mjs`, `verify-media-readiness.mjs`, `verify-scroll-recovery.mjs`, `verify-quality.mjs`, updated existing browser verifiers, `src/test/sceneGraph.test.ts` and `discoveryScore.test.ts`. Commands are registered in `package.json`; the dependency lock and runtime dependencies are unchanged. Ordered requirements/TODO/evidence are in `SCENE_IMPLEMENTATION_PLAN.md`.
+
+## Verification
+
+Final application src SHA256: `585532194183529eae3ecdfb6fcd36408def6cc2ffd8a1eb9645776a056e2732`. Full-src suites record matching before/after fingerprints; scoped hero/name/scan tests record their narrower implementation/verifier fingerprints.
+
+| Actual verification | Result | Local evidence |
+|---|---|---|
+| Build, TypeScript, lint, unit tests | PASS;10unit tests,0lint errors | Build output; seven existing UI Fast Refresh warnings remain |
+| Four-size geometry, copy/font/spacing and pixels | 2277/2277PASS | `output/playwright/scene-layout/report.json` |
+| Watched projects, agents/handles, duplication, handoff, jumps/reverse, touch/reduced | 33/33PASS | `output/playwright/scenes/report.json`, `project-construction.webm` |
+| About/Experience/Education/Honors/flow/Skills/GitHub/Contact/Finale recipes | 37/37PASS | `output/playwright/scenes-recipes/report.json`, `all-semantic-recipes.webm` |
+| Cinematic and dynamic integration | 15/15and29/29PASS | `output/playwright/cinematic`, `dynamic` |
+| Production interaction journeys | 60/60PASS | `output/playwright/scenes-production/report.json` (local port8083) |
+| Native fluid browsing and scan continuity | 65/65and16/16PASS | `output/research/fluid-review/report.json`; scan verifier output |
+| Existing hero completion/name workshop | 12/12and23/23PASS | `output/playwright/hero-completion`, `name-workshop` |
+| Exposure eligibility, quality/coverage, company feedback and reminder limits | 51/51PASS | `output/playwright/quality-reminders/report.json` |
+| Genuine expanded route through all33stories | 6/6PASS | `output/playwright/discovery-completion/report.json` |
+| Delayed real image/calendar, failure fallback and resize | 13/13PASS | `output/playwright/media-readiness/report.json` |
+| Fast-to-slow recovery and mobile image prewarm | 8/8PASS | `output/playwright/scroll-recovery/report.json` |
+
+Geometry baseline is unmodified accepted commit52cfa85 at1440×900,1366×768,768×1024and390×844. About's explicitly approved height increases are230.75px desktop/laptop,234px tablet and388px mobile. Downstream Y changes equal those deltas; remaining section dimensions and internal element bounds stay within1CSS pixel. For pixels only, a detached52worktree with exactly the two approved About/profile files supplies the amended reference, avoiding fractional-origin raster differences. Original baseline captures and Git history remain intact. Exclusions are narrowly recorded: company40px feedback, external live calendar pixels and decorative hero overlays; actual normal-motion behavior is verified separately. No comparison threshold was raised.
+
+Negative controls correctly fail independently: removing construction masks fails empty-before-content (13of14other checks pass), changing Hivo media width by10px fails the bounding-box oracle (2276of2277pass), and an isolated broken quality denominator fails the independent mean (fault injection confirmed). They never modify production source.
+
+Runtime screenshots and video frames were inspected, including the empty slot → first image/text → source-preserving duplicate → customized second card → released guides. Original links, real cursor, certificate/project zoom with Escape/focus restoration, CV PDF response, terminal, contact state/validation, keyboard and history remain functional. Native touch checks find no prevented input, no programmatic correction during pan/inertia, and zero idle lower-page decorative rAF. Instrumented mobile journeys recorded49app rAF callbacks each; these are scoped work counts, not physical-device FPS guarantees.
+
+## Limits and failure history
+
+No known unresolved functional failure remains in this revision's acceptance scope. Later parallel edits to HeroAgentsOverlay, heroAgents, heroOverlayWork and the hero-work bridge in useScrollConstruction began after final verification. They are preserved in the working tree, excluded from this checkpoint, and their separate ongoing plan/verifier is not certified here. The checkpoint retains the previously tested approved hero illustration; port8083serves its tested production build. Build still reports the existing stale Browserslist dataset and a main chunk above500kB (516.24kB before gzip,165.97kB gzip); ESLint retains seven existing warnings. No dependency updates or threshold suppression were used to conceal them. GitHub data still depends on its external endpoint; the actual failure path was exercised. Real-user reading/comprehension, retention improvement, physical-device performance and universal Core Web Vitals are not established by these tests.
+
+During development, lazy zero-size certificate registration, a2px prop inset and a99.9% timer stop were found and fixed. Test setup was corrected when a direct positioning jump completed the very scene being observed, when routing prevented a font warm-up from surviving reload, and when authorized concurrent edits invalidated source coherence. Early pixel runs against the shorter About were retained as diagnostic history; the original geometry oracle plus an explicitly amended pixel reference passes. Some parallel runs hit external/network-idle timeouts; complete final current-source runs passed. See the durable ledger for distinctions between product fixes, test preconditions, source drift and expected negative failures.
+
+HarrTest2.6.1 was used in instruction-only mode: product **VERIFIED_WITHIN_SCOPE**; sealed mechanical **ROOT_GOAL_UNVERIFIED** (not executed), and **BEHAVIORAL_IMPACT_UNPROVEN**. These are not claims that the skill itself improved outcomes.
+
+---
+
 # Reversible discovery score and complete hero building - 2 November2026
 
 Published and verified: https://abdoabozena7.github.io/Clean_Portofoio/ . Runtime sourcefbac916 is pushed; gh-pagesd2b58a9666d0336bcb79df0fb065018df5ec4400 completed successfulPagesworkflow41457057276.21actual desktop/mobile live checks pass; normalURL andall3JS/CSSSHA256s match testedproduction. Original/final source history and previous live release remain preserved. Current user asks for real expanded exposure, reversible progress, round/curved controls and no90%-complete hero pop.

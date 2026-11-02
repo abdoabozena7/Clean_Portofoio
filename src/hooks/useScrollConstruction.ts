@@ -1,6 +1,7 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
 import { constructionScene, type SceneBox } from "@/lib/constructionScene";
+import { createConstructionDirector } from "@/lib/constructionDirector";
 import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
 import { createNameConstruction } from "@/lib/nameConstruction";
 
@@ -96,7 +97,9 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         byElement.set(el, targets[targets.length - 1]);
       }
     };
-    sections.filter(s => !mobileRegistry || s.id === "hero").forEach(registerTargets);
+    // The approved hero retains its directed controller. Lower sections use
+    // explicit semantic recipes and share this controller's frame/cursor pool.
+    sections.filter(s => s.id === "hero").forEach(registerTargets);
 
     const measure = () => {
       for (const t of targets) {
@@ -233,7 +236,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const dt = Math.min(50, Math.max(0, now - lastTick)); lastTick = now;
       const repaint = dirty;
       if (dirty) { measure(); positions.forEach((p, i) => { if (p.target) bindProp(p.target, i); }); }
-      if (reduced.matches) { targets.forEach(finish); hideAgents(); return; }
+      if (reduced.matches) { targets.forEach(finish); director?.configure(false); hideAgents(); return; }
       if (mobileRegistry && targets.every(t => t.progress === 1)) { hideAgents(); dirty = false; return; }
       const simplified = coarse.matches || innerWidth < 768;
       const intent = getScrollIntent(), velocity = Math.abs(intent.speed);
@@ -377,13 +380,15 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         }
       }
       jump = false;
-      if (work.some(t => t.progress < 1)) schedule();
+      const lowerWork = director?.tick(now, intent, work.length > 0) || false;
+      if (work.some(t => t.progress < 1) || lowerWork) schedule();
     };
+    const director = createConstructionDirector({ layer, sections, pointers: cursors, guides, carets, enabled: !mobileRegistry && !reduced.matches, wake: schedule });
     const unsubscribe = subscribeScrollIntent(() => { if (getScrollIntent().hardJump) jump = true; schedule(); });
     const onRegroup = (event: Event) => {
       const active = (event as CustomEvent<string[]>).detail || [];
       targets.filter(t => active.includes(t.el.closest<HTMLElement>("[data-scan-group]")?.dataset.scanGroup || "")).forEach(ready);
-      hideAgents(); dirty = true; schedule();
+      hideAgents(); director?.invalidate(); dirty = true; schedule();
     };
     const refreshMode = () => {
       const next = coarse.matches || innerWidth < 768;
@@ -391,13 +396,14 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       mobileRegistry = next; jump = true;
       if (next) {
         for (let i = targets.length - 1; i >= 0; i--) if (targets[i].section.id !== "hero") { finish(targets[i]); byElement.delete(targets[i].el); targets.splice(i, 1); }
-      } else sections.forEach(registerTargets);
+      } else sections.filter(s => s.id === "hero").forEach(registerTargets);
+      director?.configure(!next && !reduced.matches);
     };
-    const onActivityReady = () => { if (!mobileRegistry && !reflowing) { dirty = true; schedule(); } };
-    const onMeasure = () => { refreshMode(); if (reflowing) return; dirty = true; schedule(); };
-    const onLayoutStart = () => { reflowing = true; cancelAnimationFrame(frame); frame = 0; hideAgents(); nameScene?.hide(); };
-    const onLayoutSettled = () => { reflowing = false; lastTick = performance.now(); dirty = true; schedule(); };
-    const onJump = () => { jump = true; schedule(); };
+    const onActivityReady = () => { if (!mobileRegistry && !reflowing) { director?.invalidate(); dirty = true; schedule(); } };
+    const onMeasure = () => { refreshMode(); director?.configure(!mobileRegistry && !reduced.matches); if (reflowing) return; director?.invalidate(); dirty = true; schedule(); };
+    const onLayoutStart = () => { reflowing = true; cancelAnimationFrame(frame); frame = 0; hideAgents(); director?.pause(); nameScene?.hide(); };
+    const onLayoutSettled = () => { reflowing = false; lastTick = performance.now(); director?.resume(); dirty = true; schedule(); };
+    const onJump = () => { jump = true; director?.jump(); schedule(); };
     const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) onJump(); };
     const onFocus = (event: FocusEvent) => {
       const focused = event.target as HTMLElement;
@@ -437,6 +443,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       targets.forEach(t => { finish(t); delete t.el.dataset.constructed; });
       sections.forEach(s => { delete s.dataset.mobileEnter; });
       nameScene?.dispose();
+      director?.dispose();
     };
   }, [layerRef]);
 }

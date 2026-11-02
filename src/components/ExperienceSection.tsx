@@ -1,5 +1,6 @@
 import { training, experiences, companyLogos } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
+import CompanyEvidence from "./CompanyEvidence";
 
 
 
@@ -50,6 +51,7 @@ const Timeline = ({ items }: { items: TimelineItem[] }) => (
             {companyLogos[exp.company]
               ? <img src={`${import.meta.env.BASE_URL}${companyLogos[exp.company].image}`} alt={`${exp.company} logo`} loading="lazy" decoding="async" width="24" height="24" />
               : <span className="font-mono text-xs" aria-label={exp.company}>{exp.company.slice(0, 2)}</span>}
+            <CompanyEvidence variant={index} />
           </div>
 
           <h3 className="experience-company font-bold">{exp.company}</h3>

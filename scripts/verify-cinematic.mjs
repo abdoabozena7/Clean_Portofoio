@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const output = 'output/playwright/cinematic'; await mkdir(output, { recursive: true });
@@ -18,39 +19,12 @@ try {
   await page.goto('http://127.0.0.1:8080/Clean_Portofoio/', { waitUntil: 'networkidle' });
   await page.evaluate(() => document.fonts.ready);
   await page.addStyleTag({ content: 'html{scroll-behavior:auto!important}' });
-  // Place a still-unbuilt media row just below the viewport, then enter it slowly.
-  const media = page.locator('[data-project="ya-rab-ostorha"] .project-media');
-  const before = await media.evaluate(el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top + scrollY, width: r.width, height: r.height }; });
-  await media.evaluate(el => scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight - 35));
-  await page.waitForTimeout(220);
-  await page.evaluate(() => {
-    window.__cinematic = []; window.__sceneStart = performance.now();
-    window.__sceneTimer = setInterval(() => {
-      const props = [...document.querySelectorAll('[data-prop]')].filter(el => Number(el.style.opacity) > 0).map(el => ({
-        phase: el.dataset.phase, target: el.dataset.target, copy: el.dataset.copy, media: el.dataset.media,
-        rect: el.getBoundingClientRect().toJSON(), opacity: Number(el.style.opacity),
-        template: el.querySelector('.prop-template').getAttribute('src'), image: el.querySelector('.prop-image').getAttribute('src'),
-        replacement: Number(el.querySelector('.prop-image').style.opacity),
-      }));
-      const real = document.querySelector('[data-project="ya-rab-ostorha"] .project-media');
-      window.__cinematic.push({ time: performance.now() - window.__sceneStart, props, realClip: getComputedStyle(real).clipPath });
-    }, 40);
-  });
-  for (let i = 0; i < 28; i++) { await page.mouse.wheel(0, 18); await page.waitForTimeout(55); if (i === 12 || i === 25) await page.screenshot({ path: `${output}/projects-drag-${i}.png` }); }
-  await page.waitForTimeout(400); await page.screenshot({ path: `${output}/projects-resize.png` });
-  await page.waitForTimeout(6000);
-  report.samples = await page.evaluate(() => { clearInterval(window.__sceneTimer); return window.__cinematic; });
-  const shots = report.samples.flatMap(s => s.props.filter(p => p.media === 'image' && p.image?.includes('ya-rab-ostorha')));
-  const phases = new Set(shots.map(s => s.phase));
-  check('Real project image passes through pickup, carry, resize and alignment', ['pick', 'carry', 'resize', 'align'].every(p => phases.has(p)));
-  check('A sibling screenshot is duplicated before the destination image replaces it', shots.some(s => s.copy === 'true' && s.template !== s.image && s.replacement === 0) && shots.some(s => s.replacement > .99));
-  check('Image prop physically travels more than 30px', Math.max(...shots.map(s => s.rect.y)) - Math.min(...shots.map(s => s.rect.y)) > 30);
-  check('Image prop visibly resizes to its real measured destination', Math.min(...shots.map(s => s.rect.width)) < before.width * .65 && Math.max(...shots.map(s => s.rect.width)) > before.width * .99);
-  check('The actual media stays masked while the movable prop is being carried', report.samples.some(s => s.props.some(p => p.image?.includes('ya-rab-ostorha') && p.phase === 'carry') && s.realClip.includes('100%')));
-  const after = await media.evaluate(el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top + scrollY, width: r.width, height: r.height }; });
-  check('Carrying and resizing never change the actual project flow box', JSON.stringify(before) === JSON.stringify(after));
-  check('The committed project image is fully visible and interactive', await media.evaluate(el => !el.hasAttribute('data-building') && getComputedStyle(el).clipPath === 'none'));
-  await page.screenshot({ path: `${output}/projects-committed.png` });
+  // The prior universal carry queue is superseded by the stronger semantic
+  // empty-slot -> source -> duplicate -> customize -> commit browser journey.
+  execFileSync(process.execPath, ['scripts/verify-scenes.mjs'], { stdio: 'inherit' });
+  const sceneEvidence = JSON.parse(await readFile('output/playwright/scenes/report.json', 'utf8'));
+  check('Cinematic construction passes actual semantic scene and handoff acceptance', sceneEvidence.passed && sceneEvidence.sourceAfter === report.sourceBefore);
+  report.semanticEvidence = { path: 'output/playwright/scenes/report.json', source: sceneEvidence.sourceAfter, checks: sceneEvidence.checks.length };
   await page.evaluate(() => document.querySelector('#skills').scrollIntoView()); await page.waitForTimeout(90);
   check('Fast navigation removes all obsolete moving props immediately', await page.locator('[data-prop]').evaluateAll(es => es.every(el => Number(el.style.opacity) === 0)));
   await page.evaluate(() => scrollTo(0, 0)); await page.waitForTimeout(100);
@@ -68,12 +42,15 @@ try {
   const portraitPage = await context.newPage(); portraitPage.on('pageerror', e => report.errors.push(e.message));
   await portraitPage.goto('http://127.0.0.1:8080/Clean_Portofoio/', { waitUntil: 'networkidle' });
   await portraitPage.addStyleTag({ content: 'html{scroll-behavior:auto!important}' });
-  await portraitPage.locator('#about img').evaluate(el => scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight - 35));
+  await portraitPage.locator('#about > div').evaluate(el => scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight - 35));
+  await portraitPage.evaluate(()=>{window.__portraitFrames=[];window.__portraitTimer=setInterval(()=>{for(const prop of document.querySelectorAll('[data-scene-prop]')){if(Number(getComputedStyle(prop.parentElement).opacity)<=.05)continue;for(const img of prop.querySelectorAll('img'))if(img.src.includes('portrait-cutout'))window.__portraitFrames.push({src:img.src,filter:getComputedStyle(img).filter,rect:img.getBoundingClientRect().toJSON()});}},20);});
   await portraitPage.waitForTimeout(200);
-  for (let i = 0; i < 12; i++) { await portraitPage.mouse.wheel(0, 18); await portraitPage.waitForTimeout(55); }
-  await portraitPage.waitForFunction(() => [...document.querySelectorAll('[data-prop]')].some(p => +p.style.opacity > 0 && p.querySelector('.prop-image').src.includes('portrait-cutout') && getComputedStyle(p.querySelector('.prop-image')).filter === 'grayscale(1)'));
-  check('The carried portrait remains grayscale throughout construction', true);
-  await portraitPage.screenshot({ path: `${output}/portrait-grayscale-carry.png` }); await portraitPage.close();
+  let portraitCaptured=false;
+  for (let i = 0; i < 24; i++) { await portraitPage.mouse.wheel(0, 18); await portraitPage.waitForTimeout(55);if(!portraitCaptured&&await portraitPage.evaluate(()=>window.__portraitFrames.length>0)){await portraitPage.screenshot({path:`${output}/portrait-grayscale-carry.png`});portraitCaptured=true;} }
+  await portraitPage.waitForTimeout(700);
+  report.portraitFrames=await portraitPage.evaluate(()=>{clearInterval(window.__portraitTimer);return window.__portraitFrames;});
+  check('The carried portrait remains grayscale throughout construction',report.portraitFrames.length>0&&report.portraitFrames.every(frame=>frame.filter==='grayscale(1)'));
+ await portraitPage.close();
   check('No runtime errors during cinematic manipulation and credential dialogs', report.errors.length === 0);
   report.sourceAfter = await fingerprint(); check('Source is coherent throughout this recorded journey', report.sourceAfter === report.sourceBefore);
   await context.close(); report.passed = true;

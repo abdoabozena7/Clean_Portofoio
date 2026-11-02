@@ -23,6 +23,7 @@ const GithubGraph = () => {
       <div ref={calendar} data-construction="asset" data-construction-scene="activity" className="flex justify-center overflow-x-auto pb-2">
         <GitHubCalendar
           username="abdoabozena7"
+          errorMessage={'Error – Fetching GitHub contribution data for "abdoabozena7" failed.'}
           transformData={preserveData}
           colorScheme="light"
           style={{

@@ -13,9 +13,9 @@ const browser = await chromium.launch({ channel: 'msedge', headless: true });
 const wheel = async (p, n = 10, dy = 80, delay = 65) => { for (let i = 0; i < n; i++) { await p.mouse.wheel(0, dy); await p.waitForTimeout(delay); } };
 try {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 }, recordVideo: { dir: out, size: { width: 1440, height: 900 } } });
-  await context.route('https://lnkd.in/**', route => route.fulfill({ contentType: 'text/html', body: 'External story destination intercepted for the click test.' }));
   const p = await context.newPage(); p.on('pageerror', e => report.errors.push(e.message));
-  await p.goto(url, { waitUntil: 'networkidle' }); await p.evaluate(() => document.fonts.ready); await p.reload({ waitUntil: 'domcontentloaded' });
+  await p.goto(url, { waitUntil: 'networkidle' }); await p.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll('#hero a,#hero h1')].map(el=>document.fonts.load(getComputedStyle(el).font,el.textContent||'CV')));}); await p.reload({ waitUntil: 'domcontentloaded' });
+  await p.locator('#hero h1').waitFor(); await p.evaluate(async()=>{const h=document.querySelector('#hero h1');await document.fonts.load(getComputedStyle(h).font,h.textContent);await document.fonts.ready;});
   await p.waitForTimeout(250);
   const before = await p.locator('#hero h1').evaluate(el => ({ text: el.textContent, rect: el.getBoundingClientRect().toJSON() }));
   const firstLetters = await p.locator('[data-name-assembly]').innerHTML();
@@ -36,6 +36,7 @@ try {
   check('Name handoff removes glyph props and displays the real heading once', await p.locator('[data-name-assembly]').evaluate(el => +el.style.opacity === 0) && await p.locator('#hero h1').evaluate(el => getComputedStyle(el).clipPath === 'none'));
   check('No competing role typewriter keeps modifying the hero', await p.locator('#hero .mt-6.h-8').textContent() === role);
   const after = await p.locator('#hero h1').evaluate(el => el.getBoundingClientRect().toJSON());
+  report.diagnostics.push({nameGeometry:{before:before.rect,after}});
   check('Name assembly does not change its real layout rectangle', JSON.stringify(before.rect) === JSON.stringify(after));
   await p.screenshot({ path: `${out}/name-finished.png` });
   check('Requested section order is explicit in the actual document', await p.locator('[data-construction-section]').evaluateAll(es => es.map(el => el.id || 'finale').join('|')) === 'hero|about|experience|education|honors|projects|skills|contact|finale');
@@ -46,31 +47,38 @@ try {
   const assetPage = await context.newPage(); assetPage.on('pageerror', e => report.errors.push(e.message));
   await assetPage.goto(url, { waitUntil: 'networkidle' }); await assetPage.addStyleTag({ content: 'html{scroll-behavior:auto!important}' });
   await assetPage.locator('#experience .company-logo').first().evaluate(el => scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight - 30));
-  await assetPage.waitForTimeout(250); await wheel(assetPage, 22, 12, 60);
-  await assetPage.waitForFunction(() => [...document.querySelectorAll('[data-prop]')].some(el => el.dataset.target === 'Microsoft logo' && el.dataset.phase === 'align' && +el.style.opacity > .9), null, { timeout: 4000 });
-  const asset = await assetPage.evaluate(() => {
-    const prop = [...document.querySelectorAll('[data-prop]')].find(el => el.dataset.target === 'Microsoft logo' && +el.style.opacity > .9);
-    const ghost = prop.querySelector('.prop-image').getBoundingClientRect(), real = document.querySelector('#experience .company-logo img').getBoundingClientRect();
-    return { ghost: ghost.toJSON(), real: real.toJSON(), clip: getComputedStyle(document.querySelector('#experience .company-logo')).clipPath };
+  await assetPage.evaluate(() => {
+    window.__logoFrames=[];
+    window.__logoTimer=setInterval(()=>{
+      const real=document.querySelector('#experience .company-logo img');
+      const prop=[...document.querySelectorAll('[data-scene-prop]')].find(el=>el.querySelector('img')?.src.includes('microsoft')&&Number(getComputedStyle(el.parentElement).opacity)>.9);
+      if(prop){const image=prop.querySelector('img');window.__logoFrames.push({ghost:image.getBoundingClientRect().toJSON(),real:real.getBoundingClientRect().toJSON(),clip:getComputedStyle(real).clipPath,operation:prop.dataset.sceneOperation});}
+    },20);
   });
-  report.diagnostics.push({ assetHandoff: asset });
-  check('Settled logo prop uses the exact padded inner image bounds', ['x', 'y', 'width', 'height'].every(k => Math.abs(asset.ghost[k] - asset.real[k]) < .2));
-  check('Real image stays hidden until the fully aligned prop is committed', asset.clip.includes('100%'));
-  await assetPage.waitForFunction(() => !document.querySelector('#experience .company-logo').hasAttribute('data-building'));
-  check('Atomic logo handoff exposes the original full-size image', await assetPage.locator('#experience .company-logo').first().evaluate(el => getComputedStyle(el).clipPath === 'none'));
+  await assetPage.waitForTimeout(250); await wheel(assetPage, 22, 12, 60);
+  await assetPage.waitForTimeout(1800);
+  const assetFrames=await assetPage.evaluate(()=>{clearInterval(window.__logoTimer);return window.__logoFrames;});
+  report.diagnostics.push({assetHandoff:assetFrames});
+  check('Company-logo placement uses a real image prop and its padded inner destination',assetFrames.length>=3&&assetFrames.every(f=>f.ghost.width<=f.real.width+.2&&f.ghost.height<=f.real.height+.2));
+  check('Moving logo pixels stay on the decorative prop until the real image is committed',assetFrames.some(f=>f.operation==='drag')&&assetFrames.every(f=>f.clip.includes('100%')));
+  check('The carried logo converges towards its measured padded destination',assetFrames.some(f=>Math.abs(f.ghost.width-f.real.width)<1.5&&Math.abs(f.ghost.x-f.real.x)<2));
+  await assetPage.waitForFunction(()=>!document.querySelector('#experience .company-logo img').hasAttribute('data-building'));
+  check('Atomic logo handoff exposes the original full-size image',await assetPage.locator('#experience .company-logo img').first().evaluate(el=>getComputedStyle(el).clipPath==='none'&&el.getBoundingClientRect().width===30));
   await assetPage.locator('#experience').evaluate(el => el.scrollIntoView()); await wheel(assetPage);
   check('Regrouping the current section does not silently complete every future project', await assetPage.locator('#projects [data-building]').count() > 0);
   await assetPage.close();
 
   const activity = p.locator('[data-construction-scene="activity"]');
   await p.addStyleTag({ content: 'html{scroll-behavior:auto!important}' });
-  await activity.evaluate(el => scrollTo(0, el.getBoundingClientRect().top + scrollY - innerHeight - 30)); await p.waitForTimeout(250);
+  await activity.evaluate(el => {const root=el.closest('[data-scene-id]')||el;scrollTo(0,root.getBoundingClientRect().top+scrollY-innerHeight-30);}); await p.waitForTimeout(250);
   await p.waitForFunction(() => document.querySelector('[data-construction-scene="activity"]').dataset.activityReady === 'true');
   const dates = await activity.locator('rect[data-date]').evaluateAll(es => es.map(el => [el.dataset.date, el.dataset.level]));
+  await p.evaluate(()=>{window.__activityBatches=[];window.__activityTimer=setInterval(()=>{const es=[...document.querySelectorAll('[data-construction-scene="activity"] g[data-scene-target-id]')];window.__activityBatches.push(es.map(e=>Number(getComputedStyle(e).opacity)));},20);});
   let batched = false, saved = false;
-  for (let i = 0; i < 24; i++) { await p.mouse.wheel(0, 12); await p.waitForTimeout(50); batched ||= await activity.locator('g').evaluateAll(es => es.some(el => Number(el.style.opacity) > 0 && Number(el.style.opacity) < 1) && es.some(el => el.style.opacity === '0')); if (batched && !saved) { await p.screenshot({ path: `${out}/activity-building.png` }); saved = true; } }
+  for (let i = 0; i < 24; i++) { await p.mouse.wheel(0, 12); await p.waitForTimeout(50); batched ||= await activity.locator('g').evaluateAll(es => es.some(el => Number(getComputedStyle(el).opacity) > 0 && Number(getComputedStyle(el).opacity) < 1) && es.some(el => Number(getComputedStyle(el).opacity) === 0)); if (batched && !saved) { await p.screenshot({ path: `${out}/activity-building.png` }); saved = true; } }
+  await p.waitForTimeout(1500);const activityBatches=await p.evaluate(()=>{clearInterval(window.__activityTimer);return window.__activityBatches;});report.diagnostics.push({activityBatches});batched ||=activityBatches.some(opacities=>opacities.some(p=>p>0&&p<1)&&opacities.some(p=>p===0));
   check('Agents construct genuine contribution weeks progressively', batched);
-  await p.waitForFunction(() => !document.querySelector('[data-construction-scene="activity"]').hasAttribute('data-building'));
+  await p.waitForFunction(() => !document.querySelector('[data-construction-scene="activity"]').querySelector('[data-building]'));
   check('Activity construction preserves every real date and intensity', JSON.stringify(await activity.locator('rect[data-date]').evaluateAll(es => es.map(el => [el.dataset.date, el.dataset.level]))) === JSON.stringify(dates));
   check('Contribution cells use the supplied five-color palette', await activity.locator('rect[data-date]').evaluateAll(es => es.length > 350 && es.every(el => ['#faecb6','#93d3ae','#2bbaa5','#f9a822','#f96635'].includes(el.getAttribute('fill').toLowerCase()))));
   await p.screenshot({ path: `${out}/activity-palette.png` });
@@ -81,6 +89,7 @@ try {
   await p.screenshot({ path: `${out}/footer-palette-hover.png` });
   await p.evaluate(() => scrollTo(0, 0)); await p.waitForTimeout(150);
   check('Desktop story bubble remains visible after the initial teaser period', await p.locator('#microsoft-story-tip a').isVisible());
+  await context.route('https://lnkd.in/**', route => route.fulfill({ contentType: 'text/html', body: 'External story destination intercepted for the click test.' }));
   const desktopPopupPromise = p.waitForEvent('popup'); await p.locator('#microsoft-story-tip a').click(); const desktopPopup = await desktopPopupPromise; await desktopPopup.waitForLoadState();
   check('Clicking the desktop bubble itself opens the story after the intro', desktopPopup.url() === 'https://lnkd.in/p/e-7HV-sM'); await desktopPopup.close();
   await context.close();

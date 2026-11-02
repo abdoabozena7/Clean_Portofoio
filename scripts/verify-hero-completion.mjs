@@ -20,9 +20,12 @@ try{
    code=code.replace(/const paint = \(t\)\s*=>\s*\{/,`const paint = (t) => { if(t.section.id==='hero'){window.__heroPaints??=new Map();window.__heroPaints.set(t.el,{at:performance.now(),progress:t.progress});}`);
    await route.fulfill({response,body:code});
   });
-  await page.goto('http://127.0.0.1:8080/Clean_Portofoio/',{waitUntil:'networkidle'});await page.evaluate(()=>document.fonts.ready);await page.reload({waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);
+  await page.goto('http://127.0.0.1:8080/Clean_Portofoio/',{waitUntil:'networkidle'});await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll('#hero a')].map(el=>document.fonts.load(getComputedStyle(el).font,el.textContent||'CV')));});await page.reload({waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);
   const rects=()=>page.locator('#hero h1,#hero [data-microsoft-headline],#hero .palette-tag,#hero a').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};}));
   await page.waitForFunction(()=>+document.querySelector('[data-name-assembly]')?.dataset.nameProgress>.025&&document.fonts.status==='loaded');
+  // Routing the controller intentionally disables browser cache. The warm-up
+  // before reload therefore cannot guarantee the masked CV's bold font is ready.
+  await page.evaluate(()=>Promise.all([...document.querySelectorAll('#hero a')].map(el=>document.fonts.load(getComputedStyle(el).font,el.textContent||'CV'))));
   const before=await rects();await page.waitForTimeout(6500);await page.screenshot({path:`${out}/${label}-after-name.png`});
   await page.waitForFunction(()=>!document.querySelector('#hero [data-building]'),null,{timeout:24000});await page.waitForTimeout(100);
   const finishes=await page.evaluate(()=>window.__heroFinishes||[]),unearned=finishes.filter(f=>f.visible&&f.progress<.98&&!['structure'].includes(f.kind));
@@ -31,7 +34,8 @@ try{
   check(`${label}: trace observes real individual hero jobs`,finishes.filter(f=>f.visible&&f.kind!=='structure').length>=10);
   check(`${label}: every visible content target completes its own timeline`,unearned.length===0,unearned);
   check(`${label}: no unfinished end-of-intro batch is exposed`,biggestBatch<3,{biggestBatch});
-  check(`${label}: original hero geometry stays fixed`,JSON.stringify(before)===JSON.stringify(await rects()));
+  const afterGeometry = await rects();
+  check(`${label}: original hero geometry stays fixed`,JSON.stringify(before)===JSON.stringify(afterGeometry),{before,after:afterGeometry});
   check(`${label}: finished hero has real readable controls`,await page.locator('#hero a').evaluateAll(es=>es.filter(e=>e.getClientRects().length).every(e=>!e.closest('[data-building]')&&getComputedStyle(e).clipPath==='none')));
   await page.screenshot({path:`${out}/${label}-finished.png`});await context.close();
  }
