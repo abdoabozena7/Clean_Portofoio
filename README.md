@@ -1,6 +1,6 @@
 # Abdelrahman Abozena â€” current portfolio
 
-Repository: https://github.com/abdoabozena7/Clean_Portofoio . React18, TypeScript, Vite and Tailwind. The latest semantic construction revision is local and has not been deployed.
+Repository: https://github.com/abdoabozena7/Clean_Portofoio . React18, TypeScript, Vite and Tailwind. The current section-aware Slow Down revision is deployed on GitHub Pages (source64574cf; published branch81aa0e8).
 
 ```sh
 npm install
@@ -9,7 +9,7 @@ npm run dev -- --host 127.0.0.1 --port 8080
 
 Open http://127.0.0.1:8080/Clean_Portofoio/ . `npm run build` generates `dist`; `npm run preview` serves that production build locally. Publishing is a separate action.
 
-The current local experiment returns fast browsing to a whole section that was skipped without meaningful exposure. It uses the existing per-story expanded-content evidence (at least60%quality and75%block coverage for any story exempts its section). Fast input then moves UP only to that section's start, with a brief palette-colored edge shadow and Slow Down invitation; it does not continue to landing. Slowing restores native browsing. Anchors/keyboard, fields and dialogs are exempt. Configure input thresholds or set `enabled:false` in `src/lib/fastScrollReturn.ts`. `npm run test:fast-return` runs current section-return acceptance. See `SECTION_RETURN_PLAN.md`; the two older return plans are historical. No deployment.
+The current published experiment returns fast browsing to a whole section that was skipped without meaningful exposure. It uses the existing per-story expanded-content evidence (at least60%quality and75%block coverage for any story exempts its section). Fast input then moves UP only to that section's start, with a brief palette-colored edge shadow and Slow Down invitation; it does not continue to landing. Slowing restores native browsing. Anchors/keyboard, fields and dialogs are exempt. Configure input thresholds or set `enabled:false` in `src/lib/fastScrollReturn.ts`. `npm run test:fast-return` runs current section-return acceptance. See `SECTION_RETURN_PLAN.md`; the two older return plans are historical. Published with the owner’s approval on3November2026.
 
 Edit verified professional content and media paths in `src/data/profileContent.ts`. LinkedIn is not scraped at runtime. `constructionRecipes.ts` defines empty slots, placement, typing, duplication, customization and alignment; `constructionDirector.ts` paints the real lower-section UI inside the existing construction clock. Fast scrolling prepares content ahead; slowing down can resume unseen work. Touch keeps hero agents and lightweight lower entrances/adaptive collapse. Reduced motion exposes finished content. Below-fold images begin low-priority loading during the hero.
 

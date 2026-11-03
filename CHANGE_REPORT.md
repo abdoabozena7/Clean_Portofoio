@@ -1,3 +1,13 @@
+# Published — 3 November 2026
+
+Owner explicitly requested deploy. `npm run deploy` rebuilt and published source64574cf to gh-pages81aa0e895a9438be2c5ba44963bc65a6222f3494. Normal public URL: https://abdoabozena7.github.io/Clean_Portofoio/ . Exact production bytes for all three JS/CSS assets match dist (output/deploy/published-bytes.json).
+
+Live native Edge acceptance23/23PASS: output/playwright/section-return-live/report.json. Desktop and390px mobile-emulation wheel input verify whole-section gating, return bounded at Education, Slow Down palette cue, slow recovery, no overflow, and actual12-second exposure exemption. No runtime exceptions. Desktop/mobile screenshots inspected. Physical-phone continuous touch remains unverified, as before. The first live navigation timed out waiting for the full load event; retained report-load-timeout.json. Verification now waits for DOMContentLoaded and actual fonts/content, then exercises the same unchanged assertions. This changes the test entry wait, not the product or its acceptance thresholds.
+
+The verifier now accepts PORTFOLIO_URL and PORTFOLIO_EVIDENCE_DIR so published checks retain separate evidence. No application changes after publication. Prior local-only notes below are historical.
+
+---
+
 # Skipped-section return and Slow Down cue — 3 November 2026
 
 Latest clarification now governs: a native fast pass must cross the entire section without meaningful exposure before downward fast input is inverted. The destination is that section, not the landing. Existing per-story evidence exempts a section once any story reaches60%quality/75%coverage; it is not proof of reading. Return clamps to the measured section start, releases for slow browsing, and shows a temporary random palette-colored edge shadow with Slow Down and the section title. It never blocks links or changes finished geometry. Keyboard/anchor navigation and interactive contexts are excluded.

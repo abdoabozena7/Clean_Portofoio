@@ -19,3 +19,5 @@ The first section test failed because the initial20%exposure exemption treated a
 Limits:390px positive reversal uses native wheel in mobile emulation, not a physical touch fling. Touch requests a bounded step after a qualifying gesture ends; continuous physical-device touch reversal is not verified. A section is exempt once any of its stories has meaningful evidence; this is deliberately a whole-section-not-explored rule, not a requirement to finish every story. Already-returned sections do not repeatedly trap the visitor during this visit. No deployment/push. Previous unconditional-to-landing acceptance reports are historical and superseded.
 
 Final native acceptance: 23/23PASS; app 882e1519d6a992396747bb5b9e7b6a2449dadd5d91f953ecfa1b067d070a1bfe.
+
+Publication authorized by owner: source64574cf published via gh-pages81aa0e8; live production asset hashes match and all23native checks pass against the public URL. Evidence in output/deploy/published-bytes.json and output/playwright/section-return-live/report.json.

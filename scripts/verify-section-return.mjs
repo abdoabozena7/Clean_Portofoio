@@ -3,12 +3,13 @@ import { mkdir, writeFile, readdir, readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
-const out='output/playwright/section-return'; await mkdir(out,{recursive:true});
+const url=process.env.PORTFOLIO_URL || 'http://127.0.0.1:8080/Clean_Portofoio/';
+const out=process.env.PORTFOLIO_EVIDENCE_DIR || 'output/playwright/section-return'; await mkdir(out,{recursive:true});
 async function fingerprint(){const files=[];async function walk(d){for(const f of await readdir(d,{withFileTypes:true})){const p=d+'/'+f.name;f.isDirectory()?await walk(p):files.push(p)}}await walk('src');const h=createHash('sha256');for(const p of files.sort())h.update(p).update(await readFile(p));return h.digest('hex')}
-const report={sourceBefore:await fingerprint(),checks:[],journeys:[],errors:[]};
+const report={url,sourceBefore:await fingerprint(),checks:[],journeys:[],errors:[]};
 const check=(name,passed,evidence)=>{report.checks.push({name,passed:!!passed,evidence});console.log(passed?'PASS':'FAIL',name)};
 const browser=await chromium.launch({channel:'msedge',headless:true});
-async function open(mobile=false){const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile,recordVideo:{dir:out}});const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto('http://127.0.0.1:8080/Clean_Portofoio/');await page.evaluate(()=>document.fonts.ready);await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});await page.locator('#education').evaluate(el=>scrollTo({top:scrollY+el.getBoundingClientRect().top-350,behavior:'instant'}));await page.waitForTimeout(800);return {context,page}}
+async function open(mobile=false){const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile,recordVideo:{dir:out}});const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});await page.evaluate(()=>document.fonts.ready);await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});await page.locator('#education').evaluate(el=>scrollTo({top:scrollY+el.getBoundingClientRect().top-350,behavior:'instant'}));await page.waitForTimeout(800);return {context,page}}
 async function wheeling(page,delta,delay,count){for(let i=0;i<count;i++){await page.mouse.wheel(0,delta);await page.waitForTimeout(delay)}}
 try {
  for(const mode of ['skipped','exposed','normal','mobile-skipped']){
