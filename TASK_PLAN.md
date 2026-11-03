@@ -1,5 +1,7 @@
 # Current revision
 
+The latest section-aware Slow Down experiment supersedes unconditional reversal to landing; see SECTION_RETURN_PLAN.md. Return only after a whole low-exposure section is passed; stop at that section. Local only.
+
 Latest clarification replaces burst-origin return with continuous input inversion toward landing; `FAST_REVERSE_PLAN.md` and the newest change report govern. Local only.
 
 The latest user-requested very-fast-scroll return experiment is complete locally; see `FAST_RETURN_PLAN.md` and the newest `CHANGE_REPORT.md` entry. Ordinary/moderate browsing stays native. This explicit experiment supersedes the earlier no-auto-return constraint only for sustained very-fast input. No deployment or push.

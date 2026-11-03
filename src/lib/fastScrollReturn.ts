@@ -1,13 +1,13 @@
 /** Experimental behavior explicitly requested by the owner. Disable here to
  * restore unrestricted native downward browsing at every speed. */
 type FastReturnConfig = {
-  enabled: boolean; destination: "continuous-up";
+  enabled: boolean; destination: "skipped-section";
   speedViewportsPerSecond: number; sustainedMs: number; minTravelViewports: number;
   minSamples: number; cooldownMs: number;
 };
 export const FAST_SCROLL_RETURN_CONFIG: FastReturnConfig = {
   enabled: true,
-  destination: "continuous-up",
+  destination: "skipped-section",
   speedViewportsPerSecond: 4.5,
   sustainedMs: 180,
   minTravelViewports: 1,

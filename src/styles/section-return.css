@@ -1,0 +1,11 @@
+.section-return-cue { --return-color: #2bbaa5; position: fixed; inset: 0; z-index: 48; pointer-events: none; opacity: 0; visibility: hidden; transition: opacity .22s, visibility .22s; box-shadow: inset 24px 0 44px -24px var(--return-color), inset -24px 0 44px -24px var(--return-color); }
+.section-return-cue[data-visible="true"] { opacity: 1; visibility: visible; }
+.section-return-cue > div { position: absolute; top: 88px; left: 50%; transform: translateX(-50%); display: grid; gap: 4px; padding: 12px 22px; max-width: calc(100vw - 36px); border: 1px solid var(--return-color); border-radius: 24px; background: #fffdf4f2; color: #111920; text-align: center; box-shadow: 0 4px 18px #11192012; font-family: inherit; }
+.section-return-cue strong { font-size: 17px; letter-spacing: .06em; }
+.section-return-cue span { font-size: 11px; }
+@media (max-width: 767px) {
+  .section-return-cue > div { top: 68px; width: max-content; max-width: calc(100vw - 48px); padding: 8px 14px; gap: 2px; }
+  .section-return-cue strong { font-size: 14px; }
+  .section-return-cue span { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) { .section-return-cue { transition: none; } }

@@ -1,3 +1,11 @@
+# Skipped-section return and Slow Down cue — 3 November 2026
+
+Latest clarification now governs: a native fast pass must cross the entire section without meaningful exposure before downward fast input is inverted. The destination is that section, not the landing. Existing per-story evidence exempts a section once any story reaches60%quality/75%coverage; it is not proof of reading. Return clamps to the measured section start, releases for slow browsing, and shows a temporary random palette-colored edge shadow with Slow Down and the section title. It never blocks links or changes finished geometry. Keyboard/anchor navigation and interactive contexts are excluded.
+
+Runtime changes: useFastScrollReturn.ts, AdaptiveBrowsing.tsx, fastScrollReturn.ts and new section-return.css. No dependencies/content changes. Current acceptance script is verify-section-return.mjs (npm run test:fast-return). Current native runtime evidence and limitations are in SECTION_RETURN_PLAN.md. Earlier entries below are historical, including the superseded unconditional landing return. No deploy/push.
+
+---
+
 # Continuous fast-scroll inversion correction â€” 3 November 2026
 
 Corrected the interpretation: after high-speed qualification, every downward wheel input moves UP continuously toward the landing and remains at the top during continued fast input. There is no single return to a burst origin. Detection uses input cadence before native scroll, so reversed motion, adaptive layout and document boundaries cannot disable detection. Entry4.5viewport/s for180ms/1viewport/3samples; slow input immediately resumes native browsing. Earlier entries below describe superseded behavior. Local only, no deployment.
