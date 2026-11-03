@@ -1,3 +1,7 @@
+# Latest local revision
+
+SCROLL_COMMAND_PLAN.md governs: immediate input-command translation supersedes section gating. Current native16/16PASS twice, paced15/15PASS and20unit tests/build/TypeScript/lint pass. Source8cd488c. No deployment;64574cf remains published.
+
 # Current revision
 
 Latest local speed-estimator repair: SCROLL_SPEED_PLAN.md. Rolling time-weighted input, spike rejection and device-aware reset; native39/39, pace15/15, unit17PASS. Previously deployed64574cf remains live; this repair has not been published.

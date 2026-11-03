@@ -1,3 +1,5 @@
+Current LOCAL revision: strong downward wheel/touch commands translate UP immediately, ordinary commands move DOWN. There is no section/exposure/progress prerequisite. Touch is handled from its first vertical move with proportional displacement and bounded release inertia. See SCROLL_COMMAND_PLAN.md. npm run test:scroll-command (also test:fast-return) runs current acceptance. Published64574cf remains unchanged; older behavior described below is historical.
+
 # Abdelrahman Abozena — current portfolio
 
 Repository: https://github.com/abdoabozena7/Clean_Portofoio . React18, TypeScript, Vite and Tailwind. The current section-aware Slow Down revision is deployed on GitHub Pages (source64574cf; published branch81aa0e8).

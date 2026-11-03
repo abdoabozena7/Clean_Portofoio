@@ -1,3 +1,11 @@
+# Immediate command translation - 3 November 2026
+
+Strong downward input immediately moves UP; ordinary input moves down; slowing within the same held gesture restores downward movement. No section/exposure/progress or sustained timer gate. Wheel intercepts before default; eligible vertical touch is handled from its first move, with proportional movement and bounded decaying release inertia. Taps, dialogs, fields and keyboard remain functional. Slow Down describes the gesture.
+
+Native16/16PASS twice at unchanged app262cf302, paced15/15PASS and20unit tests/build/TypeScript/lint pass. Existing seven warnings and bundle/Browserslist warnings remain. Fractional-pixel inertia bug fixed. Touch test policy, failures and physical-phone limitations are recorded in SCROLL_COMMAND_PLAN.md. New scrollCommand.ts/tests; isolated hook replacement, config/cue caption and current native verifier. No deploy;64574cf remains live. Earlier section-based entries are historical.
+
+---
+
 # Local scroll-speed measurement repair — 3 November 2026
 
 The return detector now measures input travel over real elapsed time in a240ms rolling window, independent of event frequency. High speed must occupy70%of that time, with the existing high entry threshold/distance/duration. An80ms recent window releases reversal when slowing. First unknown input, isolated spikes, direction/idle/device changes, pinch/cancel and blocked controls cannot reuse stale qualification. Real forward page crossing and existing exposure gates still determine the skipped section; the destination and Slow Down cue are unchanged. Shared construction/scan thresholds and finished geometry are preserved.
