@@ -9,6 +9,7 @@ const beforeName = arg('--before', 'scenes-before'), afterName = arg('--after', 
 const pixelBeforeName = arg('--pixel-before', beforeName);
 const expectedHead = arg('--expected-head', '52cfa85');
 const negative = process.argv.includes('--negative-control');
+const strict = process.argv.includes('--strict');
 const out = `output/playwright/scene-layout${negative ? '-negative' : ''}`;
 await mkdir(out, { recursive: true });
 const before = JSON.parse(await readFile(`output/playwright/${beforeName}/report.json`, 'utf8'));
@@ -32,7 +33,7 @@ try {
   check('Final capture belongs to the source currently checked out', await fingerprint() === after.sourceAfter);
   for (const viewport of ['desktop', 'laptop', 'tablet', 'mobile']) {
     const a = before.viewports[viewport], b = after.viewports[viewport];
-    const aboutDelta = b.sections.find(s => s.key === 'about').rect.height - a.sections.find(s => s.key === 'about').rect.height;
+    const aboutDelta = strict ? 0 : b.sections.find(s => s.key === 'about').rect.height - a.sections.find(s => s.key === 'about').rect.height;
     const followingAbout = id => a.sections.findIndex(s => s.key === id) > a.sections.findIndex(s => s.key === 'about');
     report.authorizedAboutUpdate ||= { source: 'User explicitly confirmed retaining concurrent3-paragraph About, inlineMicrosoftlogo and AIEngineer badge', heightDelta: {} };
     report.authorizedAboutUpdate.heightDelta[viewport] = aboutDelta;
@@ -43,11 +44,11 @@ try {
     for (const old of a.sections) {
       const now = b.sections.find(s => s.key === old.key);
       const expected = { ...old.rect, y: old.rect.y + (followingAbout(old.key) ? aboutDelta : 0) };
-      check(`${viewport}: ${old.key} section geometry`, !!now && ['x', 'y', 'width', ...(old.key === 'about' ? [] : ['height'])].every(k => within(expected[k], now.rect[k])), { before: old.rect, expected, after: now?.rect });
+      check(`${viewport}: ${old.key} section geometry`, !!now && ['x', 'y', 'width', ...(!strict && old.key === 'about' ? [] : ['height'])].every(k => within(expected[k], now.rect[k])), { before: old.rect, expected, after: now?.rect });
     }
     const portraitSelector = a.elements.find(e => e.section === 'about' && e.tag === 'img')?.selector;
     for (const old of a.elements.filter(e => e.rect.width > 0 && e.rect.height > 0)) {
-      if (old.section === 'about' && old.tag !== 'h2' && old.selector !== portraitSelector) continue;
+      if (!strict && old.section === 'about' && old.tag !== 'h2' && old.selector !== portraitSelector) continue;
       const now = b.elements.find(e => e.selector === old.selector);
       check(`${viewport}: ${old.selector} element retained`, !!now);
       if (!now) continue;
@@ -57,7 +58,7 @@ try {
         old.text === now.text ? undefined : { before: old.text, after: now.text });
     }
     for (const section of a.sections) {
-      if (section.key === 'about') continue;
+      if (!strict && section.key === 'about') continue;
       const currentSection = b.sections.find(s => s.key === section.key);
       // Original52 geometry remains authoritative above. A separately recorded
       // pixel reference may include ONLY the user-approved About content patch,

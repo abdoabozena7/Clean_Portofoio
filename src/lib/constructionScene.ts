@@ -15,6 +15,22 @@ export type ConstructionScene = { id: string; root: HTMLElement; jobs: Construct
 const smooth = (p: number) => p * p * (3 - 2 * p);
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
 
+/** Approach is part of the existing local job budget, never a scroll queue. */
+export function operationTiming(operation: ConstructionOperation, progress: number, durationMs: number) {
+  const lead = operation === "commit" ? 0 : Math.min(160, durationMs * .28) / Math.max(1, durationMs);
+  const work = clamp01((progress - lead) / Math.max(.01, 1 - lead));
+  return { approach: lead ? clamp01(progress / lead) : 1, work,
+    phase: progress < lead ? "approach" : work > .94 ? "release" : "work" };
+}
+
+/** Document-space transfer: scrolling projects both ends equally, without lag. */
+export function editorTravel(from: { x: number; y: number }, to: { x: number; y: number }, progress: number, lane: number) {
+  const p = smooth(clamp01(progress)), dx = to.x - from.x, dy = to.y - from.y;
+  const length = Math.hypot(dx, dy) || 1, bend = Math.min(24, length * .08) * (lane % 2 ? -1 : 1);
+  const arc = Math.sin(p * Math.PI) * bend;
+  return { x: mix(from.x, to.x, p) - dy / length * arc, y: mix(from.y, to.y, p) + dx / length * arc };
+}
+
 /** All coordinates are current DOM measurements. Only choreography ratios are fixed. */
 export function constructionScene(destination: SceneBox, source: SceneBox, progress: number) {
   const carry = smooth(stageProgress(progress, .16, .60));

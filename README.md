@@ -1,3 +1,5 @@
+Latest local motion revision: the second reference video was decoded into773pictures and reviewed in chronological frame sheets. Lower-page agents now travel to measured work sites, grip/type/place/align, then release, in document coordinates that stay attached during scroll. Layout/hero/mobile policies and immediate scroll-command translation are preserved. See REFERENCE_V2_PLAN.md. npm run test:reference-motion and test:reference-layout exercise current motion and four-size baseline checks. This local revision is not deployed.
+
 Current LOCAL revision: strong downward wheel/touch commands translate UP immediately, ordinary commands move DOWN. There is no section/exposure/progress prerequisite. Touch is handled from its first vertical move with proportional displacement and bounded release inertia. See SCROLL_COMMAND_PLAN.md. npm run test:scroll-command (also test:fast-return) runs current acceptance. Published64574cf remains unchanged; older behavior described below is historical.
 
 # Abdelrahman Abozena — current portfolio

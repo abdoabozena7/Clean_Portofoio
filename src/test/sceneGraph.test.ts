@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { operationPose } from "@/lib/constructionScene";
+import { editorTravel, operationPose, operationTiming } from "@/lib/constructionScene";
 import { compileRecipe, type RuntimeScene, type SceneUnit, type Surface } from "@/lib/constructionRecipes";
 
 const box = { left: 10, top: 20, width: 300, height: 180 };
@@ -15,6 +15,20 @@ function scene(units: SceneUnit[]): RuntimeScene {
 }
 
 describe("semantic construction obligations", () => {
+  it("travels to the operation before work and reaches exact measured endpoints", () => {
+    const from = { x: 20, y: 400 }, to = { x: 700, y: 900 };
+    expect(editorTravel(from, to, 0, 0)).toEqual(from);
+    const end = editorTravel(from, to, 1, 0);
+    expect(end.x).toBeCloseTo(to.x); expect(end.y).toBeCloseTo(to.y);
+    const approaching = operationTiming("drag", .1, 450);
+    expect(approaching.phase).toBe("approach"); expect(approaching.work).toBe(0);
+    expect(operationTiming("drag", .5, 450).phase).toBe("work");
+    expect(operationTiming("drag", 1, 450).work).toBe(1);
+    // Scroll projects world positions; it never changes the actual contact point.
+    const point = editorTravel(from, to, .5, 0);
+    const shifted = editorTravel({ x: from.x, y: from.y - 100 }, { x: to.x, y: to.y - 100 }, .5, 0);
+    expect(shifted.x).toBeCloseTo(point.x); expect(shifted.y).toBeCloseTo(point.y - 100);
+  });
   it("a populated project copy waits for all source content and for its destination outline", () => {
     const first = unit("first"), second = unit("second"); second.source = first;
     for (const u of [first, second]) {

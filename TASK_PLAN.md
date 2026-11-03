@@ -1,3 +1,7 @@
+# Latest local reference revision
+
+REFERENCE_V2_PLAN.md is complete: all773decoded frames reviewed, measured approach/work/release choreography implemented, native18/18, scene33/33, recipe37/37, strict layout2345/2345, command16/16, pace15/15 and unit21PASS. Negative control rejects all4stationary-agent cases. No deploy/push; prior accepted sources preserved. Older entries below are historical.
+
 # Latest local revision
 
 SCROLL_COMMAND_PLAN.md governs: immediate input-command translation supersedes section gating. Current native16/16PASS twice, paced15/15PASS and20unit tests/build/TypeScript/lint pass. Source8cd488c. No deployment;64574cf remains published.

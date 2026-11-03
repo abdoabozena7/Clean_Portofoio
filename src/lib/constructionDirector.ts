@@ -1,5 +1,5 @@
 import { clamp01, textFrame } from "./construction";
-import { operationPose, type SceneBox } from "./constructionScene";
+import { editorTravel, operationPose, operationTiming, type SceneBox } from "./constructionScene";
 import { compileRecipe, discoverScenes, readBox, semanticSurfaces, type PaintElement, type RuntimeScene, type SceneUnit, type Surface, type TimedJob } from "./constructionRecipes";
 import { getScrollIntent, type ScrollIntent } from "./scrollIntent";
 
@@ -40,6 +40,7 @@ export function createConstructionDirector(options: DirectorOptions) {
   let scenes: RuntimeScene[] = [], enabled = false, disposed = false, paused = false, dirty = false;
   const surfaces = new Map<PaintElement, Surface>();
   const histories = new Map<string, string>();
+  const motions = new Map<number, { job: string; from: { x: number; y: number }; last: { x: number; y: number } }>();
   const decoded = new WeakSet<HTMLImageElement>(), requested = new WeakSet<HTMLImageElement>(), failed = new WeakSet<HTMLImageElement>();
   const copyOrigins = new Map<string, SceneBox>();
   const activityFailed = (scene: RuntimeScene) => scene.root.querySelector<HTMLElement>("[data-construction-scene='activity']")?.textContent?.includes("Error – Fetching GitHub contribution data") || false;
@@ -205,6 +206,7 @@ export function createConstructionDirector(options: DirectorOptions) {
   }
 
   function hideActors(preservePointerPaint = false) {
+    if (!preservePointerPaint) motions.clear();
     for (const [i, prop] of props.entries()) {
       prop.el.parentElement!.style.opacity = "0";
       const pointer = pointers[i];
@@ -212,6 +214,7 @@ export function createConstructionDirector(options: DirectorOptions) {
       pointer.classList.remove("scene-pointer");
       for (const el of [pointer, prop.el, prop.el.parentElement!, guides[i]]) {
         delete el.dataset.sceneId; delete el.dataset.sceneOperation; delete el.dataset.sceneTarget;
+        delete el.dataset.scenePhase;
       }
     }
   }
@@ -255,7 +258,9 @@ export function createConstructionDirector(options: DirectorOptions) {
     return clone;
   }
 
-  function showActor(job: TimedJob, scene: RuntimeScene, progress: number, index: number) {
+  function showActor(job: TimedJob, scene: RuntimeScene, rawProgress: number, index: number) {
+    const timing = operationTiming(job.operation, rawProgress, job.durationMs);
+    const progress = timing.work;
     const s = job.surface, pointer = pointers[index], prop = props[index];
     const destination = viewportBox(s.box), u = job.unit;
     let source = destination;
@@ -285,13 +290,25 @@ export function createConstructionDirector(options: DirectorOptions) {
     if (operation === "type" && s.lines.length) {
       const text = textFrame(s.lines, s.box.width, s.box.height, progress);
       x = destination.left + text.x + 2; y = destination.top + text.y + text.height * .75;
-      carets[index].style.cssText = `background:${getComputedStyle(pointer).getPropertyValue("--agent-color")};height:${Math.max(10, text.height * .75)}px;transform:translate3d(${destination.left + text.x}px,${destination.top + text.y}px,0);opacity:${Math.floor(performance.now() / 380) % 2 ? .35 : .85}`;
+      if (timing.phase !== "approach") carets[index].style.cssText = `background:${getComputedStyle(pointer).getPropertyValue("--agent-color")};height:${Math.max(10, text.height * .75)}px;transform:translate3d(${destination.left + text.x}px,${destination.top + text.y}px,0);opacity:${Math.floor(performance.now() / 380) % 2 ? .35 : .85}`;
     } else if (s.kind === "edge" && s.el instanceof SVGPathElement) {
       const point = s.el.getPointAtLength(s.el.getTotalLength() * progress), matrix = s.el.getScreenCTM();
       if (matrix) { const at = new DOMPoint(point.x, point.y).matrixTransform(matrix); x = at.x; y = at.y; }
     } else if (s.part === "cell") { x = destination.left + destination.width; y = destination.top + destination.height * progress; }
-    // Keep the contact point exact. Move only the tiny label when near an edge.
-    pointer.style.opacity = "1"; pointer.style.transform = `translate3d(${x}px,${y}px,0)`;
+    const contact = { x: x + scrollX, y: y + scrollY };
+    let motion = motions.get(index);
+    if (!motion || motion.job !== job.id) {
+      const prior = motion?.last;
+      const reusable = prior && prior.y - scrollY > 76 && prior.y - scrollY < innerHeight && prior.x - scrollX > 0 && prior.x - scrollX < innerWidth;
+      motion = { job: job.id, from: reusable ? { ...prior } : { x: Math.max(scrollX + 12, contact.x - 42), y: Math.min(scrollY + innerHeight - 20, Math.max(scrollY + 90, contact.y - 24)) }, last: contact };
+      motions.set(index, motion);
+    }
+    const position = timing.phase === "approach" ? editorTravel(motion.from, contact, timing.approach, index) : contact;
+    motion.last = position;
+    // Travel is document-relative. During work, the pointer is exactly attached
+    // to the real moving handle/caret, even while the viewport scrolls.
+    pointer.style.opacity = String(timing.phase === "release" ? 1 - (progress - .94) / .06 * .55 : 1);
+    pointer.style.transform = `translate3d(${position.x - scrollX}px,${position.y - scrollY}px,0)`;
     pointer.classList.add("scene-pointer"); pointer.dataset.edge = x > innerWidth - 135 ? "right" : "left";
     pointer.dataset.click = String(operation === "duplicate" && progress < .15 || operation === "align" && progress > .7);
     pointer.querySelector<SVGElement>("svg")!.style.transform = "none";
@@ -300,6 +317,7 @@ export function createConstructionDirector(options: DirectorOptions) {
     prop.el.style.clipPath = "none";
     for (const el of [pointer, actor, prop.el, guides[index]]) {
       el.dataset.sceneId = scene.id; el.dataset.sceneOperation = operation; el.dataset.sceneTarget = s.id;
+      el.dataset.scenePhase = timing.phase;
     }
     const guide = guides[index], selection = guide.querySelector("rect")!, handles = guide.querySelector("path")!;
     guide.dataset.sceneGuide = "";
@@ -310,6 +328,13 @@ export function createConstructionDirector(options: DirectorOptions) {
     guide.setAttribute("opacity", ["type", "populate", "replace"].includes(operation) ? ".23" : ".65");
     const r = box.left + box.width, b = box.top + box.height;
     handles.setAttribute("d", `M${box.left + 5},${box.top}h-5v5 M${r - 5},${box.top}h5v5 M${box.left},${b - 5}v5h5 M${r - 5},${b}h5v-5`);
+    if (operation === "align") {
+      const left = Math.min(...scene.units.map(u => u.box.left)) - scrollX;
+      const right = Math.max(...scene.units.map(u => u.box.left + u.box.width)) - scrollX;
+      handles.setAttribute("d", `${handles.getAttribute("d")} M${left},${box.top}H${right} M${box.left},${box.top}V${b}`);
+    }
+    if (timing.phase === "approach") { actor.style.opacity = "0"; guide.setAttribute("opacity", "0"); return; }
+    if (timing.phase === "release") guide.setAttribute("opacity", String(.65 * (1 - (progress - .94) / .06)));
     if (operation === "duplicate" && s.kind === "shell" && sourceAvailable) {
       const key = `${scene.id}:${u.id}:${sourceUnit.id}`;
       if (prop.target !== key) { prop.el.replaceChildren(snapshot(sourceUnit, scene.kind !== "project")); prop.target = key; }
@@ -394,7 +419,8 @@ export function createConstructionDirector(options: DirectorOptions) {
           }
           if (scene.elapsed >= u.end) { finishUnit(u); continue; }
           for (const job of scene.timeline.filter(j => j.unit === u)) {
-            const p = stage(scene.elapsed, job); if (p <= 0) continue;
+            const rawProgress = stage(scene.elapsed, job); if (rawProgress <= 0) continue;
+            const p = operationTiming(job.operation, rawProgress, job.durationMs).work;
             const s = job.surface;
             if (job.operation === "commit") continue;
             if (s.kind === "shell") {
@@ -408,7 +434,7 @@ export function createConstructionDirector(options: DirectorOptions) {
               s.progress = p;
             } else if (!(s.kind === "text" && ["trace", "create-slot", "align"].includes(job.operation))) paint(s, p);
             const meaningful = p < 1 && visibleBox(s.box) && (!s.populated || ["trace", "create-slot", "align", "duplicate"].includes(job.operation));
-            if (meaningful && !waiting) activeJobs.push({ job, scene, p });
+            if (meaningful && !waiting) activeJobs.push({ job, scene, p: rawProgress });
           }
         }
         if (scene.units.every(u => u.complete)) finish(scene);

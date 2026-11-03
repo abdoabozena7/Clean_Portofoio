@@ -42,7 +42,9 @@
     "test:scroll-recovery": "node scripts/verify-scroll-recovery.mjs",
     "test:pace": "node scripts/verify-paced-browsing.mjs",
     "test:fast-return": "node scripts/verify-scroll-command.mjs",
-    "test:scroll-command": "node scripts/verify-scroll-command.mjs"
+    "test:scroll-command": "node scripts/verify-scroll-command.mjs",
+    "test:reference-motion": "node scripts/verify-reference-motion.mjs",
+    "test:reference-layout": "node scripts/verify-scene-layout.mjs --before reference-v2-before --after reference-v2-after --expected-head 15e42c5 --strict"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

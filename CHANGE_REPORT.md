@@ -1,3 +1,13 @@
+# Second reference choreography - 3 November 2026
+
+Reviewed all773decoded frames in13chronological sheets and6enlarged operation sequences. The reference stages empty regions, prepares slots, works in parallel, manipulates media/handles, repeats structures and releases editing selections while the viewport moves. Its source scroll algorithm cannot be inferred from filmed output alone. Full timeline and evidence paths are in REFERENCE_V2_PLAN.md.
+
+constructionScene.ts and constructionDirector.ts now reserve approach/work/release phases inside existing job durations. Agents travel from their last document-space positions, reach actual work sites before painting, stay attached to measured handles/carets during scroll, draw shared alignment guides and release selections. Real component geometry, original content/hero and the8-agent/mobile policy remain unchanged. No new dependencies or animation loop.
+
+Current-source native motion18/18, project scenes33/33, all-section recipes37/37, fresh strict four-size layout2345/2345, scroll command16/16, paced recovery15/15 and21unit checks pass. Build/TypeScript/lint pass with7existing warnings and existing bundle/Browserslist warnings. A live stationary-approach fault makes exactly4motion checks fail, so labels alone cannot pass. Runtime recordings/screenshots inspected. Current app d87ed5d7. Physical-device/CWV gains and exact reference source algorithm are not claimed. Local only, no deployment or push.
+
+---
+
 # Immediate command translation - 3 November 2026
 
 Strong downward input immediately moves UP; ordinary input moves down; slowing within the same held gesture restores downward movement. No section/exposure/progress or sustained timer gate. Wheel intercepts before default; eligible vertical touch is handled from its first move, with proportional movement and bounded decaying release inertia. Taps, dialogs, fields and keyboard remain functional. Slow Down describes the gesture.
