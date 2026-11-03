@@ -12,7 +12,7 @@ const browser=await chromium.launch({channel:'msedge',headless:true});
 async function open(mobile=false){const context=await browser.newContext({viewport:mobile?{width:390,height:844}:{width:1440,height:900},isMobile:mobile,hasTouch:mobile,recordVideo:{dir:out}});const page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));await page.goto(url,{waitUntil:'domcontentloaded',timeout:45000});await page.evaluate(()=>document.fonts.ready);await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});await page.locator('#education').evaluate(el=>scrollTo({top:scrollY+el.getBoundingClientRect().top-350,behavior:'instant'}));await page.waitForTimeout(800);return {context,page}}
 async function wheeling(page,delta,delay,count){for(let i=0;i<count;i++){await page.mouse.wheel(0,delta);await page.waitForTimeout(delay)}}
 try {
- for(const mode of ['skipped','exposed','normal','mobile-skipped']){
+ for(const mode of ['skipped','exposed','normal','mobile-skipped','trackpad-skipped','moderate','spike','small-trackpad']){
   const {context,page}=await open(mode==='mobile-skipped');
   try{
    if(mode==='exposed'){
@@ -22,9 +22,14 @@ try {
     check('Real expanded visible Education earns meaningful exposure',evidence.quality>=60&&evidence.coverage>=75,evidence);
     await page.locator('#education').evaluate(el=>scrollTo({top:scrollY+el.getBoundingClientRect().top-350,behavior:'instant'}));await page.waitForTimeout(300);
    }
-   await page.evaluate(()=>{window.__sectionFrames=[];window.__returnEvents=[];window.__trusted=[];addEventListener('portfolio:fast-scroll-return',e=>window.__returnEvents.push(e.detail));addEventListener('wheel',e=>window.__trusted.push(e.isTrusted),{passive:true});window.__trace=setInterval(()=>{const el=document.querySelector('#education'),cue=document.querySelector('.section-return-cue');window.__sectionFrames.push({y:scrollY,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,cue:cue.dataset.visible,color:cue.style.getPropertyValue('--return-color'),section:cue.dataset.section})},16)});
-   if(mode==='normal')await wheeling(page,80,140,24);else await wheeling(page,500,50,16);
-   const during=await page.evaluate(()=>({frames:window.__sectionFrames.slice(),events:window.__returnEvents.slice(),trusted:window.__trusted.every(Boolean)}));
+   await page.evaluate(()=>{window.__sectionFrames=[];window.__returnEvents=[];window.__trusted=[];window.__wheelTiming=[];addEventListener('portfolio:fast-scroll-return',e=>window.__returnEvents.push(e.detail));addEventListener('wheel',e=>{window.__trusted.push(e.isTrusted);window.__wheelTiming.push({at:performance.now(),delta:e.deltaY})},{passive:true});window.__trace=setInterval(()=>{const el=document.querySelector('#education'),cue=document.querySelector('.section-return-cue');window.__sectionFrames.push({y:scrollY,top:el.getBoundingClientRect().top,bottom:el.getBoundingClientRect().bottom,cue:cue.dataset.visible,color:cue.style.getPropertyValue('--return-color'),section:cue.dataset.section})},16)});
+   if(mode==='normal')await wheeling(page,80,140,24);
+   else if(mode==='moderate')await wheeling(page,220,60,20);
+   else if(mode==='spike'){await wheeling(page,20,16,5);await wheeling(page,3000,16,1);await wheeling(page,20,16,30);}
+   else if(mode==='small-trackpad')await wheeling(page,6,8,60);
+   else if(mode==='trackpad-skipped')await wheeling(page,200,8,96);
+   else await wheeling(page,500,50,16);
+   const during=await page.evaluate(()=>({frames:window.__sectionFrames.slice(),events:window.__returnEvents.slice(),trusted:window.__trusted.every(Boolean),wheelTiming:window.__wheelTiming.slice()}));
    report.journeys.push({mode,...during});
    check(mode+': trusted browser inputs',during.trusted);
    if(mode.endsWith('skipped')){
@@ -37,7 +42,7 @@ try {
     const end=await page.evaluate(()=>({y:scrollY,cue:document.querySelector('.section-return-cue').dataset.visible}));
     check('Slow browsing resumes and temporary cue clears',end.y>start+160&&end.cue==='false',{start,...end});
    }else if(mode==='exposed') check('Meaningfully exposed Education is not a return target',!during.events.some(e=>e.section==='education'),during.events);
-   else check('Ordinary pace has no reversal or edge warning',during.events.length===0&&during.frames.every(f=>f.cue!=='true'),during.events);
+   else check(mode+': no reversal or edge warning',during.events.length===0&&during.frames.every(f=>f.cue!=='true'),during.events);
    check(mode+': cue never blocks interaction or creates overflow',await page.evaluate(()=>getComputedStyle(document.querySelector('.section-return-cue')).pointerEvents==='none'&&document.documentElement.scrollWidth===innerWidth));
    await page.evaluate(()=>clearInterval(window.__trace));
   }finally{await context.close()}

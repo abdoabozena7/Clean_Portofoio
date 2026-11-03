@@ -1,5 +1,6 @@
 import { useEffect, type RefObject } from "react";
-import { FAST_SCROLL_RETURN_CONFIG as config, initialFastReturnBurst, observeFastReturn } from "@/lib/fastScrollReturn";
+import { FAST_SCROLL_RETURN_CONFIG as config } from "@/lib/fastScrollReturn";
+import { initialScrollVelocity, sampleScrollVelocity, wheelPixels } from "@/lib/scrollVelocity";
 import { getScrollIntent, navigateForScrollReturn, requestDetailedView, subscribeScrollIntent } from "@/lib/scrollIntent";
 
 /** A local, section-aware experiment. Exposure never proves reading. */
@@ -9,7 +10,10 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
     const sections = [...document.querySelectorAll<HTMLElement>('section[id]')].filter(el => !['hero', 'contact'].includes(el.id));
     const entered = new Set<HTMLElement>(), returned = new Set<HTMLElement>();
     let previousY = scrollY, bounds = sections.map(el => el.getBoundingClientRect());
-    let burst = initialFastReturnBurst(), inputAt = -Infinity, wheelAt = -Infinity;
+    let velocity = initialScrollVelocity(), inputAt = -Infinity;
+    let source: "wheel" | "touch" | "none" = "none";
+    const rootFont = getComputedStyle(document.documentElement);
+    let lineHeight = parseFloat(rootFont.lineHeight) || parseFloat(rootFont.fontSize) * 1.2 || 20;
     let target: HTMLElement | null = null, reversing = false, arrived = false, qualifiedUntil = 0;
     let cueTimer: ReturnType<typeof setTimeout> | undefined;
     const cue = cueRef.current;
@@ -23,7 +27,7 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       clearTimeout(cueTimer); cueTimer = setTimeout(hide, 1100);
     };
     const resetBounds = () => { previousY = scrollY; bounds = sections.map(el => el.getBoundingClientRect()); };
-    const cancel = () => { target = null; reversing = false; arrived = false; qualifiedUntil = 0; burst = initialFastReturnBurst(); entered.clear(); hide(); resetBounds(); };
+    const cancel = () => { target = null; reversing = false; arrived = false; qualifiedUntil = 0; velocity = initialScrollVelocity(); source = "none"; entered.clear(); hide(); resetBounds(); };
     const blocked = (origin: EventTarget | null) => {
       if (document.hidden || !document.hasFocus() || document.querySelector('[role="dialog"],[data-exploration-map]')) return true;
       if (document.activeElement?.matches('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return true;
@@ -60,18 +64,18 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       previousY = y; bounds = next;
     };
     const wheel = (event: WheelEvent) => {
-      const now = performance.now(), gap = now - wheelAt; wheelAt = now; inputAt = now;
-      const delta = event.deltaY * (event.deltaMode === 1 ? 20 : event.deltaMode === 2 ? innerHeight : 1);
-      const speed = gap > 180 ? 0 : delta * 1000 / Math.max(16, gap) / innerHeight;
+      const now = performance.now(); inputAt = now;
+      const delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, lineHeight);
       const eligible = !event.defaultPrevented && !event.ctrlKey && !event.metaKey && Math.abs(event.deltaY) >= Math.abs(event.deltaX) && !blocked(event.target);
-      if (!eligible) { reversing = false; burst = initialFastReturnBurst(); return; }
+      if (!eligible) { reversing = false; qualifiedUntil = 0; velocity = initialScrollVelocity(); return; }
       if (target && hasExposure(target)) cancel();
-      if (reversing && (delta <= 0 || gap > 180 || speed < config.speedViewportsPerSecond * .75)) {
-        reversing = false; burst = initialFastReturnBurst();
+      if (source !== "wheel") { velocity = initialScrollVelocity(); qualifiedUntil = 0; source = "wheel"; }
+      const result = sampleScrollVelocity(velocity, now, delta, innerHeight);
+      velocity = result.state;
+      if (reversing && (delta <= 0 || result.recentSpeed < config.speedViewportsPerSecond * .75)) {
+        reversing = false;
         if (arrived) { target = null; arrived = false; show(); }
       }
-      const result = observeFastReturn(gap > 180 ? initialFastReturnBurst() : burst, { now, previousY: scrollY, delta, viewportHeight: innerHeight, speed, eligible });
-      burst = result.burst;
       if (result.qualified) qualifiedUntil = now + 350;
       if (target && delta > 0 && (reversing || result.qualified) && event.cancelable) {
         event.preventDefault(); reversing = true; returnStep(delta);
@@ -79,27 +83,35 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
     };
     // Touch remains native while held; its fast native momentum can return only
     // after an actual skipped section, using the same bounded destination.
-    let touchY = 0, touchAt = 0;
-    const touchStart = (event: TouchEvent) => { inputAt = performance.now(); touchAt = inputAt; touchY = event.touches[0]?.clientY || 0; reversing = false; };
+    let touchY = 0;
+    const touchStart = (event: TouchEvent) => { if (event.touches.length !== 1) { cancel(); return; } inputAt = performance.now(); touchY = event.touches[0]?.clientY || 0; reversing = false; qualifiedUntil = 0; velocity = initialScrollVelocity(); source = "touch"; };
     const touchMove = (event: TouchEvent) => {
+      if (event.touches.length !== 1) { velocity = initialScrollVelocity(); qualifiedUntil = 0; return; }
       const now = performance.now(), y = event.touches[0]?.clientY || touchY;
-      const speed = (touchY - y) * 1000 / Math.max(16, now - touchAt) / innerHeight;
-      inputAt = now; touchAt = now; touchY = y;
-      if (speed > config.speedViewportsPerSecond && !blocked(event.target)) qualifiedUntil = now + 350;
+      const result = sampleScrollVelocity(velocity, now, touchY - y, innerHeight);
+      inputAt = now; touchY = y;
+      velocity = result.state;
+      if (blocked(event.target) || result.recentSpeed < config.speedViewportsPerSecond * .75) { qualifiedUntil = 0; if (blocked(event.target)) velocity = initialScrollVelocity(); }
+      else if (result.qualified) qualifiedUntil = now + 350;
     };
     const touchEnd = () => { if (target && performance.now() < qualifiedUntil && !blocked(null)) returnStep(innerHeight * .75); };
     const jump = () => cancel();
     const unsubscribe = subscribeScrollIntent(onIntent);
     window.addEventListener('wheel', wheel, { passive: false });
     window.addEventListener('touchstart', touchStart, { passive: true }); window.addEventListener('touchmove', touchMove, { passive: true }); window.addEventListener('touchend', touchEnd, { passive: true });
+    window.addEventListener('touchcancel', cancel, { passive: true });
     window.addEventListener('keydown', jump); window.addEventListener('hashchange', jump); window.addEventListener('popstate', jump); window.addEventListener('blur', jump);
     // A resize callback can run between native scroll and its intent frame.
     // Updating the previous bounds there would erase a real section crossing.
     const onResize = () => { if (performance.now() - inputAt > 500) resetBounds(); };
+    const onViewportResize = () => { const style = getComputedStyle(document.documentElement); lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2 || 20; cancel(); };
+    window.addEventListener('resize', onViewportResize);
     const resize = new ResizeObserver(onResize); sections.forEach(el => resize.observe(el));
     return () => {
       unsubscribe(); resize.disconnect(); clearTimeout(cueTimer); hide();
+      window.removeEventListener('resize', onViewportResize);
       window.removeEventListener('wheel', wheel); window.removeEventListener('touchstart', touchStart); window.removeEventListener('touchmove', touchMove); window.removeEventListener('touchend', touchEnd);
+      window.removeEventListener('touchcancel', cancel);
       window.removeEventListener('keydown', jump); window.removeEventListener('hashchange', jump); window.removeEventListener('popstate', jump); window.removeEventListener('blur', jump);
     };
   }, [cueRef]);

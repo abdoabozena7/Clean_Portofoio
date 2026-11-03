@@ -1,3 +1,11 @@
+# Local scroll-speed measurement repair — 3 November 2026
+
+The return detector now measures input travel over real elapsed time in a240ms rolling window, independent of event frequency. High speed must occupy70%of that time, with the existing high entry threshold/distance/duration. An80ms recent window releases reversal when slowing. First unknown input, isolated spikes, direction/idle/device changes, pinch/cancel and blocked controls cannot reuse stale qualification. Real forward page crossing and existing exposure gates still determine the skipped section; the destination and Slow Down cue are unchanged. Shared construction/scan thresholds and finished geometry are preserved.
+
+New scrollVelocity.ts and its tests replace the obsolete per-event burst qualification; useFastScrollReturn.ts integrates wheel/touch and font-aware line units. Native Edge39/39PASS, pace/recovery15/15PASS,17unit tests, build, TypeScript and lint pass (seven existing warnings; bundle/Browserslist warnings remain). Exact source and evidence, original-formula arithmetic, test adjustment and physical-device limitations are recorded in SCROLL_SPEED_PLAN.md. No dependencies, telemetry, storage, CSS or content changes. Current revision is local; the previously published64574cf remains live.
+
+---
+
 # Published — 3 November 2026
 
 Owner explicitly requested deploy. `npm run deploy` rebuilt and published source64574cf to gh-pages81aa0e895a9438be2c5ba44963bc65a6222f3494. Normal public URL: https://abdoabozena7.github.io/Clean_Portofoio/ . Exact production bytes for all three JS/CSS assets match dist (output/deploy/published-bytes.json).

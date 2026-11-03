@@ -1,5 +1,7 @@
 # Current revision
 
+Latest local speed-estimator repair: SCROLL_SPEED_PLAN.md. Rolling time-weighted input, spike rejection and device-aware reset; native39/39, pace15/15, unit17PASS. Previously deployed64574cf remains live; this repair has not been published.
+
 User explicitly requested deploy; source64574cf is now published via gh-pages81aa0e8. Exact live production JS/CSS byte hashes verified. See newest CHANGE_REPORT.md entry. Earlier local-only notes are historical.
 
 The latest section-aware Slow Down experiment supersedes unconditional reversal to landing; see SECTION_RETURN_PLAN.md. Return only after a whole low-exposure section is passed; stop at that section. Local only.
