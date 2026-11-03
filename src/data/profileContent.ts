@@ -143,7 +143,7 @@ export const honors: EducationItem[] = [
     degree: "Learning C#", school: "LinkedIn Learning",
     year: "Completed October 29, 2026 · 2h 54m", duration: "2 hours 54 minutes",
     image: "images/certificates/learning-csharp-2026.png",
-    imageWidth: 1031, imageHeight: 795,
+    imageWidth: 1031, imageHeight: 796,
     imageAlt: "LinkedIn Learning Learning C# course completion certificate for Abdelrahman Abozena, October 29, 2026, duration 2 hours 54 minutes.",
     source: "Owner-supplied LinkedIn Learning completion certificate",
     brief: "Completed 2 hours 54 minutes of C# learning with LinkedIn Learning.",

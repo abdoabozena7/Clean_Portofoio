@@ -1,16 +1,36 @@
 import { useEffect } from "react";
 
-/** Warm the actual inline assets during the introduction, including on phones.
- * Low fetch priority leaves fonts/the hero first; decoding stays asynchronous. */
+/** Warm near media without decoding or competing with the initial viewport. */
 export function usePortfolioMediaPreload() {
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      document.querySelectorAll<HTMLImageElement>("section img").forEach(image => {
-        if (image.closest("[data-agent-layer]")) return;
-        image.decoding = "async";
-        if (image.loading === "lazy") { image.fetchPriority = "low"; image.loading = "eager"; }
-      });
-    }, 160);
-    return () => clearTimeout(timer);
+    if (!("IntersectionObserver" in window)) return;
+
+    const visible = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const image = entry.target as HTMLImageElement;
+        image.fetchPriority = "high";
+        image.loading = "eager";
+        visible.unobserve(image);
+        nearby.unobserve(image);
+      }
+    });
+    const nearby = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const image = entry.target as HTMLImageElement;
+        if (image.loading === "lazy") {
+          image.fetchPriority = "low";
+          image.loading = "eager";
+        }
+        nearby.unobserve(image);
+      }
+    }, { rootMargin: "700px 0px" });
+
+    document.querySelectorAll<HTMLImageElement>("section img[loading=lazy]").forEach(image => {
+      visible.observe(image);
+      nearby.observe(image);
+    });
+    return () => { visible.disconnect(); nearby.disconnect(); };
   }, []);
 }

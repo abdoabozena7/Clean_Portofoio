@@ -1,4 +1,5 @@
 import type { EducationItem } from "@/data/profileContent";
+import ResponsiveThumbnail from "./ResponsiveThumbnail";
 import { Trophy, ZoomIn } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import "@/styles/exploration-evidence.css";
@@ -34,7 +35,15 @@ const CredentialList = ({ items, group }: CredentialListProps) => (
           <Dialog>
             <DialogTrigger asChild>
               <button data-construction="asset" data-scan-detail className="certificate-image-trigger" aria-label={`Zoom in ${item.degree} ${item.achievement ? "photo" : "certificate"}`}>
-                <img src={`${import.meta.env.BASE_URL}${item.image}`} alt={item.imageAlt} className="certificate-thumb" loading="lazy" decoding="async" width={item.imageWidth} height={item.imageHeight} />
+                <ResponsiveThumbnail
+                  path={item.image}
+                  sizes="(min-width: 640px) calc(100vw - 86px), calc(100vw - 78px)"
+                  alt={item.imageAlt}
+                  className="certificate-thumb"
+                  width={item.imageWidth}
+                  height={item.imageHeight}
+                  style={{ aspectRatio: `${item.imageWidth} / ${item.imageHeight}` }}
+                />
                 <span className="certificate-zoom" aria-hidden="true"><ZoomIn className="w-4 h-4" /></span>
               </button>
             </DialogTrigger>

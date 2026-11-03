@@ -3,6 +3,7 @@ import { useRef } from "react";
 import { requestDetailedView } from "@/lib/scrollIntent";
 import { projects } from "@/data/profileContent";
 import SectionBlock from "./SectionBlock";
+import ResponsiveThumbnail from "./ResponsiveThumbnail";
 import HarrTestFlow from "./HarrTestFlow";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
@@ -53,7 +54,7 @@ const ProjectsSection = () => {
               <div className="project-media" data-construction="asset">
                 <DialogTrigger asChild>
                   <button className="project-image-trigger" onClick={event => openers.current.set(project.id, event.currentTarget)} onPointerDown={event => event.currentTarget.setPointerCapture(event.pointerId)} aria-label={`Zoom in on ${project.title} screenshot`}>
-                    <img src={`${import.meta.env.BASE_URL}${project.image}`} alt={project.imageAlt} loading="lazy" decoding="async" width="1920" height="1080" />
+                    <ResponsiveThumbnail path={project.image} sizes="calc(100vw - 92px)" alt={project.imageAlt} width="1920" height="1080" />
                   </button>
                 </DialogTrigger>
               </div>
