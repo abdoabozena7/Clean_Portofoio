@@ -169,8 +169,10 @@ async function exercise(browser, site, profile, pair) {
     for (const cache of ['cold', 'warm']) {
       localRequests.clear();
       transferChunks = [];
+      // A distinct document URL avoids restoring the previous visit's scroll
+      // offset, while every hashed asset still uses the same browser cache.
+      await page.goto(cache === 'cold' ? site.url : site.url + '?visit=repeat', { waitUntil: 'commit', timeout: 30000 });
       const firstMetric = await metrics();
-      await page.goto(site.url, { waitUntil: 'commit', timeout: 30000 });
       await page.locator('h1').waitFor({ state: 'attached', timeout: 25000 });
       const ready = await page.evaluate(() => window.__perf.marks.ready ?? performance.now());
       const elapsed = await page.evaluate(() => performance.now());

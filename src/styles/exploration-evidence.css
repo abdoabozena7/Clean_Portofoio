@@ -41,7 +41,7 @@
 .company-evidence-check, .company-evidence-spark { fill: none; stroke: #111920; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
 @property --credential-fill {
   syntax: "<percentage>";
-  inherits: true;
+  inherits: false;
   initial-value: 0%;
 }
 .credential-evidence {
@@ -56,6 +56,8 @@
 .credential-evidence[data-scene-shell] { border-image: none; }
 .credential-evidence .certificate-image-trigger::after {
   /* Trace the exposed right side of the offset shadow, then turn left at the foot. */
+  --credential-fill: calc(var(--exploration-evidence, 0) * 100%);
+  transition: --credential-fill .24s linear;
   --shadow-side: clamp(0%, calc(var(--credential-fill) / .6), 100%);
   --shadow-foot: clamp(0%, calc((var(--credential-fill) - 60%) / .4), 100%);
   content: "";
@@ -69,12 +71,13 @@
 .credential-evidence .certificate-image-trigger[data-scene-shell]::after { content: none; }
 @media (max-width: 767px) {
   .project-card {
-    --credential-fill: calc(var(--exploration-evidence, 0) * 100%);
     --project-ink: var(--accent, var(--accent-teal));
     --project-track: color-mix(in srgb, var(--project-ink) 30%, transparent);
     transition: --credential-fill .24s linear;
   }
   .project-card::after {
+    --credential-fill: calc(var(--exploration-evidence, 0) * 100%);
+    transition: --credential-fill .24s linear;
     --shadow-side: clamp(0%, calc(var(--credential-fill) / .6), 100%);
     --shadow-foot: clamp(0%, calc((var(--credential-fill) - 60%) / .4), 100%);
     content: "";
@@ -89,6 +92,7 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .company-logo > img, .company-evidence-progress, .company-evidence-finish, .credential-evidence, .project-card { transition: none; }
+  .credential-evidence .certificate-image-trigger::after, .project-card::after { transition: none; }
 }
 @media print {
   .credential-evidence { border-image: none; }

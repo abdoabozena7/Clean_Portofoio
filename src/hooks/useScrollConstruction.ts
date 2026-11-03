@@ -143,7 +143,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const paint = (t: Target) => {
       if (t.progress === 1) return;
       t.el.dataset.building = t.kind;
-      if (t.el === nameHeading) { t.el.style.setProperty("--construction-clip", "inset(0 100% 0 0)"); nameScene?.paint(t.progress, viewY); return; }
+      if (t.el === nameHeading) { t.el.style.setProperty("--construction-clip", "inset(0 100% 0 0)"); nameScene?.paint(t.progress, viewY, viewWidth); return; }
       if (t.weeks?.length) {
         t.el.style.removeProperty("--construction-clip");
         t.weeks.forEach((week, i) => { week.style.opacity = String(clamp01((t.progress - i / t.weeks!.length * .7) / .25)); });
@@ -272,7 +272,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       if (frame || stopped || document.hidden || reflowing || !layoutReady) return;
       // Once the mobile hero is finished, scroll and resize need no animation
       // callback. The separate intersection observer still runs section entrances.
-      if (mobileRegistry && !getHeroOverlayWork().active && targets.every(t => t.progress === 1)) return;
+      if (mobileRegistry && !getHeroOverlayWork().active && targets.every(t => t.progress === 1)) {
+        if (!layer.hasAttribute("data-construction-idle")) layer.setAttribute("data-construction-idle", "");
+        return;
+      }
+      if (layer.hasAttribute("data-construction-idle")) layer.removeAttribute("data-construction-idle");
       frame = requestAnimationFrame(tick);
     };
     const tick = (now: number) => {
@@ -281,7 +285,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const dt = Math.min(50, Math.max(0, now - lastTick)) * 1.15; lastTick = now;
       if (reduced.matches) { targets.forEach(finish); director?.configure(false); hideAgents(); return; }
       const overlayWork=getHeroOverlayWork();
-      if (mobileRegistry && targets.every(t => t.progress === 1) && !overlayWork.active) { hideAgents(); dirty = false; return; }
+      if (mobileRegistry && targets.every(t => t.progress === 1) && !overlayWork.active) {
+        hideAgents(); dirty = false;
+        layer.setAttribute("data-construction-idle", "");
+        return;
+      }
       viewY = scrollY; viewWidth = innerWidth; viewHeight = innerHeight;
       frameBoxes.clear();
       const repaint = dirty;

@@ -88,13 +88,15 @@ export function createNameConstruction(heading: HTMLElement, layer: HTMLElement)
     piece.node.style.transform = `translate3d(${box.x - piece.offsetX * sx}px,${box.y - piece.offsetY * sy}px,0) scale(${sx},${sy})`;
     piece.node.style.color = ink ? "#111920" : piece.color;
   };
-  const outline = (index: number, box: Box, opacity: number, label: string, dashed = false) => {
+  const outline = (index: number, box: Box, opacity: number, label: string, viewportWidth: number, dashed = false) => {
     const frame = frames[index], { x, y, width: w, height: h } = box, l = x - 4, top = y - 3, r = x + w + 4, b = y + h + 3, half = 3;
     frame.group.style.opacity = String(opacity); frame.rect.setAttribute("x", String(l)); frame.rect.setAttribute("y", String(top)); frame.rect.setAttribute("width", String(w + 8)); frame.rect.setAttribute("height", String(h + 6)); frame.rect.style.strokeDasharray = dashed ? "5 4" : "none";
     frame.handles.setAttribute("d", [[l, top], [r, top], [l, b], [r, b]].map(([x, y]) => `M${x-half},${y-half}h6v6h-6Z`).join(" "));
-    if (frame.label.textContent !== label) frame.label.textContent = label; frame.label.style.opacity = label ? String(opacity) : "0"; frame.label.style.transform = `translate3d(${Math.max(8, Math.min(innerWidth - 150, l))}px,${index === 1 ? b + 8 : top - 24}px,0)`;
+    if (frame.label.textContent !== label) frame.label.textContent = label;
+    frame.label.style.opacity = label ? String(opacity) : "0";
+    frame.label.style.transform = `translate3d(${Math.max(8, Math.min(viewportWidth - 150, l))}px,${index === 1 ? b + 8 : top - 24}px,0)`;
   };
-  const paint = (p: number, offset: number) => {
+  const paint = (p: number, offset: number, viewportWidth: number) => {
     const s = scene(p, offset); if (!s || !template) return;
     root.style.opacity = p < 1 ? "1" : "0";
     root.dataset.nameShot = p < .32 ? "carry" : p < .56 ? "resize" : p < .78 ? "duplicate" : p < .9 ? "punctuate" : "align";
@@ -106,9 +108,9 @@ export function createNameConstruction(heading: HTMLElement, layer: HTMLElement)
     const finishInk = between(p, .86, .94);
     for (const piece of pieces.slice(1)) piece.node.style.color = p >= .94 ? piece.color : `color-mix(in srgb, #111920 ${(1-finishInk)*100}%, ${piece.color} ${finishInk*100}%)`;
     const firstOpacity = p > .03 && p < .60 ? s.guideOpacity : p >= .88 ? s.guideOpacity * .55 : 0;
-    outline(0, s.carry, firstOpacity, p < .32 ? "pick up → place" : p < .56 ? `resize · ${Math.round(s.scale * 100)}%` : "position locked");
-    outline(1, s.second, p >= .54 ? s.guideOpacity : 0, p < .705 ? "duplicate → move" : p < .78 ? "replace text" : "", p < .705);
-    outline(2, s.period, p > .80 && p < .93 ? s.guideOpacity : 0, "");
+    outline(0, s.carry, firstOpacity, p < .32 ? "pick up → place" : p < .56 ? `resize · ${Math.round(s.scale * 100)}%` : "position locked", viewportWidth);
+    outline(1, s.second, p >= .54 ? s.guideOpacity : 0, p < .705 ? "duplicate → move" : p < .78 ? "replace text" : "", viewportWidth, p < .705);
+    outline(2, s.period, p > .80 && p < .93 ? s.guideOpacity : 0, "", viewportWidth);
     if (alignment) {
       const first = pieces[0], surname = pieces[1];
       alignment.setAttribute("d", `M${center},${first.y-offset-12}V${surname.y-offset+surname.height+12} M${surname.x-12},${surname.y-offset+surname.height}H${pieces[2].x+pieces[2].width+12}`);
