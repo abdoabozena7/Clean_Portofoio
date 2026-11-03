@@ -18,10 +18,22 @@ export function useFastScrollReturn() {
     let touching = false, owned = false, allowed = false;
     let x = 0, y = 0, touchAt = 0, releaseVelocity = 0, lastMove = 0;
     let attempts = 0, lastAttempt = -Infinity, gestureAttempt = false, passFast = false, lastReverse = false;
-    let lineHeight = 20;
-    const font = () => { const s = getComputedStyle(document.documentElement); lineHeight = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2 || 20; };
-    font();
-    const hide = () => setCue(previous => previous.visible ? { ...previous, visible: false } : previous);
+    let cueVisible = false;
+    let touchOrigin: EventTarget | null = null, touchOriginBlocked = false, touchOriginDirty = true;
+    let gestureHeight = 1;
+    let lineHeight: number | undefined;
+    const wheelLineHeight = () => {
+      if (lineHeight === undefined) {
+        const style = getComputedStyle(document.documentElement);
+        lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2 || 20;
+      }
+      return lineHeight;
+    };
+    const hide = () => {
+      if (!cueVisible) return;
+      cueVisible = false;
+      setCue(previous => ({ ...previous, visible: false }));
+    };
     const fastAttempt = (now: number) => {
       if (!gestureAttempt) {
         gestureAttempt = true;
@@ -29,6 +41,7 @@ export function useFastScrollReturn() {
         lastAttempt = now;
         passFast = attempts >= attemptsToContinue;
         const showMessage = !passFast;
+        cueVisible = true;
         setCue(previous => ({ activation: previous.activation + 1, message: previous.message + Number(showMessage), visible: true, showMessage }));
         clearTimeout(timer); timer = setTimeout(hide, 900);
       }
@@ -42,9 +55,10 @@ export function useFastScrollReturn() {
       if (passFast) { passFast = false; gestureAttempt = false; attempts = 0; endFastBrowsing(); }
       hide();
     };
-    const blocked = (origin: EventTarget | null) => {
-      if (document.hidden || !document.hasFocus() || document.querySelector('[role="dialog"],[data-exploration-map]')) return true;
-      if (document.activeElement?.matches('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return true;
+    const blockedByPage = () => document.hidden || !document.hasFocus() ||
+      !!document.querySelector('[role="dialog"],[data-exploration-map]') ||
+      !!document.activeElement?.matches('input,textarea,select,[contenteditable]:not([contenteditable="false"])');
+    const blockedByOrigin = (origin: EventTarget | null) => {
       let el = origin instanceof Element ? origin : null;
       if (el?.closest('input,textarea,select,[contenteditable]:not([contenteditable="false"]),[role="dialog"]')) return true;
       for (; el && el !== document.body; el = el.parentElement) {
@@ -52,16 +66,20 @@ export function useFastScrollReturn() {
       }
       return false;
     };
+    const blocked = (origin: EventTarget | null) => blockedByPage() || blockedByOrigin(origin);
+    const invalidateTouchOrigin = () => { touchOriginDirty = true; };
     const apply = (delta: number, reverse: boolean, input: "wheel" | "touch" | "momentum") => {
       const from = scrollY;
       if (reverse) navigateForScrollReturn(Math.max(0, from + delta));
       else window.scrollTo({ top: Math.max(0, from + delta), behavior: 'instant' });
-      window.dispatchEvent(new CustomEvent('portfolio:scroll-command', { detail: { input, reverse, from, to: scrollY, delta } }));
+      const to = scrollY;
+      window.dispatchEvent(new CustomEvent('portfolio:scroll-command', { detail: { input, reverse, from, to, delta } }));
+      return to - from;
     };
     const wheel = (event: WheelEvent) => {
       stopInertia();
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || blocked(event.target)) { velocity = initialScrollVelocity(); wheelAt = null; return; }
-      const now = performance.now(), delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, lineHeight);
+      const now = performance.now(), delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, event.deltaMode === 1 ? wheelLineHeight() : 20);
       if (source !== 'wheel') { velocity = initialScrollVelocity(); wheelAt = null; source = 'wheel'; }
       const gap = wheelAt === null || now - wheelAt > 240 ? null : now - wheelAt;
       if (gap === null) { gestureAttempt = false; passFast = false; }
@@ -75,6 +93,8 @@ export function useFastScrollReturn() {
     const touchStart = (event: TouchEvent) => {
       stopGesture();
       if (event.touches.length !== 1 || blocked(event.target)) return;
+      touchOrigin = event.target; touchOriginBlocked = false; touchOriginDirty = false;
+      gestureHeight = innerHeight;
       source = 'touch'; touching = true; allowed = true;
       x = event.touches[0].clientX; y = event.touches[0].clientY; touchAt = performance.now();
       // A timestamp anchor lets the first movement carry its own command.
@@ -82,7 +102,12 @@ export function useFastScrollReturn() {
     };
     const touchMove = (event: TouchEvent) => {
       if (!touching || !allowed) return;
-      if (event.touches.length !== 1 || blocked(event.target)) { cancel(); return; }
+      if (event.touches.length !== 1 || blockedByPage()) { cancel(); return; }
+      if (touchOriginDirty || event.target !== touchOrigin) {
+        touchOrigin = event.target; touchOriginDirty = false;
+        touchOriginBlocked = blockedByOrigin(touchOrigin);
+      }
+      if (touchOriginBlocked) { cancel(); return; }
       const point = event.touches[0], now = performance.now(), delta = y - point.clientY, dx = point.clientX - x;
       if (!owned && Math.abs(delta) < 4 && Math.abs(dx) < 4) return;
       if (!owned && Math.abs(dx) > Math.abs(delta) * 1.2) { cancel(); return; }
@@ -91,8 +116,8 @@ export function useFastScrollReturn() {
       if (!event.cancelable) { cancel(); return; }
       event.preventDefault(); owned = true;
       const dt = Math.max(1, now - touchAt);
-      const sample = sampleScrollVelocity(velocity, now, delta, innerHeight); velocity = sample.state;
-      const command = scrollCommand(delta, dt, innerHeight, sample.recentSpeed);
+      const sample = sampleScrollVelocity(velocity, now, delta, gestureHeight); velocity = sample.state;
+      const command = scrollCommand(delta, dt, gestureHeight, sample.recentSpeed);
       const reverse = command.reverse && !fastAttempt(now);
       if (!command.reverse) ordinaryInput();
       const movement = reverse ? command.delta : delta;
@@ -115,22 +140,29 @@ export function useFastScrollReturn() {
         const dt = Math.min(32, at - previous); previous = at; elapsed += dt;
         speed *= Math.exp(-dt / 180);
         pending += speed * dt;
+        let boundary = false;
         if (Math.abs(pending) >= .5) {
-          const before = scrollY; apply(pending, reverse, 'momentum'); pending -= scrollY - before;
+          pending -= apply(pending, reverse, 'momentum');
+          // Fractional scroll coordinates can round by a pixel. A larger
+          // remainder means the browser clamped the step at a document edge.
+          boundary = Math.abs(pending) > 1;
         }
-        const boundary = speed < 0 ? scrollY <= 0 : scrollY >= document.documentElement.scrollHeight - innerHeight - 1;
         if (Math.abs(speed) > .05 && elapsed < 700 && !boundary) frame = requestAnimationFrame(coast);
       };
       frame = requestAnimationFrame(coast);
     };
-    const resize = () => { font(); cancel(); };
+    const resize = () => { lineHeight = undefined; cancel(); };
     const visibility = () => { if (document.hidden) cancel(); };
     window.addEventListener('wheel', wheel, { passive: false });
+    window.addEventListener('portfolio:layout-start', invalidateTouchOrigin);
+    window.addEventListener('portfolio:layout-settled', invalidateTouchOrigin);
     window.addEventListener('touchstart', touchStart, { passive: true }); window.addEventListener('touchmove', touchMove, { passive: false }); window.addEventListener('touchend', touchEnd, { passive: true }); window.addEventListener('touchcancel', cancel, { passive: true });
     window.addEventListener('keydown', cancel); window.addEventListener('hashchange', cancel); window.addEventListener('popstate', cancel); window.addEventListener('blur', cancel); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility);
     return () => {
       cancel(); clearTimeout(timer);
       window.removeEventListener('wheel', wheel); window.removeEventListener('touchstart', touchStart); window.removeEventListener('touchmove', touchMove); window.removeEventListener('touchend', touchEnd); window.removeEventListener('touchcancel', cancel);
+      window.removeEventListener('portfolio:layout-start', invalidateTouchOrigin);
+      window.removeEventListener('portfolio:layout-settled', invalidateTouchOrigin);
       window.removeEventListener('keydown', cancel); window.removeEventListener('hashchange', cancel); window.removeEventListener('popstate', cancel); window.removeEventListener('blur', cancel); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility);
     };
   }, []);

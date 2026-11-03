@@ -21,10 +21,11 @@ export function getScrollIntent(): ScrollIntent {
 
 /** A repeated fast command can use the existing scan layout while it lasts. */
 export function continueFastBrowsing() {
+  const changed = !commandScan || held || automaticUntil !== 0;
   held = false; automaticUntil = 0; commandScan = true;
   clearTimeout(commandIdle);
   commandIdle = setTimeout(endFastBrowsing, 280);
-  publish();
+  if (changed) publish();
 }
 
 export function endFastBrowsing() {
@@ -83,8 +84,7 @@ function start() {
       pace = advanceScrollPace(pace, Math.abs(speed) * 1000 / innerHeight, now, travel / innerHeight);
       scan = pace.scanning;
     } else { pace = initialScrollPace(); scan = false; }
-    if (frame) cancelAnimationFrame(frame);
-    frame = requestAnimationFrame(() => { frame = 0; publish(); });
+    if (!frame) frame = requestAnimationFrame(() => { frame = 0; publish(); });
     clearTimeout(idle);
     idle = setTimeout(() => { speed = 0; scan = false; pace = initialScrollPace(); hardJump = false; userDriven = false; publish(); }, 280);
   };

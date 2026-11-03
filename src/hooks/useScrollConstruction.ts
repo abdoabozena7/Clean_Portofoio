@@ -1,7 +1,7 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
 import { constructionScene, type SceneBox } from "@/lib/constructionScene";
-import { createConstructionDirector } from "@/lib/constructionDirector";
+import type { createConstructionDirector } from "@/lib/constructionDirector";
 import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
 import { createNameConstruction } from "@/lib/nameConstruction";
 import { getHeroOverlayWork, type HeroOverlayJob } from "@/lib/heroOverlayWork";
@@ -14,8 +14,7 @@ type Target = {
 };
 type Position = { x: number; y: number; angle: number; initialized: boolean; target: Target | null };
 
-function measureLines(el: HTMLElement): TextLine[] {
-  const origin = el.getBoundingClientRect();
+function measureLines(el: HTMLElement, origin: DOMRect): TextLine[] {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
   const lines: TextLine[] = [];
   while (walker.nextNode()) {
@@ -68,7 +67,20 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const byElement = new Map<HTMLElement, Target>();
     const completed = new WeakSet<HTMLElement>();
     let mobileRegistry = coarse.matches || innerWidth < 768, reflowing = false;
-    const preparedImages = new WeakSet<HTMLImageElement>();
+    let layoutReady = !mobileRegistry;
+    const hero = sections.find(section => section.id === "hero");
+    const frameBoxes = new Map<HTMLElement, DOMRect>();
+    const boxFor = (el: HTMLElement) => {
+      let box = frameBoxes.get(el);
+      if (!box) { box = el.getBoundingClientRect(); frameBoxes.set(el, box); }
+      return box;
+    };
+    const colors = cursors.map(cursor => cursor.style.getPropertyValue("--agent-color"));
+    const pointerShapes = cursors.map(cursor => cursor.querySelector<SVGElement>("svg")!);
+    const actions = cursors.map(cursor => cursor.querySelector<HTMLElement>(".agent-action")!);
+    let director: ReturnType<typeof createConstructionDirector> | undefined;
+    let loadingDirector = false, directorJump = jump;
+    let viewY = scrollY, viewWidth = innerWidth, viewHeight = innerHeight;
     const nameHeading = document.querySelector<HTMLElement>('[data-construction-scene="letters"]');
     const nameScene = nameHeading ? createNameConstruction(nameHeading, layer) : null;
 
@@ -100,14 +112,14 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     };
     // The approved hero retains its directed controller. Lower sections use
     // explicit semantic recipes and share this controller's frame/cursor pool.
-    sections.filter(s => s.id === "hero").forEach(registerTargets);
+    if (hero) registerTargets(hero);
 
     const measure = () => {
       for (const t of targets) {
         if (t.progress === 1) continue;
-        const rect = t.el.getBoundingClientRect();
-        t.top = rect.top + scrollY; t.left = rect.left; t.width = rect.width; t.height = rect.height;
-        if (t.kind === "text") t.lines = measureLines(t.el);
+        const rect = boxFor(t.el);
+        t.top = rect.top + viewY; t.left = rect.left; t.width = rect.width; t.height = rect.height;
+        if (t.kind === "text") t.lines = measureLines(t.el, rect);
         if (t.el.dataset.constructionScene === "activity") t.weeks = [...new Set(Array.from(t.el.querySelectorAll<SVGRectElement>("rect[data-date]")).map(rect => rect.parentElement as unknown as SVGGElement))];
       }
       dirty = false;
@@ -131,7 +143,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const paint = (t: Target) => {
       if (t.progress === 1) return;
       t.el.dataset.building = t.kind;
-      if (t.el === nameHeading) { t.el.style.setProperty("--construction-clip", "inset(0 100% 0 0)"); nameScene?.paint(t.progress); return; }
+      if (t.el === nameHeading) { t.el.style.setProperty("--construction-clip", "inset(0 100% 0 0)"); nameScene?.paint(t.progress, viewY); return; }
       if (t.weeks?.length) {
         t.el.style.removeProperty("--construction-clip");
         t.weeks.forEach((week, i) => { week.style.opacity = String(clamp01((t.progress - i / t.weeks!.length * .7) / .25)); });
@@ -160,6 +172,15 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const template = peers[0] || t.el;
       sources[index] = template;
       const templateImage = template instanceof HTMLImageElement ? template : template.querySelector<HTMLImageElement>("img");
+      const style = getComputedStyle(t.el);
+      const font = style.font, color = style.color, background = style.backgroundColor, letterSpacing = style.letterSpacing;
+      const textTransform = style.textTransform, gap = style.columnGap, padding = style.padding;
+      const imageStyle = image ? getComputedStyle(image) : null;
+      const fit = imageStyle?.objectFit || "", filter = imageStyle?.filter || "";
+      const templateFilter = templateImage ? getComputedStyle(templateImage).filter : filter;
+      const targetRect = image ? boxFor(t.el) : null, imageRect = image ? boxFor(image) : null;
+      const sourceSvg = !image && t.kind === "asset" ? t.el.querySelector("svg") : null;
+      const iconRect = sourceSvg?.getBoundingClientRect();
       prop.dataset.media = image ? "image" : t.kind === "structure" ? "frame" : "label";
       prop.dataset.copy = String(template !== t.el && template !== image);
       prop.dataset.target = image?.getAttribute("alt") || t.el.textContent?.trim().slice(0, 70) || "frame";
@@ -168,51 +189,47 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const icon = prop.querySelector<HTMLElement>(".prop-icon")!;
       icon.replaceChildren();
       if (!image && t.kind === "asset") {
-        const svg = t.el.querySelector("svg");
-        if (svg) { icon.append(svg.cloneNode(true), document.createTextNode(t.el.textContent?.trim() || "")); prop.dataset.media = "icon"; }
+        if (sourceSvg) { icon.append(sourceSvg.cloneNode(true), document.createTextNode(t.el.textContent?.trim() || "")); prop.dataset.media = "icon"; }
       }
       if (image) {
         actualImg.src = image.currentSrc || image.src;
         templateImg.src = templateImage?.currentSrc || templateImage?.src || image.src;
-        actualImg.style.objectFit = getComputedStyle(image).objectFit;
-        templateImg.style.objectFit = getComputedStyle(image).objectFit;
-        actualImg.style.filter = getComputedStyle(image).filter;
-        templateImg.style.filter = getComputedStyle(templateImage || image).filter;
-        const targetRect = t.el.getBoundingClientRect(), imageRect = image.getBoundingClientRect();
+        actualImg.style.objectFit = fit;
+        templateImg.style.objectFit = fit;
+        actualImg.style.filter = filter;
+        templateImg.style.filter = templateFilter;
         for (const item of [actualImg, templateImg]) {
-          item.style.left = `${imageRect.left - targetRect.left}px`; item.style.top = `${imageRect.top - targetRect.top}px`;
-          item.style.width = `${imageRect.width}px`; item.style.height = `${imageRect.height}px`; item.style.inset = "auto";
-          item.style.left = `${imageRect.left - targetRect.left}px`; item.style.top = `${imageRect.top - targetRect.top}px`;
+          item.style.inset = "auto";
+          item.style.width = `${imageRect!.width}px`; item.style.height = `${imageRect!.height}px`;
+          item.style.left = `${imageRect!.left - targetRect!.left}px`; item.style.top = `${imageRect!.top - targetRect!.top}px`;
         }
       } else { actualImg.removeAttribute("src"); templateImg.removeAttribute("src"); }
       prop.querySelector<HTMLElement>(".prop-label")!.textContent = t.el.textContent?.trim() || "";
       prop.querySelector<HTMLElement>(".prop-template-label")!.textContent = template.textContent?.trim() || "";
-      const style = getComputedStyle(t.el), surface = prop.querySelector<HTMLElement>(".construction-prop-surface")!;
-      surface.style.background = style.backgroundColor === "rgba(0, 0, 0, 0)" ? "#ffffffed" : style.backgroundColor;
-      surface.style.font = style.font; surface.style.color = style.color;
-      surface.style.letterSpacing = style.letterSpacing; surface.style.textTransform = style.textTransform;
-      icon.style.gap = style.columnGap;
-      const sourceSvg = t.el.querySelector("svg"), copiedSvg = icon.querySelector("svg");
-      if (sourceSvg && copiedSvg) { const r = sourceSvg.getBoundingClientRect(); copiedSvg.style.width = `${r.width}px`; copiedSvg.style.height = `${r.height}px`; }
-      prop.querySelector<HTMLElement>(".prop-label")!.style.padding = style.padding;
-      prop.querySelector<HTMLElement>(".prop-template-label")!.style.padding = style.padding;
+      const surface = prop.querySelector<HTMLElement>(".construction-prop-surface")!;
+      surface.style.background = background === "rgba(0, 0, 0, 0)" ? "#ffffffed" : background;
+      surface.style.font = font; surface.style.color = color;
+      surface.style.letterSpacing = letterSpacing; surface.style.textTransform = textTransform;
+      icon.style.gap = gap;
+      const copiedSvg = icon.querySelector("svg");
+      if (iconRect && copiedSvg) { copiedSvg.style.width = `${iconRect.width}px`; copiedSvg.style.height = `${iconRect.height}px`; }
+      prop.querySelector<HTMLElement>(".prop-label")!.style.padding = padding;
+      prop.querySelector<HTMLElement>(".prop-template-label")!.style.padding = padding;
     };
     const sceneFor = (t: Target, index: number, rect: DOMRect) => {
-      const origin = (sources[index] || t.el).getBoundingClientRect();
+      const origin = boxFor(sources[index] || t.el);
       // Keep pickup in the visible work area even when its template is above it.
       const source: SceneBox = {
-        left: Math.max(12, Math.min(innerWidth - rect.width * .58 - 12, origin.left - Math.min(80, rect.width * .25) + index * Math.min(9, rect.width * .09))),
-        top: Math.max(82, Math.min(innerHeight - rect.height * .58 - 20, origin.top - Math.min(64, rect.height * .3) - index * 5)),
+        left: Math.max(12, Math.min(viewWidth - rect.width * .58 - 12, origin.left - Math.min(80, rect.width * .25) + index * Math.min(9, rect.width * .09))),
+        top: Math.max(82, Math.min(viewHeight - rect.height * .58 - 20, origin.top - Math.min(64, rect.height * .3) - index * 5)),
         width: origin.width, height: origin.height,
       };
       return constructionScene(rect, source, t.progress);
     };
     const point = (t: Target, index: number) => {
-      let rect = t.el.getBoundingClientRect();
+      let rect = boxFor(t.el);
       let x = rect.left, y = rect.top;
-      if (t.el === nameHeading && nameScene) {
-        const at = nameScene.point(t.progress, index); if (at) { x = at.x; y = at.y; }
-      } else if (t.weeks?.length) {
+      if (t.weeks?.length) {
         rect = t.weeks[Math.min(t.weeks.length - 1, Math.floor(t.progress * t.weeks.length))].getBoundingClientRect();
         x = rect.right; y = rect.bottom;
       } else if (t.cinematic) {
@@ -228,7 +245,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         x += rect.width * (index % 2 ? 1 - t.progress : t.progress);
         y += index % 2 ? Math.min(rect.height, 32) : 0;
       }
-      return { rect, x: Math.max(10, Math.min(innerWidth - 20, x)), y: Math.max(78, Math.min(innerHeight - 42, y)) };
+      return { rect, x: Math.max(10, Math.min(viewWidth - 20, x)), y: Math.max(78, Math.min(viewHeight - 42, y)) };
     };
     const renderOverlayBuilder = (job: HeroOverlayJob) => {
       const index=job.index, cursor=cursors[index], position=positions[index];
@@ -236,9 +253,9 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       position.x=job.x-10; position.y=job.y-.625; position.target=null; position.initialized=true;
       cursor.style.opacity="1"; cursor.style.transform=`translate3d(${position.x}px,${position.y}px,0)`;
       cursor.dataset.overlayJob=job.kind; cursor.dataset.click="true";
-      cursor.dataset.edge=position.x>innerWidth-135?"right":"left";
-      cursor.querySelector<SVGElement>("svg")!.style.transform="none";
-      const action=cursor.querySelector<HTMLElement>(".agent-action")!;
+      cursor.dataset.edge=position.x>viewWidth-135?"right":"left";
+      pointerShapes[index].style.transform="none";
+      const action=actions[index];
       action.textContent=` · ${job.operation}`;action.style.display="inline";
       props[index].style.opacity="0";carets[index].style.opacity="0";
       if(job.box){
@@ -251,38 +268,44 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         guide.querySelector("path")!.setAttribute("d",`M${l+6},${top}h-6v6 M${r-6},${top}h6v6 M${l},${b-6}v6h6 M${r-6},${b}h6v-6`);
       }else guides[index].setAttribute("opacity","0");
     };
-    const schedule = () => { if (!frame && !stopped && !document.hidden && !reflowing) frame = requestAnimationFrame(tick); };
+    const schedule = () => {
+      if (frame || stopped || document.hidden || reflowing || !layoutReady) return;
+      // Once the mobile hero is finished, scroll and resize need no animation
+      // callback. The separate intersection observer still runs section entrances.
+      if (mobileRegistry && !getHeroOverlayWork().active && targets.every(t => t.progress === 1)) return;
+      frame = requestAnimationFrame(tick);
+    };
     const tick = (now: number) => {
       frame = 0;
       if (stopped || document.hidden || reflowing) return;
       const dt = Math.min(50, Math.max(0, now - lastTick)) * 1.15; lastTick = now;
-      const repaint = dirty;
-      if (dirty) { measure(); positions.forEach((p, i) => { if (p.target) bindProp(p.target, i); }); }
       if (reduced.matches) { targets.forEach(finish); director?.configure(false); hideAgents(); return; }
       const overlayWork=getHeroOverlayWork();
       if (mobileRegistry && targets.every(t => t.progress === 1) && !overlayWork.active) { hideAgents(); dirty = false; return; }
-      const simplified = coarse.matches || innerWidth < 768;
+      viewY = scrollY; viewWidth = innerWidth; viewHeight = innerHeight;
+      frameBoxes.clear();
+      const repaint = dirty;
+      if (dirty) measure();
+      const simplified = mobileRegistry;
       const intent = getScrollIntent(), velocity = Math.abs(intent.speed);
       const urgency = intent.active && intent.userDriven ? clamp01((velocity - .4) / 1.1) : 0;
       const fast = intent.active && intent.userDriven && intent.scan;
-      const lead = fast ? Math.min(innerHeight * 2.5, velocity * 650) : 0;
-      for (const section of sections) {
-        const rect = section.getBoundingClientRect();
-        if (rect.top < innerHeight + Math.max(220, lead) && rect.bottom > -lead) {
-          section.querySelectorAll("img").forEach(img => {
-            if (preparedImages.has(img)) return;
-            preparedImages.add(img); img.loading = "eager"; void img.decode().catch(() => {});
-          });
-        }
+      const lead = fast ? Math.min(viewHeight * 2.5, velocity * 650) : 0;
+      // Take live boxes together, before changing clips, agent labels, or SVG guides.
+      for (const t of targets) {
+        const top = t.top - viewY;
+        if (t.progress < 1 && top < viewHeight * .98 && top + t.height > 76) boxFor(t.el);
       }
+      for (const source of sources) if (source) boxFor(source);
+      if (repaint) positions.forEach((p, i) => { if (p.target && p.target.progress < 1) bindProp(p.target, i); });
       const work: Target[] = [];
       for (const t of targets) {
         if (t.progress === 1) continue;
-        const top = t.top - scrollY;
-        const visible = t.width > 0 && t.height > 0 && top < innerHeight * .98 && top + t.height > 76;
+        const top = t.top - viewY;
+        const visible = t.width > 0 && t.height > 0 && top < viewHeight * .98 && top + t.height > 76;
         const approaching = fast && (intent.direction > 0
-          ? top < innerHeight * .85 + lead && top + t.height > 76
-          : top + t.height > 76 - lead && top < innerHeight * .85);
+          ? top < viewHeight * .85 + lead && top + t.height > 76
+          : top + t.height > 76 - lead && top < viewHeight * .85);
         if ((!t.width || !t.height) || top + t.height < 76 || approaching || (visible && (jump || fast))) { ready(t); continue; }
         if (visible) {
           t.visibleSince ??= now;
@@ -311,17 +334,17 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const used = new Set<Target>();
       for (let index = 0; index < cursors.length; index++) {
         if (simplified && ![0, 2, 5].includes(index)) continue;
-        const action = cursors[index].querySelector<HTMLElement>(".agent-action")!;
+        const action = actions[index];
         action.style.removeProperty("display"); delete cursors[index].dataset.letter;
         delete cursors[index].dataset.overlayJob;
         if (assembling && assembling.progress < 1 && nameScene) {
-          const at = nameScene.point(assembling.progress, index), c = cursors[index], p = positions[index];
+          const at = nameScene.point(assembling.progress, index, viewY), c = cursors[index], p = positions[index];
           if (at) {
             p.x = at.x; p.y = at.y; p.initialized = true; p.target = null;
             c.style.opacity = "1"; c.style.transform = `translate3d(${p.x}px,${p.y}px,0)`;
-            c.dataset.letter = String(at.letter); c.dataset.edge = p.x > innerWidth - 135 ? "right" : "left";
+            c.dataset.letter = String(at.letter); c.dataset.edge = p.x > viewWidth - 135 ? "right" : "left";
             c.dataset.click = String(at.moving);
-            c.querySelector<SVGElement>("svg")!.style.transform = "none";
+            pointerShapes[index].style.transform = "none";
             action.textContent = ` · ${at.operation}`; action.style.display = "inline";
             continue;
           }
@@ -343,7 +366,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           return true;
         });
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
-          const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - scrollY - innerHeight * .45) * .08 + t.order * .1;
+          const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - viewY - viewHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);
         })[0];
         if (!target) continue;
@@ -353,7 +376,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         position.target = target;
         const aim = point(target, index);
         if (!position.initialized) {
-          position.x = Math.max(10, Math.min(innerWidth - 112, aim.rect.left + Math.min(100, aim.rect.width * .4) + index * 5));
+          position.x = Math.max(10, Math.min(viewWidth - 112, aim.rect.left + Math.min(100, aim.rect.width * .4) + index * 5));
           position.y = Math.max(78, aim.rect.top - 66 - index * 5); position.initialized = true;
         }
         const dx = aim.x - position.x, dy = aim.y - position.y;
@@ -373,10 +396,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         {
           cursor.style.opacity = "1";
           cursor.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
-          cursor.dataset.edge = position.x > innerWidth - 135 ? "right" : "left";
-          cursor.querySelector<SVGElement>("svg")!.style.transform = `rotate(${position.angle}deg)`;
+          cursor.dataset.edge = position.x > viewWidth - 135 ? "right" : "left";
+          pointerShapes[index].style.transform = `rotate(${position.angle}deg)`;
           cursor.dataset.click = String(target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0);
-          cursor.querySelector<HTMLElement>(".agent-action")!.textContent = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
+          const label = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
+          if (action.textContent !== label) action.textContent = label;
           let guideRect: SceneBox = aim.rect;
           if (target.cinematic) {
             const prop = props[index], scene = sceneFor(target, index, aim.rect);
@@ -388,7 +412,9 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
             prop.querySelector<HTMLElement>(".prop-label")!.style.opacity = String(scene.replacement);
             prop.querySelector<HTMLElement>(".prop-template")!.style.opacity = String(1 - scene.replacement);
             prop.querySelector<HTMLElement>(".prop-template-label")!.style.opacity = String(1 - scene.replacement);
-            prop.querySelector<HTMLElement>(".prop-operation")!.textContent = scene.phase === "pick" ? prop.dataset.copy === "true" ? "duplicate" : "pick up" : scene.phase === "carry" ? "drag" : scene.phase === "resize" ? "resize" : "align";
+            const operation = prop.querySelector<HTMLElement>(".prop-operation")!;
+            const label = scene.phase === "pick" ? prop.dataset.copy === "true" ? "duplicate" : "pick up" : scene.phase === "carry" ? "drag" : scene.phase === "resize" ? "resize" : "align";
+            if (operation.textContent !== label) operation.textContent = label;
             guideRect = scene;
           }
           const guide = guides[index], rect = guideRect;
@@ -401,7 +427,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           guide.querySelector("path")!.setAttribute("d", `M${l + 6},${top}h-6v6 M${r - 6},${top}h6v6 M${l},${b - 6}v6h6 M${r - 6},${b}h6v-6`);
           if (target.kind === "text" && target.el !== nameHeading && target.progress > 0 && target.progress < 1) {
             const text = textFrame(target.lines, rect.width, rect.height, typedProgress(target.progress, target.count));
-            carets[index].style.cssText = `background:${getComputedStyle(cursor).getPropertyValue("--agent-color")};transform:translate3d(${rect.left + text.x}px,${rect.top + text.y + text.height * .14}px,0);height:${Math.max(12, text.height * .73)}px;opacity:${Math.floor(now / 430) % 2 ? .3 : .9}`;
+            carets[index].style.cssText = `background:${colors[index]};transform:translate3d(${rect.left + text.x}px,${rect.top + text.y + text.height * .14}px,0);height:${Math.max(12, text.height * .73)}px;opacity:${Math.floor(now / 430) % 2 ? .3 : .9}`;
           }
         }
       }
@@ -409,7 +435,22 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const lowerWork = director?.tick(now, intent, work.length > 0 || overlayWork.active) || false;
       if (work.some(t => t.progress < 1) || lowerWork || overlayWork.active) schedule();
     };
-    const director = createConstructionDirector({ layer, sections, pointers: cursors, guides, carets, enabled: !mobileRegistry && !reduced.matches, wake: schedule });
+    const syncDirector = () => {
+      const enabled = !mobileRegistry && !reduced.matches;
+      if (director) { director.configure(enabled); return; }
+      if (!enabled || loadingDirector) return;
+      loadingDirector = true;
+      void import("@/lib/constructionDirector").then(({ createConstructionDirector }) => {
+        if (stopped || mobileRegistry || reduced.matches) return;
+        director = createConstructionDirector({ layer, sections, pointers: cursors, guides, carets, enabled: true, wake: schedule });
+        if (directorJump) director.jump();
+        if (reflowing) director.pause();
+        schedule();
+      }).catch(error => {
+        // This enhancement can fail open: the document remains fully readable.
+        console.error("Unable to load the construction scene director", error);
+      }).finally(() => { loadingDirector = false; });
+    };
     const unsubscribe = subscribeScrollIntent(() => { if (getScrollIntent().hardJump) jump = true; schedule(); });
     const onRegroup = (event: Event) => {
       const active = (event as CustomEvent<string[]>).detail || [];
@@ -422,8 +463,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       mobileRegistry = next; jump = true;
       if (next) {
         for (let i = targets.length - 1; i >= 0; i--) if (targets[i].section.id !== "hero") { finish(targets[i]); byElement.delete(targets[i].el); targets.splice(i, 1); }
-      } else sections.filter(s => s.id === "hero").forEach(registerTargets);
-      director?.configure(!next && !reduced.matches);
+      } else if (hero) registerTargets(hero);
     };
     const onActivityReady = () => { if (!mobileRegistry && !reflowing) { director?.invalidate(); dirty = true; schedule(); } };
     const onHeroOverlayWork = () => {
@@ -437,26 +477,30 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       current.jobs.forEach(renderOverlayBuilder);
       schedule();
     };
-    const onMeasure = () => { refreshMode(); director?.configure(!mobileRegistry && !reduced.matches); if (reflowing) return; director?.invalidate(); dirty = true; schedule(); };
+    const onMeasure = () => { refreshMode(); syncDirector(); if (reflowing) return; director?.invalidate(); dirty = true; schedule(); };
     const onLayoutStart = () => { reflowing = true; cancelAnimationFrame(frame); frame = 0; hideAgents(); director?.pause(); nameScene?.hide(); };
     const onLayoutSettled = () => { reflowing = false; lastTick = performance.now(); director?.resume(); dirty = true; schedule(); };
-    const onJump = () => { jump = true; director?.jump(); schedule(); };
+    const onJump = () => { jump = true; directorJump = true; director?.jump(); schedule(); };
     const onPageShow = (event: PageTransitionEvent) => { if (event.persisted) onJump(); };
     const onFocus = (event: FocusEvent) => {
       const focused = event.target as HTMLElement;
       targets.filter(t => t.el.contains(focused) || focused.contains(t.el)).forEach(finish); schedule();
     };
     const onVisibility = () => {
+      document.documentElement.toggleAttribute("data-decoration-paused", document.hidden);
       if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
       else { lastTick = performance.now(); dirty = true; jump = true; schedule(); }
     };
-    const observer = new ResizeObserver(onMeasure);
+    const observer = new ResizeObserver(() => { layoutReady = true; onMeasure(); });
     sections.forEach(section => observer.observe(section));
     const entranceObserver = new IntersectionObserver(entries => {
-      if (!mobileRegistry || reduced.matches) return;
-      entries.forEach(entry => { const el = entry.target as HTMLElement; if (entry.isIntersecting && !el.dataset.mobileEnter) el.dataset.mobileEnter = "true"; });
-    }, { threshold: .04 });
-    sections.filter(s => s.id !== "hero").forEach(s => entranceObserver.observe(s));
+      entries.forEach(entry => {
+        const el = entry.target as HTMLElement;
+        el.toggleAttribute("data-decoration-paused", !entry.isIntersecting);
+        if (mobileRegistry && !reduced.matches && el !== hero && entry.isIntersecting && !el.dataset.mobileEnter) el.dataset.mobileEnter = "true";
+      });
+    }, { threshold: [0, .04] });
+    sections.forEach(section => entranceObserver.observe(section));
     window.addEventListener("portfolio:layout-start", onLayoutStart); window.addEventListener("portfolio:layout-settled", onLayoutSettled);
     window.addEventListener("resize", onMeasure, { passive: true }); window.addEventListener("portfolio:regroup", onRegroup);
     window.addEventListener("portfolio:activity-ready", onActivityReady);
@@ -466,8 +510,23 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     reduced.addEventListener("change", onMeasure); coarse.addEventListener("change", onMeasure);
     window.addEventListener("wheel", markNavigationTouched, { passive: true }); window.addEventListener("touchstart", markNavigationTouched, { passive: true }); window.addEventListener("keydown", markNavigationTouched);
     document.fonts.ready.then(() => { if (!stopped) { resolveInitialHash(); onMeasure(); } });
-    sections.forEach(s => s.querySelectorAll("img").forEach(img => img.addEventListener("load", onMeasure)));
-    resolveInitialHash(); measure(); targets.forEach(paint); tick(performance.now());
+    const onImageLoad = (event: Event) => {
+      const image = event.target;
+      if (image instanceof HTMLImageElement && (hero?.contains(image) || director && sections.some(section => section.contains(image)))) onMeasure();
+    };
+    document.addEventListener("load", onImageLoad, true);
+    resolveInitialHash();
+    syncDirector();
+    if (reduced.matches) targets.forEach(finish);
+    else {
+      // Reserve the opening frame before the first post-layout measurement.
+      // The browser can lay out the untouched document without a forced flush.
+      if (!layoutReady && !jump && nameHeading) {
+        nameHeading.dataset.building = "text";
+        nameHeading.style.setProperty("--construction-clip", "inset(0 100% 0 0)");
+      }
+      schedule();
+    }
     return () => {
       stopped = true; cancelAnimationFrame(frame); observer.disconnect(); entranceObserver.disconnect();
       window.removeEventListener("portfolio:layout-start", onLayoutStart); window.removeEventListener("portfolio:layout-settled", onLayoutSettled);
@@ -478,9 +537,10 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       document.removeEventListener("focusin", onFocus); document.removeEventListener("visibilitychange", onVisibility);
       reduced.removeEventListener("change", onMeasure); coarse.removeEventListener("change", onMeasure);
       window.removeEventListener("wheel", markNavigationTouched); window.removeEventListener("touchstart", markNavigationTouched); window.removeEventListener("keydown", markNavigationTouched);
-      sections.forEach(s => s.querySelectorAll("img").forEach(img => img.removeEventListener("load", onMeasure)));
+      document.removeEventListener("load", onImageLoad, true);
       targets.forEach(t => { finish(t); delete t.el.dataset.constructed; });
-      sections.forEach(s => { delete s.dataset.mobileEnter; });
+      sections.forEach(s => { delete s.dataset.mobileEnter; s.removeAttribute("data-decoration-paused"); });
+      document.documentElement.removeAttribute("data-decoration-paused");
       nameScene?.dispose();
       director?.dispose();
     };

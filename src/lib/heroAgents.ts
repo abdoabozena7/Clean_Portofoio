@@ -20,25 +20,31 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
   const terminal = svg.querySelector<SVGGElement>('[data-hero-tool="terminal"]')!;
   const junctions = [...svg.querySelectorAll<SVGCircleElement>("[data-cable-junction]")];
   const celebration = svg.querySelector<SVGGElement>("[data-hero-celebration]")!;
+  const accents = [...celebration.querySelectorAll<SVGPathElement>("path")];
+  const coarse = matchMedia("(pointer: coarse)");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)");
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d")!;
-  let layout: Layout | null = null, length = 0, frame = 0, elapsed = 0, last = 0;
+  let layout: Layout | null = null, layoutDirty = true, accentLengths: number[] = [], length = 0, frame = 0, elapsed = 0, last = 0;
   let visible = false, fontsReady = false, stopped = false, started = false;
   const duration = 5600;
   let layoutPaused = false;
   const objects = [...actors, code, terminal];
-  const vectors = new Map(objects.map(group => [group, [...group.querySelectorAll<SVGGeometryElement>("path,rect,ellipse,circle")].map(node => ({
-    node, length: node.getTotalLength(), stroke: getComputedStyle(node).stroke,
-  }))]));
+  const readVectors = () => new Map(objects.map(group => {
+    const parts = [...group.querySelectorAll<SVGGeometryElement>("path,rect,ellipse,circle")].map(node => ({
+      node, length: node.getTotalLength(), stroke: getComputedStyle(node).stroke,
+    }));
+    return [group, { parts, total: parts.reduce((sum, part) => sum + part.length, 0), painted: -1 }];
+  }));
+  let vectors: ReturnType<typeof readVectors> | undefined;
   const setPose = (node: SVGElement, point: Point, scale: number, angle = 0) => {
-    node.setAttribute("transform", `translate(${point.x.toFixed(3)} ${point.y.toFixed(3)}) rotate(${angle.toFixed(2)}) scale(${scale})`);
+    const transform = `translate(${point.x.toFixed(3)} ${point.y.toFixed(3)}) rotate(${angle.toFixed(2)}) scale(${scale})`;
+    if (node.getAttribute("transform") !== transform) node.setAttribute("transform", transform);
   };
 
   const measure = () => {
     const origin = container.getBoundingClientRect();
     if (!origin.width || !origin.height) return;
-    svg.setAttribute("viewBox", `0 0 ${origin.width} ${origin.height}`);
     const words: { text: Text; start: number; end: number }[] = [];
     const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -87,79 +93,101 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     const end = { x: right, y: first.y + first.height * .77 };
     const n = (v: number) => v.toFixed(3);
     cable.setAttribute("d", `M${n(start.x)},${n(start.y)} C${n(left-43*scale)},${n(lineY-36*scale)} ${n(left-18*scale)},${n(lineY+24*scale)} ${n(left+51*scale)},${n(lineY+4*scale)} S${n(codePoint.x-58*scale)},${n(lineY-17*scale)} ${n(codePoint.x)},${n(codePoint.y)} S${n(terminalPoint.x-120*scale)},${n(lineY-24*scale)} ${n(terminalPoint.x)},${n(terminalPoint.y)} S${n(right+8*scale)},${n(lineY+32*scale)} ${n(end.x)},${n(end.y)}`);
-    length = cable.getTotalLength();
-    for (const [i, fraction] of [.16, .49, .82].entries()) {
-      const p = cable.getPointAtLength(length * fraction); junctions[i].setAttribute("cx", String(p.x)); junctions[i].setAttribute("cy", String(p.y)); junctions[i].setAttribute("r", String(4.3 * scale));
-    }
     for (const [side, x, y] of [["left", surname.x - 10 * scale, surname.y + 19 * scale], ["right", surname.x + surname.width + 12 * scale, surname.y + surname.height - 10 * scale]] as const) {
       const direction=side==="left"?-1:1;
       svg.querySelector(`[data-celebration-${side}]`)!.setAttribute("d", `M${x},${y}l${direction*7*scale},${-5*scale} M${x+direction*3*scale},${y+9*scale}h${direction*9*scale} M${x-direction*5*scale},${y-8*scale}l${direction*2*scale},${-8*scale}`);
     }
     layout = { scale, perches, code: codePoint, terminal: terminalPoint, left, right, lineY };
-    paint(); wake();
+    svg.setAttribute("viewBox", `0 0 ${origin.width} ${origin.height}`);
+    length = cable.getTotalLength();
+    const points = [.16, .49, .82].map(fraction => cable.getPointAtLength(length * fraction));
+    accentLengths = accents.map(node => node.getTotalLength());
+    points.forEach((point, i) => {
+      junctions[i].setAttribute("cx", String(point.x)); junctions[i].setAttribute("cy", String(point.y)); junctions[i].setAttribute("r", String(4.3 * scale));
+    });
+    layoutDirty = false;
   };
 
   const viewportPoint = (node: SVGGraphicsElement, point: Point): Point => {
     const matrix = node.getScreenCTM();
     return matrix ? new DOMPoint(point.x, point.y).matrixTransform(matrix) : point;
   };
-  const createVector = (group: SVGGElement, progress: number): Point => {
-    const parts = vectors.get(group)!;
-    const total = parts.reduce((sum, part) => sum + part.length, 0);
-    let remaining = clamp(progress) * total, tip: Point = {x:0,y:0};
-    let tracing = false;
-    for (const {node, length: partLength, stroke} of parts) {
+  const vectorTip = (group: SVGGElement, progress: number): Point => {
+    const { parts, total } = vectors!.get(group)!;
+    let remaining = progress * total;
+    for (const { node, length } of parts) {
+      if (remaining < length) return viewportPoint(node, node.getPointAtLength(remaining));
+      remaining -= length;
+    }
+    return { x: 0, y: 0 };
+  };
+  const paintVector = (group: SVGGElement, progress: number) => {
+    const vector = vectors!.get(group)!;
+    if (vector.painted === progress) return;
+    let remaining = progress * vector.total;
+    for (const { node, length: partLength, stroke } of vector.parts) {
       const p = clamp(remaining / (partLength || 1)); remaining -= partLength;
       node.style.stroke = p < 1 ? "#111920" : stroke;
       node.style.strokeDasharray = String(partLength);
-      node.style.strokeDashoffset = String(partLength * (1-p));
+      node.style.strokeDashoffset = String(partLength * (1 - p));
       node.style.strokeOpacity = p > 0 ? "1" : "0";
-      node.style.fillOpacity = String(phase(p,.82,1));
-      if (!tracing && p < 1) { tip=viewportPoint(node,node.getPointAtLength(partLength*p)); tracing=true; }
+      node.style.fillOpacity = String(phase(p, .82, 1));
     }
-    group.dataset.buildProgress=String(clamp(progress));
-    return tip;
+    group.dataset.buildProgress = String(progress);
+    vector.painted = progress;
   };
   const paint = () => {
-    if (!layout || !fontsReady) return;
+    if (!fontsReady) return;
     const ready = heading.dataset.constructed === "true";
     if (!ready) { svg.style.opacity = "0"; svg.dataset.state = "waiting"; releaseHeroOverlayWork(svg); return; }
+    if (layoutDirty) measure();
+    if (!layout) return;
+    vectors ??= readVectors();
     if (reduced.matches) elapsed = duration;
     // Keep every construction beat readable, with a modest pause for each handoff.
     const t = elapsed / 1000 * (7000 / duration), done = elapsed >= duration, s = layout.scale;
-    const helpers=innerWidth>=768&&!matchMedia("(pointer: coarse)").matches;
-    svg.style.opacity = "1";
-    svg.dataset.state = done ? "settled" : "building";
-    svg.dataset.elapsed = String(Math.round(elapsed));
-    svg.dataset.phase = done ? "settled" : t < 1.3 ? "create-mascots" : t < 3.2 ? "place-mascots" : t < 5.85 ? "build-cable" : "perch";
-    const jobs: HeroOverlayJob[]=[];
-    const addJob = (index:number, kind:string, operation:string, point:Point, object?:SVGGElement) => {
-      const box=object?.getBoundingClientRect();
-      jobs.push({index,kind,operation,x:point.x,y:point.y,...box?{box:{left:box.left,top:box.top,width:box.width,height:box.height}}:{}});
+    const helpers = innerWidth >= 768 && !coarse.matches;
+    const projecting = active() && !done && !reduced.matches;
+    const writes: (() => void)[] = [];
+    const reads: (() => void)[] = [];
+    const jobs: HeroOverlayJob[] = [];
+    const boxes = new Map<SVGGElement, DOMRect>();
+    const addJob = (index: number, kind: string, operation: string, resolvePoint: () => Point, object?: SVGGElement) => {
+      if (!projecting) return;
+      reads.push(() => {
+        const point = resolvePoint();
+        let box = object && boxes.get(object);
+        if (object && !box) { box = object.getBoundingClientRect(); boxes.set(object, box); }
+        jobs.push({ index, kind, operation, x: point.x, y: point.y, ...(box ? { box: { left: box.left, top: box.top, width: box.width, height: box.height } } : {}) });
+      });
     };
     const buildAndPlace = (group:SVGGElement,index:number,name:string,destination:Point,staging:Point,from:number,drawUntil:number,carryFrom:number,placedAt:number) => {
       const build=phase(t,from,drawUntil),carry=phase(t,carryFrom,placedAt);
       const position=travel(staging,destination,carry,26*s);
       setPose(group,position,s);
-      group.style.opacity="1";
-      group.dataset.placed=String(t>=placedAt);
-      group.dataset.action=t<from?"waiting":t<drawUntil?"create":t<carryFrom?"grip":t<placedAt?"carry":"perched";
-      const tip=createVector(group,build);
+      writes.push(() => {
+        group.style.opacity = "1";
+        const placed = String(t >= placedAt);
+        const action = t < from ? "waiting" : t < drawUntil ? "create" : t < carryFrom ? "grip" : t < placedAt ? "carry" : "perched";
+        if (group.dataset.placed !== placed) group.dataset.placed = placed;
+        if (group.dataset.action !== action) group.dataset.action = action;
+        paintVector(group, build);
+      });
       const helperIndex=({0:1,2:3,5:7} as Record<number,number>)[index];
       if (t>=from && t<drawUntil) {
         const step=build<.45?"outline":build<.6?"add eyes":build<.75?"draw sparks":"draw hands";
-        addJob(index,`draw-${name}`,`${step} · ${name}`,tip,group);
-        if(helpers)addJob(helperIndex,`pin-${name}`,"pin drawing",viewportPoint(group,{x:-19,y:-35}),group);
+        addJob(index,`draw-${name}`,`${step} · ${name}`,() => vectorTip(group, build),group);
+        if(helpers)addJob(helperIndex,`pin-${name}`,"pin drawing",() => viewportPoint(group,{x:-19,y:-35}),group);
       } else if (t>=drawUntil && t<placedAt) {
-        addJob(index,`place-${name}`,carry>.8?"align → snap":`carry ${name}`,viewportPoint(group,{x:18,y:-7}),group);
-        if(helpers)addJob(helperIndex,`pin-${name}`,"hold corner",viewportPoint(group,{x:-18,y:-7}),group);
+        addJob(index,`place-${name}`,carry>.8?"align → snap":`carry ${name}`,() => viewportPoint(group,{x:18,y:-7}),group);
+        if(helpers)addJob(helperIndex,`pin-${name}`,"hold corner",() => viewportPoint(group,{x:-18,y:-7}),group);
       } else if(helpers&&t>=placedAt&&t<placedAt+.25) {
         const p=phase(t,placedAt,placedAt+.25);
-        addJob(helperIndex,`align-${name}`,"align edges",viewportPoint(group,{x:-18+36*p,y:-35}),group);
+        addJob(helperIndex,`align-${name}`,"align edges",() => viewportPoint(group,{x:-18+36*p,y:-35}),group);
       }
       if(helpers&&t>=placedAt+.3&&t<placedAt+.52) {
         const p=phase(t,placedAt+.3,placedAt+.52);
-        addJob(9,`inspect-${name}`,"check placement",viewportPoint(group,{x:-18+36*p,y:2}),group);
+        addJob(9,`inspect-${name}`,"check placement",() => viewportPoint(group,{x:-18+36*p,y:2}),group);
       }
     };
     const offsets=[[-30,52],[28,62],[-30,50]];
@@ -169,26 +197,38 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
         {x:destination.x+offsets[i][0]*s,y:destination.y+offsets[i][1]*s},from,from+1.25,from+1.3,from+2.4);
     });
     const draw = phase(t, 3.2, 5.65);
-    cable.style.strokeDasharray = String(length);
-    cable.style.strokeDashoffset = String(length * (1 - draw));
-    svg.dataset.drawProgress = String(draw);
-    if(t>=3.2 && t<5.65) addJob(0,"draw-cable","draw cable",viewportPoint(cable,cable.getPointAtLength(length*draw)));
+    if(t>=3.2 && t<5.65) addJob(0,"draw-cable","draw cable",() => viewportPoint(cable,cable.getPointAtLength(length*draw)));
     buildAndPlace(code,2,"code",layout.code,{x:layout.code.x-50*s,y:layout.lineY+57*s},3.2,4.1,4.15,5.25);
     buildAndPlace(terminal,5,"terminal",layout.terminal,{x:layout.right-14*s,y:layout.lineY+61*s},3.75,4.65,4.7,5.8);
     junctions.forEach((node,i)=>{
       const at=[.16,.49,.82][i];
-      node.style.opacity=String(helpers?phase(draw,at+.025,at+.09):clamp((draw-at)*40));
+      writes.push(() => { node.style.opacity=String(helpers?phase(draw,at+.025,at+.09):clamp((draw-at)*40)); });
       if(helpers&&draw>at&&draw<at+.1) {
-        addJob(8,"seat-junction","connect node",viewportPoint(node,{x:+node.getAttribute("cx")!,y:+node.getAttribute("cy")!}));
+        addJob(8,"seat-junction","connect node",() => viewportPoint(node,{x:+node.getAttribute("cx")!,y:+node.getAttribute("cy")!}));
       }
     });
-    celebration.style.opacity="1";
-    [...celebration.querySelectorAll<SVGPathElement>("path")].forEach((node,i)=>{
-      const progress=phase(t,6+i*.3,6.4+i*.3),l=node.getTotalLength();
-      node.style.strokeDasharray=String(l);node.style.strokeDashoffset=String(l*(1-progress));node.style.opacity=progress>0?"1":"0";
-      if(progress>0&&progress<1)addJob(i===0?2:5,"details","draw details",viewportPoint(node,node.getPointAtLength(l*progress)));
+    accents.forEach((node,i)=>{
+      const progress=phase(t,6+i*.3,6.4+i*.3),l=accentLengths[i];
+      writes.push(() => {
+        node.style.strokeDasharray=String(l);node.style.strokeDashoffset=String(l*(1-progress));node.style.opacity=progress>0?"1":"0";
+      });
+      if(progress>0&&progress<1)addJob(i===0?2:5,"details","draw details",() => viewportPoint(node,node.getPointAtLength(l*progress)));
     });
-    if(active()&&!done&&!reduced.matches) publishHeroOverlayWork(svg,jobs); else releaseHeroOverlayWork(svg);
+
+    // Pose all groups together, read native SVG geometry, then paint strokes.
+    reads.forEach(read => read());
+    writes.forEach(write => write());
+    svg.style.opacity = "1";
+    const state = done ? "settled" : "building";
+    if (svg.dataset.state !== state) svg.dataset.state = state;
+    svg.dataset.elapsed = String(Math.round(elapsed));
+    const beat = done ? "settled" : t < 1.3 ? "create-mascots" : t < 3.2 ? "place-mascots" : t < 5.85 ? "build-cable" : "perch";
+    if (svg.dataset.phase !== beat) svg.dataset.phase = beat;
+    cable.style.strokeDasharray = String(length);
+    cable.style.strokeDashoffset = String(length * (1 - draw));
+    svg.dataset.drawProgress = String(draw);
+    celebration.style.opacity = "1";
+    if(projecting) publishHeroOverlayWork(svg,jobs); else releaseHeroOverlayWork(svg);
   };
 
   const active = () => visible && !document.hidden && !layoutPaused;
@@ -211,21 +251,21 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
   }
   const mutations = new MutationObserver(wake);
   mutations.observe(heading, { attributes:true, attributeFilter:["data-constructed"] });
-  const resize = new ResizeObserver(measure); resize.observe(heading); resize.observe(container);
+  const onMeasure = () => { layoutDirty = true; wake(); };
+  const resize = new ResizeObserver(onMeasure); resize.observe(heading); resize.observe(container);
   const visibility = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; wake(); }); visibility.observe(heading);
   const onPreference = () => { if (reduced.matches) { elapsed=duration; cancelAnimationFrame(frame); frame=0; } wake(); };
   const onLayoutStart=()=>{layoutPaused=true;wake();};
-  const onLayoutSettled=()=>{layoutPaused=false;measure();};
-  window.addEventListener("resize", measure);
+  const onLayoutSettled=()=>{layoutPaused=false;onMeasure();};
+  window.addEventListener("resize", onMeasure);
   window.addEventListener("portfolio:layout-start",onLayoutStart);
   window.addEventListener("portfolio:layout-settled", onLayoutSettled);
   document.addEventListener("visibilitychange", wake);
   reduced.addEventListener("change", onPreference);
-  document.fonts.ready.then(() => { if (!stopped) { fontsReady=true; measure(); } });
-  measure();
+  document.fonts.ready.then(() => { if (!stopped) { fontsReady=true; onMeasure(); } });
   return () => {
     stopped=true; cancelAnimationFrame(frame); mutations.disconnect(); resize.disconnect(); visibility.disconnect();
-    window.removeEventListener("resize",measure); window.removeEventListener("portfolio:layout-start",onLayoutStart); window.removeEventListener("portfolio:layout-settled",onLayoutSettled);
+    window.removeEventListener("resize",onMeasure); window.removeEventListener("portfolio:layout-start",onLayoutStart); window.removeEventListener("portfolio:layout-settled",onLayoutSettled);
     document.removeEventListener("visibilitychange",wake); reduced.removeEventListener("change",onPreference);
     if (started) svg.dataset.active="false";
     releaseHeroOverlayWork(svg);

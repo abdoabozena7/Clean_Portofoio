@@ -11,8 +11,14 @@ let snapshot = empty;
 const listeners = new Set<() => void>();
 export const getExploration = () => snapshot;
 export const subscribeExploration = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener); }; };
+const sameList = <T,>(a: T[], b: T[]) => a === b || a.length === b.length && a.every((item, index) => item === b[index]);
 export function publishExploration(value: ExplorationSnapshot) {
-  if (JSON.stringify(snapshot) === JSON.stringify(value)) return;
+  if (value.total === snapshot.total && value.score === snapshot.score &&
+      value.gaps === snapshot.gaps && value.coverage === snapshot.coverage &&
+      value.suggestedId === snapshot.suggestedId && sameList(value.items, snapshot.items) &&
+      sameList(value.explored, snapshot.explored) && sameList(value.encountered, snapshot.encountered) &&
+      value.items.every(({ id }) => value.credits[id] === snapshot.credits[id] &&
+        value.confidence[id] === snapshot.confidence[id])) return;
   snapshot = value; listeners.forEach(listener => listener());
 }
 export function resetExploration() { publishExploration(empty); }

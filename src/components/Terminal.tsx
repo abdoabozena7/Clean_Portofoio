@@ -6,7 +6,14 @@ import {
   Minimize2,
 } from "lucide-react";
 
-import { profileContent, projects } from "@/data/profileContent";
+let commands: Promise<typeof import("./terminalCommands")> | undefined;
+function loadCommands() {
+  return commands ??= import("./terminalCommands").catch(error => {
+    commands = undefined;
+    throw error;
+  });
+}
+const prefetchCommands = () => { void loadCommands().catch(() => {}); };
 
 interface CommandOutput {
   id: number;
@@ -34,12 +41,18 @@ const Terminal = () => {
       ),
     },
   ]);
+  const nextId = useRef(1);
+  const historyRevision = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleTerminalClick = () => {
     inputRef.current?.focus();
   };
+
+  useEffect(() => {
+    if (isOpen) prefetchCommands();
+  }, [isOpen]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -62,151 +75,35 @@ const Terminal = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen]);
 
-  const getCommandResponse = (cmd: string): React.ReactNode | null => {
-    switch (cmd) {
-      case "help":
-        return (
-          <div className="grid grid-cols-[100px_1fr] gap-2">
-            <span className="text-green-400">about</span>
-            <span>Learn about me</span>
-            <span className="text-green-400">skills</span>
-            <span>View technical skills</span>
-            <span className="text-green-400">projects</span>
-            <span>List recent projects</span>
-            <span className="text-green-400">contact</span>
-            <span>How to reach me</span>
-            <span className="text-green-400">clear</span>
-            <span>Clear the terminal</span>
-            <span className="text-green-400">exit</span>
-            <span>Close terminal</span>
-          </div>
-        );
-      case "about":
-        return profileContent.terminalBio;
-      case "skills":
-        return (
-          <div>
-            <p className="mb-1">CORE STACK:</p>
-            {profileContent.terminalSkills.map(skill => <p key={skill}>- {skill}</p>)}
-          </div>
-        );
-      case "projects":
-        return (
-          <div className="flex flex-col gap-1">
-            {projects.map((project, index) => <a key={project.id} href="#projects" className="text-blue-400 hover:underline">{index + 1}. {project.title}</a>)}
-          </div>
-        );
-      case "contact":
-        return (
-          <div>
-            <p>
-              Email:{" "}
-              <a
-                href="mailto:boodyabozena@gmail.com"
-                className="text-blue-400 hover:underline"
-              >
-                boodyabozena@gmail.com
-              </a>
-            </p>
-            <p>
-              LinkedIn:{" "}
-              <a
-                href={profileContent.linkedinUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:underline"
-              >
-                linkedin.com/in/abdelrahman-abozena
-              </a>
-            </p>
-            <p>
-              GitHub:{" "}
-              <a
-                href="https://github.com/abdoabozena7"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-400 hover:underline"
-              >
-                github.com/abdoabozena7
-              </a>
-            </p>
-          </div>
-        );
-      default:
-        return null;
-    }
-  };
-
-  const processQuery = (input: string): React.ReactNode | null => {
-    const lower = input.toLowerCase();
-
-    if (lower.match(/^(hi|hello|hey|greetings)/)) {
-      return "Hello. I can help you explore Abdelrahman's profile. Try: skills, projects, or contact.";
-    }
-
-    if (lower.match(/(who|about|author|creator|developer)/)) {
-      return getCommandResponse("about");
-    }
-
-    if (lower.match(/(skill|stack|tech|language|framework)/)) {
-      return getCommandResponse("skills");
-    }
-
-    if (lower.match(/(project|work|app|site|portfolio)/)) {
-      return getCommandResponse("projects");
-    }
-
-    if (lower.match(/(contact|email|reach|hire|github|linkedin)/)) {
-      return getCommandResponse("contact");
-    }
-
-    return null;
-  };
-
   const handleCommand = (cmd: string) => {
-    const trimmedCmd = cmd.trim();
-    if (!trimmedCmd) return;
-
-    const newHistory: CommandOutput[] = [
-      ...history,
-      {
-        id: Date.now(),
-        type: "command",
-        content: `guest@portfolio:~$ ${cmd}`,
-      },
-    ];
-
-    if (trimmedCmd.toLowerCase() === "clear") {
+    const trimmed = cmd.trim();
+    if (!trimmed) return;
+    const command = trimmed.toLowerCase();
+    if (command === "clear") {
+      historyRevision.current++;
       setHistory([]);
       return;
     }
-    if (trimmedCmd.toLowerCase() === "exit") {
+    if (command === "exit") {
       setIsOpen(false);
       return;
     }
 
-    let response = getCommandResponse(trimmedCmd.toLowerCase());
-
-    if (!response) {
-      response = processQuery(trimmedCmd);
-    }
-
-    if (!response) {
-      response = (
-        <span className="text-red-400">
-          Command not understood. Try asking "who are you?", "show skills", or
-          type 'help'.
-        </span>
-      );
-    }
-
-    newHistory.push({
-      id: Date.now() + 1,
-      type: "response",
-      content: response,
-    });
-
-    setHistory(newHistory);
+    const revision = historyRevision.current;
+    const id = nextId.current;
+    nextId.current += 2;
+    const append = (response: React.ReactNode) => {
+      if (revision !== historyRevision.current) return;
+      setHistory(previous => [
+        ...previous,
+        { id, type: "command", content: `guest@portfolio:~$ ${cmd}` },
+        { id: id + 1, type: "response", content: response },
+      ]);
+    };
+    void loadCommands().then(
+      ({ respondToCommand }) => append(respondToCommand(trimmed)),
+      () => append(<span className="text-red-400">Terminal commands could not load. Try again.</span>),
+    );
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -224,6 +121,9 @@ const Terminal = () => {
         </div>
         <button
           onClick={() => setIsOpen(true)}
+          onPointerEnter={prefetchCommands}
+          onPointerDown={prefetchCommands}
+          onFocus={prefetchCommands}
           className="p-3 bg-white border border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-black hover:text-white transition-all duration-300"
           aria-label="Open Terminal"
         >

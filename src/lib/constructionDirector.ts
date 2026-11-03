@@ -154,13 +154,13 @@ export function createConstructionDirector(options: DirectorOptions) {
             s = { id: `${unit.id}-surface-${unit.surfaces.length}`, ...target, box: readBox(target.el), lines: target.kind === "text" ? measureLines(target.el) : [], originalStyle: "", progress: 0, populated: false };
             const style = getComputedStyle(target.el);
             s.originalStyle = styleProperties.map(p => `${p}:${style.getPropertyValue(p)}`).join(";");
-            surfaces.set(target.el, s); target.el.dataset.sceneTargetId = s.id;
+            surfaces.set(target.el, s);
           }
           unit.surfaces.push(s);
         }
       }
       scenes.forEach(compileRecipe);
-      surfaces.forEach(hide);
+      surfaces.forEach(surface => { surface.el.dataset.sceneTargetId = surface.id; hide(surface); });
       scenes.filter(s => s.kind === "activity").forEach(scene => {
         const host = scene.root.querySelector<HTMLElement>("[data-construction-scene='activity']");
         if (host && !host.hasAttribute("data-activity-ready")) { host.dataset.scenePending = ""; host.dataset.building = "asset"; host.style.setProperty("--construction-clip", "inset(0 100% 0 0)"); }

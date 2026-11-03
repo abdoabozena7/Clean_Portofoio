@@ -11,29 +11,52 @@ export default function MicrosoftHeadline() {
   const [constructed, setConstructed] = useState(false);
   const tip = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(true);
+  const positionTip = useRef<(() => void) | null>(null);
   useLayoutEffect(() => {
-    const update = () => {
-      const rect = badge.current?.getBoundingClientRect();
-      if (!rect) return;
-      const navBottom = document.querySelector("nav")?.getBoundingClientRect().bottom || 0;
-      // A paint-only adjustment keeps the badge clear of the fixed nav on short screens.
-      const naturalTop = rect.top - Number(badge.current?.style.getPropertyValue("--badge-offset").replace("px", "") || 0);
-      const documentTop = naturalTop + scrollY;
-      const offset = documentTop >= 0 && documentTop < navBottom ? Math.max(0, navBottom + 4 - documentTop) : 0;
-      badge.current?.style.setProperty("--badge-offset", `${offset}px`);
-      const right = rect.right + 10;
-      const side = right + 142 < innerWidth - 12;
-      if (tip.current) {
-        tip.current.style.left = `${side ? right : Math.max(12, Math.min(innerWidth - 154, rect.right - 142))}px`;
-        tip.current.style.top = `${side ? Math.max(navBottom + 6, naturalTop + offset + 4) : Math.max(navBottom + 6, naturalTop + offset - 31)}px`;
+    const node = badge.current;
+    if (!node) return;
+    const nav = document.querySelector("nav");
+    let geometry: { top: number; right: number; height: number; navBottom: number } | undefined;
+    let offset = 0, wasVisible = true;
+    const position = () => {
+      if (!geometry) return;
+      const { top, right, height, navBottom } = geometry;
+      const naturalTop = top - scrollY;
+      const nextOffset = top >= 0 && top < navBottom ? navBottom + 4 - top : 0;
+      if (offset !== nextOffset) {
+        offset = nextOffset;
+        node.style.setProperty("--badge-offset", `${offset}px`);
       }
-      setVisible(rect.bottom > navBottom && rect.top < innerHeight);
+      const shown = naturalTop + offset + height > navBottom && naturalTop + offset < innerHeight;
+      if (shown !== wasVisible) { wasVisible = shown; setVisible(shown); }
+      if (!shown || !tip.current) return;
+      const rightEdge = right - scrollX;
+      const side = rightEdge + 152 < innerWidth - 12;
+      tip.current.style.left = `${side ? rightEdge + 10 : Math.max(12, Math.min(innerWidth - 154, rightEdge - 142))}px`;
+      tip.current.style.top = `${Math.max(navBottom + 6, naturalTop + offset + (side ? 4 : -31))}px`;
     };
-    update();
-    window.addEventListener("scroll", update, { passive: true }); window.addEventListener("resize", update);
-    const observer = new ResizeObserver(update); if (badge.current) observer.observe(badge.current);
-    return () => { window.removeEventListener("scroll", update); window.removeEventListener("resize", update); observer.disconnect(); };
-  }, [engaged, visible, autoReady, dismissed, constructed]);
+    const measure = () => {
+      const rect = node.getBoundingClientRect();
+      geometry = { top: rect.top + scrollY - offset, right: rect.right + scrollX, height: rect.height,
+        navBottom: nav?.getBoundingClientRect().bottom || 0 };
+      position();
+    };
+    // The browser has already laid out the new page before delivering this.
+    // Measuring synchronously in React's mount forced layout of the whole tree.
+    const observer = new ResizeObserver(measure);
+    observer.observe(node);
+    if (node.parentElement) observer.observe(node.parentElement);
+    if (nav) observer.observe(nav);
+    positionTip.current = position;
+    window.addEventListener("scroll", position, { passive: true });
+    window.addEventListener("resize", measure, { passive: true });
+    return () => {
+      positionTip.current = null;
+      window.removeEventListener("scroll", position);
+      window.removeEventListener("resize", measure);
+      observer.disconnect();
+    };
+  }, []);
   useEffect(() => {
     const ready = window.setTimeout(() => setAutoReady(true), 1400);
     return () => clearTimeout(ready);
@@ -45,6 +68,7 @@ export default function MicrosoftHeadline() {
     return () => observer.disconnect();
   }, []);
   const showTip = visible && !dismissed && (engaged || (autoReady && constructed));
+  useLayoutEffect(() => { if (showTip) positionTip.current?.(); }, [showTip]);
   return (
     <>
     <a ref={badge} href={profileContent.microsoftStoryUrl} target="_blank" rel="noopener noreferrer" aria-label="SWE Intern at Microsoft — read my story on LinkedIn"

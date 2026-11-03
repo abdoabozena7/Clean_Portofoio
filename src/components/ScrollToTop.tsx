@@ -4,22 +4,31 @@ import { getExploration, subscribeExploration } from "@/lib/exploration";
 import { profileContent } from "@/data/profileContent";
 import "@/styles/score-popup.css";
 
+const scoreSnapshot = () => {
+  const { score, coverage, total } = getExploration();
+  return `${score}/${coverage}/${total}`;
+};
+
 /** An optional visit-local score card. The score's underlying evidence stays unchanged. */
 export default function ScrollToTop() {
-  const exploration = useSyncExternalStore(subscribeExploration, getExploration, getExploration);
+  const snapshot = useSyncExternalStore(subscribeExploration, scoreSnapshot, scoreSnapshot);
+  const [percentage, count, total] = snapshot.split("/").map(Number);
   const [visible, setVisible] = useState(false), [open, setOpen] = useState(false);
-  const [bestScore, setBestScore] = useState(exploration.score);
+  const bestScore = useRef(percentage);
   const root = useRef<HTMLDivElement>(null), trigger = useRef<HTMLButtonElement>(null);
-  const count = exploration.coverage;
-  const percentage = exploration.score;
-  const best = Math.max(bestScore, percentage);
+  const best = Math.max(bestScore.current, percentage);
   // The owner supplies the profile URL. Until then use the existing verified
   // contact rather than inventing an Instagram username.
   const instagram = "instagramUrl" in profileContent && typeof profileContent.instagramUrl === "string" ? profileContent.instagramUrl : undefined;
   const messageUrl = instagram || `mailto:${profileContent.email}`;
-  useEffect(() => { setBestScore(value => Math.max(value, percentage)); }, [percentage]);
+  useEffect(() => { bestScore.current = Math.max(bestScore.current, percentage); }, [percentage]);
   useEffect(() => {
-    const update = () => setVisible(scrollY > 400); update();
+    let shown = false;
+    const update = () => {
+      const next = scrollY > 400;
+      if (next !== shown) { shown = next; setVisible(shown); }
+    };
+    update();
     window.addEventListener("scroll", update, { passive: true });
     return () => window.removeEventListener("scroll", update);
   }, []);
@@ -45,7 +54,7 @@ export default function ScrollToTop() {
     </button>
     {open && <section id="exploration-map" className="exploration-map score-popup" aria-label="Score details" data-exploration-map>
       <div className="score-popup-head">
-        <span className="score-popup-count" aria-label={`Count: ${count} of ${exploration.total}`}>{count} / {exploration.total}</span>
+        <span className="score-popup-count" aria-label={`Count: ${count} of ${total}`}>{count} / {total}</span>
         <button type="button" className="map-close" aria-label="Close score details" onClick={() => { setOpen(false); trigger.current?.focus({ preventScroll: true }); }}><X className="w-3.5 h-3.5" /></button>
       </div>
       <div className="score-popup-stats">

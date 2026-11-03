@@ -1,7 +1,7 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { compensateScroll, getScrollIntent, requestDetailedView, subscribeScrollIntent } from "@/lib/scrollIntent";
 
-type Box = { el: HTMLElement; height: number; width: number; title: HTMLElement; media?: HTMLElement; actions?: HTMLElement; mediaX: number; mediaY: number; mediaW: number; mediaH: number; actionsY: number; details: HTMLElement[]; kind: string; titleSize: number; compactHeight: number; brand?: HTMLElement; logo?: HTMLElement; role?: HTMLElement; roleX: number; roleY: number; roleSize: number; summaryTitleSize: number; summaryTitleHeight: number; summaryMediaW: number; summaryMediaH: number; copy?: HTMLElement; copyW: number; copyTargetW: number; lift: number; frozen: boolean; badge?: HTMLElement; ribbon?: HTMLElement; toggle?: HTMLElement };
+type Box = { el: HTMLElement; height: number; width: number; title: HTMLElement; media?: HTMLElement; actions?: HTMLElement; mediaX: number; mediaY: number; mediaW: number; mediaH: number; actionsY: number; details: HTMLElement[]; kind: string; titleSize: number; compactHeight: number; brand?: HTMLElement; logo?: HTMLElement; role?: HTMLElement; roleX: number; roleY: number; roleSize: number; summaryTitleSize: number; summaryTitleHeight: number; summaryMediaW: number; summaryMediaH: number; copy?: HTMLElement; copyW: number; copyTargetW: number; lift: number; paddingTop: number; frozen: boolean; badge?: HTMLElement; ribbon?: HTMLElement; toggle?: HTMLElement };
 type Anchor = { el: HTMLElement; edge: "top" | "bottom"; y: number; lastScroll: number };
 type ProjectSummary = { tags: HTMLElement; tagX: number; tagY: number; tagW: number; tagTargetY: number; mediaTargetY: number };
 
@@ -20,8 +20,9 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     let activationX = 0, activationY = 0;
     let activeGroup: HTMLElement | null = null;
     let paintedProgress = -1;
-    const measureTextHeight = (el: HTMLElement, fontSize: number, width: number) => {
-      const style = getComputedStyle(el), context = document.createElement("canvas").getContext("2d")!;
+    let textContext: CanvasRenderingContext2D | null = null;
+    const measureTextHeight = (el: HTMLElement, style: CSSStyleDeclaration, fontSize: number, width: number) => {
+      const context = textContext ??= document.createElement("canvas").getContext("2d")!;
       context.font = `${style.fontWeight} ${fontSize}px ${style.fontFamily}`;
       let lines = 1, line = "";
       for (const word of (el.textContent || "").split(/\s+/)) {
@@ -67,25 +68,26 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           const details = [...el.querySelectorAll<HTMLElement>("[data-scan-detail]")].filter(detail => detail !== media);
           const brand = el.querySelector<HTMLElement>(".experience-brand"), logo = el.querySelector<HTMLElement>(".company-logo");
           const kind = el.dataset.scanItem || (media ? "project" : "skill");
-          const titleSize = parseFloat(getComputedStyle(title).fontSize);
+          const titleStyle = getComputedStyle(title), style = getComputedStyle(el);
+          const titleSize = parseFloat(titleStyle.fontSize), paddingTop = parseFloat(style.paddingTop);
           const role = el.querySelector<HTMLElement>(".experience-role"), copy = el.querySelector<HTMLElement>(".credential-copy");
           const roleRect = role?.getBoundingClientRect(), copyRect = copy?.getBoundingClientRect();
           const summaryMediaW = Math.min(224, Math.max(168, r.width * .3), r.width * .48);
           const summaryMediaH = innerWidth < 768 ? 168 : 200;
           const copyTargetW = Math.max(110, r.width - 28 - summaryMediaW - 18);
           const summaryTitleSize = kind === "experience" ? titleSize + (innerWidth < 768 ? 4 : 6) : kind === "credential" ? titleSize + 2 : titleSize;
-          const summaryTitleHeight = measureTextHeight(title, summaryTitleSize, kind === "credential" && media ? copyTargetW : Math.max(120, r.width - 90));
+          const summaryTitleHeight = kind === "skill" || kind === "project" && m && el.querySelector(".project-tags") ? 0 : measureTextHeight(title, titleStyle, summaryTitleSize, kind === "credential" && media ? copyTargetW : Math.max(120, r.width - 90));
           let compactHeight = kind === "skill" ? 60 : kind === "experience" ? Math.max(132, summaryTitleHeight + 62) : Math.max(summaryTitleHeight + 28, m ? summaryMediaH + 24 : 72);
           let projectSummary: ProjectSummary | undefined;
           if (kind === "project" && m) {
             const tags = el.querySelector<HTMLElement>(".project-tags");
             if (tags) {
-              const t = tags.getBoundingClientRect(), h = title.getBoundingClientRect(), style = getComputedStyle(el);
+              const t = tags.getBoundingClientRect(), h = title.getBoundingClientRect();
               const borderTop = parseFloat(style.borderTopWidth), borderLeft = parseFloat(style.borderLeftWidth);
               const tagTargetY = h.bottom - r.top - borderTop + 12;
               // Wide cards retain their columns; stacked cards keep full-width
               // media below the tags. Only description/action space is removed.
-              const mediaTargetY = m.left >= h.right - .5 ? parseFloat(style.paddingTop) : tagTargetY + t.height + 20;
+              const mediaTargetY = m.left >= h.right - .5 ? paddingTop : tagTargetY + t.height + 20;
               projectSummary = { tags, tagX: t.left - r.left - borderLeft, tagY: t.top - r.top - borderTop, tagW: t.width, tagTargetY, mediaTargetY };
               compactHeight = borderTop + Math.max(mediaTargetY + m.height, tagTargetY + t.height) + parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth);
               remember(tags);
@@ -96,7 +98,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           // Reserve upstream mobile footprints so a global transition cannot
           // steal native touch momentum. Their visual summary still changes.
           const frozen = !decorative() && r.top <= 150 || (r.top < 80 && headingRect.bottom < 80 && r.bottom > innerHeight - 64);
-          return { el, height: r.height, width: r.width, title, media: media || undefined, actions: actions || undefined, mediaX: m ? m.left - r.left - parseFloat(getComputedStyle(el).borderLeftWidth) : 0, mediaY: m ? m.top - r.top - parseFloat(getComputedStyle(el).borderTopWidth) : 0, mediaW: m?.width || 0, mediaH: m?.height || 0, actionsY: a ? a.top - r.top - 2 : 0, details, kind, titleSize, compactHeight, projectSummary, brand: brand || undefined, logo: logo || undefined, role: role || undefined, roleX: roleRect ? roleRect.left - r.left : 0, roleY: roleRect ? roleRect.top - r.top : 0, roleSize: role ? parseFloat(getComputedStyle(role).fontSize) : 16, summaryTitleSize, summaryTitleHeight, summaryMediaW, summaryMediaH, copy: copy || undefined, copyW: copyRect?.width || 0, copyTargetW, lift: brand ? brand.getBoundingClientRect().top - r.top - parseFloat(getComputedStyle(el).paddingTop) : 0, frozen, badge: el.querySelector<HTMLElement>(".project-building") || undefined, ribbon: el.querySelector<HTMLElement>(".achievement-ribbon") || undefined, toggle: el.querySelector<HTMLElement>("[data-scan-toggle]") || undefined };
+          return { el, height: r.height, width: r.width, title, media: media || undefined, actions: actions || undefined, mediaX: m ? m.left - r.left - parseFloat(style.borderLeftWidth) : 0, mediaY: m ? m.top - r.top - parseFloat(style.borderTopWidth) : 0, mediaW: m?.width || 0, mediaH: m?.height || 0, actionsY: a ? a.top - r.top - 2 : 0, details, kind, titleSize, compactHeight, projectSummary, brand: brand || undefined, logo: logo || undefined, role: role || undefined, roleX: roleRect ? roleRect.left - r.left : 0, roleY: roleRect ? roleRect.top - r.top : 0, roleSize: role ? parseFloat(getComputedStyle(role).fontSize) : 16, summaryTitleSize, summaryTitleHeight, summaryMediaW, summaryMediaH, copy: copy || undefined, copyW: copyRect?.width || 0, copyTargetW, lift: brand ? brand.getBoundingClientRect().top - r.top - paddingTop : 0, paddingTop, frozen, badge: el.querySelector<HTMLElement>(".project-building") || undefined, ribbon: el.querySelector<HTMLElement>(".achievement-ribbon") || undefined, toggle: el.querySelector<HTMLElement>("[data-scan-toggle]") || undefined };
         });
       });
     };
@@ -142,7 +144,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
         // distance before the user has actually moved through those rows.
       }
       for (const b of boxes) {
-        b.toggle?.setAttribute("aria-expanded", String(progress < .6));
+        if (b.toggle?.getAttribute("aria-expanded") !== String(progress < .6)) b.toggle?.setAttribute("aria-expanded", String(progress < .6));
         const project = b.kind === "project";
         // Visible mobile rows retain their footprint during native momentum,
         // while their logo/photo summary can still grow inside that reservation.
@@ -168,7 +170,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           if (b.role) {
             b.role.style.position = "absolute";
             b.role.style.left = `${b.roleX + (84 - b.roleX) * progress}px`;
-            b.role.style.top = `${b.roleY + (b.summaryTitleHeight + 10 + parseFloat(getComputedStyle(b.el).paddingTop) - b.roleY) * progress}px`;
+            b.role.style.top = `${b.roleY + (b.summaryTitleHeight + 10 + b.paddingTop - b.roleY) * progress}px`;
             b.role.style.width = `${b.width - 90}px`;
             b.role.style.fontSize = `${b.roleSize + (19 - b.roleSize) * progress}px`;
             b.role.style.lineHeight = "1.25";
@@ -188,8 +190,11 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
         }
         for (const detail of b.details) {
           detail.style.opacity = String(Math.max(0, 1 - progress * 2));
-          detail.inert = progress > .6;
-          if (progress > .6) detail.setAttribute("aria-hidden", "true"); else detail.removeAttribute("aria-hidden");
+          const hidden = progress > .6;
+          if (detail.inert !== hidden) detail.inert = hidden;
+          if (hidden !== detail.hasAttribute("aria-hidden")) {
+            if (hidden) detail.setAttribute("aria-hidden", "true"); else detail.removeAttribute("aria-hidden");
+          }
         }
       }
       compensate();

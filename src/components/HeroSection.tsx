@@ -25,40 +25,52 @@ const HeroSection = () => {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const chars = "01{}[]<>/*#=+-;:.abcdefghijklmnopqrstuvwxyz";
+    const fontSize = 14;
+    const drops: number[] = [];
     const resize = () => {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
+      const columns = Math.floor(canvas.width / fontSize);
+      if (drops.length > columns) drops.length = columns;
+      while (drops.length < columns) drops.push(1);
     };
     resize();
     window.addEventListener("resize", resize);
 
-    const chars = "01{}[]<>/*#=+-;:.abcdefghijklmnopqrstuvwxyz";
-    const fontSize = 14;
-    const columns = Math.floor(canvas.width / fontSize);
-    const drops: number[] = Array(columns).fill(1);
-
+    // Rasterize the original font and opacities once; copies land on the
+    // same integer grid and baseline as the previous per-frame fillText.
+    const atlas = document.createElement("canvas");
+    const cell = 24, inset = 4, baseline = 17;
+    atlas.width = chars.length * cell;
+    atlas.height = cell * 2;
+    const glyphs = atlas.getContext("2d");
+    const font = `${fontSize}px monospace`;
+    const inks = ["rgba(0, 0, 0, 0.15)", "rgba(0, 0, 0, 0.07)"];
+    if (glyphs) {
+      glyphs.font = font;
+      inks.forEach((ink, row) => {
+        glyphs.fillStyle = ink;
+        for (let i = 0; i < chars.length; i++) glyphs.fillText(chars[i], i * cell + inset, row * cell + baseline);
+      });
+    }
+    const glyph = (column: number, y: number, row: number) => {
+      const i = Math.floor(Math.random() * chars.length), x = column * fontSize;
+      if (glyphs) ctx.drawImage(atlas, i * cell, row * cell, cell, cell, x - inset, y - baseline, cell, cell);
+      else {
+        ctx.font = font;
+        ctx.fillStyle = inks[row];
+        ctx.fillText(chars[i], x, y);
+      }
+    };
     const draw = () => {
       ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${fontSize}px monospace`;
-
       for (let i = 0; i < drops.length; i++) {
-        const char = chars[Math.floor(Math.random() * chars.length)];
-
-        // Lead character - brighter
-        ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
-        ctx.fillText(char, i * fontSize, drops[i] * fontSize);
-
-        // Trail character - slightly dimmer
-        if (drops[i] > 1) {
-          const trailChar = chars[Math.floor(Math.random() * chars.length)];
-          ctx.fillStyle = "rgba(0, 0, 0, 0.07)";
-          ctx.fillText(trailChar, i * fontSize, (drops[i] - 1) * fontSize);
-        }
-
-        if (drops[i] * fontSize > canvas.height && Math.random() > 0.97) {
-          drops[i] = 0;
-        }
+        const y = drops[i] * fontSize;
+        glyph(i, y, 0);
+        if (drops[i] > 1) glyph(i, y - fontSize, 1);
+        if (y > canvas.height && Math.random() > 0.97) drops[i] = 0;
         drops[i]++;
       }
     };
