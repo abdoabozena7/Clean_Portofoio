@@ -2,12 +2,14 @@ import { useRef } from "react";
 import { X, ArrowUpLeft } from "lucide-react";
 import { useAdaptiveBrowsing } from "@/hooks/useAdaptiveBrowsing";
 import { useAttentionJourney } from "@/hooks/useAttentionJourney";
+import { useFastScrollReturn } from "@/hooks/useFastScrollReturn";
 import AgentPointer from "./AgentPointer";
 import "@/styles/adaptive.css";
 
 export default function AdaptiveBrowsing() {
   const editor = useRef<HTMLDivElement>(null);
   useAdaptiveBrowsing(editor);
+  useFastScrollReturn();
   const journey = useAttentionJourney();
   return <>
     <div ref={editor} data-scan-agent aria-hidden="true">

@@ -1,6 +1,6 @@
 /** One input-driven signal shared by construction and mobile regrouping. No React frames. */
 import { advanceScrollPace, initialScrollPace } from "./scrollPace";
-export type ScrollIntent = { speed: number; direction: number; scan: boolean; active: boolean; hardJump: boolean; leap: boolean; userDriven: boolean; inputDriven: boolean };
+export type ScrollIntent = { speed: number; direction: number; scan: boolean; active: boolean; hardJump: boolean; leap: boolean; automatic: boolean; userDriven: boolean; inputDriven: boolean };
 const listeners = new Set<() => void>();
 let speed = 0, direction = 1, scan = false, hardJump = false, lastY = 0, lastAt = 0;
 let inputAt = -Infinity, travel = 0, samples = 0;
@@ -9,11 +9,12 @@ let compensatedY: number | null = null, held = false;
 let userDriven = false;
 let pace = initialScrollPace();
 let lastDelta = 0, keyboardJump = false;
+let automaticUntil = 0;
 const publish = () => { listeners.forEach(listener => listener()); };
 
 export function getScrollIntent(): ScrollIntent {
   const elapsed = performance.now() - lastAt;
-  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: scan && !held, active: elapsed < 220, hardJump, leap: elapsed < 220 && Math.abs(lastDelta) > innerHeight * .95, userDriven, inputDriven: performance.now() - inputAt < 900 };
+  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: scan && !held, active: elapsed < 220, hardJump, leap: elapsed < 220 && Math.abs(lastDelta) > innerHeight * .95, automatic: performance.now() < automaticUntil, userDriven, inputDriven: performance.now() - inputAt < 900 };
 }
 
 /** Our anchor corrections are geometry bookkeeping, never evidence of user speed. */
@@ -25,6 +26,16 @@ export function compensateScroll(top: number) {
 
 export function requestDetailedView() {
   held = true; scan = false; pace = initialScrollPace(); speed = 0; hardJump = false; userDriven = false; publish();
+}
+
+/** Authorized experimental navigation. Automatic movement earns no user-speed
+ * or exposure evidence; destination content is available like an explicit jump. */
+export function navigateForScrollReturn(top: number) {
+  automaticUntil = performance.now() + 320;
+  window.dispatchEvent(new Event("portfolio:fast-return-start"));
+  requestDetailedView(); compensateScroll(top);
+  hardJump = true; lastDelta = 0; lastAt = performance.now(); userDriven = false;
+  publish();
 }
 
 function start() {
@@ -67,7 +78,7 @@ function start() {
     cancelAnimationFrame(frame); clearTimeout(idle);
     window.removeEventListener("scroll", onScroll); window.removeEventListener("wheel", input); window.removeEventListener("touchmove", input);
     window.removeEventListener("keydown", input); window.removeEventListener("hashchange", jump); window.removeEventListener("popstate", jump);
-    speed = 0; scan = false; pace = initialScrollPace(); held = false; compensatedY = null; stop = undefined;
+    speed = 0; scan = false; pace = initialScrollPace(); held = false; compensatedY = null; automaticUntil = 0; stop = undefined;
   };
 }
 

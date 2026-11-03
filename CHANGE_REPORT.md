@@ -1,3 +1,15 @@
+# Very-fast-scroll return experiment — 3 November 2026
+
+Implemented locally at the owner's request. Sustained downward movement above4.5viewport heights/second for at least300ms,1.5viewport heights and5samples returns to the beginning of that burst. Continuing very-fast wheel input moves upward; slow/upward input immediately resumes native browsing. A1200ms cooldown prevents repeated triggers from the same burst. The optional destination question remains unanswered; burst start is the stated reversible assumption, not inferred approval. No deployment or push.
+
+New `src/lib/fastScrollReturn.ts` holds the reversible configuration and pure qualification model; `src/hooks/useFastScrollReturn.ts` observes the existing scroll signal. Small integrations in `AdaptiveBrowsing.tsx`, `useAdaptiveBrowsing.ts`, `scrollIntent.ts` and `useAttentionJourney.ts` restore the natural layout before returning, expose the destination and keep automatic motion out of exposure credit. No presentation or content changes. `enabled:false` disables the experiment; `destination:"page-top"` changes the initial destination.
+
+Native Edge acceptance20/20PASS (`output/playwright/fast-return-after/report.json`), existing pace/recovery15/15PASS, build/TypeScript/lint pass and all16unit tests pass. Ordinary/moderate input, a single large notch, keyboard, anchors, focused fields and image dialogs remain usable. Actual scroll traces prove both upward movement and the configured destinations after the return begins. Initial unmodified source fails the two required-return checks. Screenshots and recordings were inspected. Run `npm run test:fast-return` to reproduce.
+
+App fingerprint `5a58a390db528ffeb5dcbcd62dffc9686edc3c5e34e310652eded0037fdee7ca`. Evidence and the ordered checklist are in `FAST_RETURN_PLAN.md`. Short/moderate touch input is verified exempt; the high threshold did not qualify a quick96ms mobile fling, so a positive qualifying mobile return is not claimed. Physical-phone behavior is not verified. Seven existing lint warnings, Browserslist age and the523.55kB main-bundle warning remain. No new dependencies. Prior four-size layout evidence below is historical, not rerun for this hook-only change. This explicit experiment overrides earlier no-automatic-return notes only for qualifying fast input.
+
+---
+
 # Paced construction repair and compact score popup — 3 November 2026
 
 Fixed ordinary scrolling being classified as fast browsing and cancelling visible construction. Agents now resume real work in the current visible section after slowing down, including repeated scan/recovery cycles. Local preview: http://127.0.0.1:8080/Clean_Portofoio/ ; production preview: http://127.0.0.1:8083/Clean_Portofoio/ . No deployment or push.

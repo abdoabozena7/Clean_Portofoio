@@ -76,7 +76,7 @@ export function useAttentionJourney() {
     };
     const completeSurface = (story: Story) => !story.el.closest('[data-building],[data-scene-building]') && !story.el.querySelector('[data-building],[data-scene-building]');
     const expanded = (story: Story) => completeSurface(story) && painted(story.el) && story.details.every(detail => !detail.inert && detail.getAttribute("aria-hidden") !== "true" && Number(getComputedStyle(detail).opacity) >= .99);
-    const active = () => !document.hidden && document.hasFocus() && !regrouping && !document.querySelector('[role="dialog"],[data-exploration-map]');
+    const active = () => !document.hidden && document.hasFocus() && !regrouping && !getScrollIntent().automatic && !document.querySelector('[role="dialog"],[data-exploration-map]');
     const resolveReminder = (story: Story) => { story.resolved = true; pending.delete(story); if (current === story) current = null; };
 
     const measure = () => {

@@ -252,6 +252,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     window.addEventListener("resize", onResize); window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump);
     window.addEventListener("portfolio:attention-focus", onAttentionFocus); reduced.addEventListener("change", onJump);
     window.addEventListener("portfolio:attention-release", onJump);
+    window.addEventListener("portfolio:fast-return-start", onJump);
     return () => {
       unsubscribe(); cancelAnimationFrame(frame); clearTimeout(activationTimer); if (boxes.length) restore(); hideEditors();
       document.removeEventListener("focusin", onFocus); document.removeEventListener("click", onClick, true);
@@ -261,6 +262,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       window.removeEventListener("resize", onResize); window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump);
       window.removeEventListener("portfolio:attention-focus", onAttentionFocus); reduced.removeEventListener("change", onJump);
       window.removeEventListener("portfolio:attention-release", onJump);
+      window.removeEventListener("portfolio:fast-return-start", onJump);
     };
   }, [editorRef]);
 }
