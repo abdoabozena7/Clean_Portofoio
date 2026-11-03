@@ -1,5 +1,7 @@
 # Current revision
 
+Latest clarification replaces burst-origin return with continuous input inversion toward landing; `FAST_REVERSE_PLAN.md` and the newest change report govern. Local only.
+
 The latest user-requested very-fast-scroll return experiment is complete locally; see `FAST_RETURN_PLAN.md` and the newest `CHANGE_REPORT.md` entry. Ordinary/moderate browsing stays native. This explicit experiment supersedes the earlier no-auto-return constraint only for sustained very-fast input. No deployment or push.
 
 Latest local repair: `PACED_BROWSING_PLAN.md` tracks sustained pace detection, current-section agent recovery, larger scan imagery/credentials and the compact numeric popup with the supplied Instagram. Current results are at the top of `CHANGE_REPORT.md`. Earlier release entries remain historical; no new deployment is part of this revision.

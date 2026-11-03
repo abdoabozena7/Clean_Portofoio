@@ -7,7 +7,7 @@ const ts = require('typescript');
 const before = process.argv.includes('--before'), argument = (key, fallback) => { const i = process.argv.indexOf(key); return i < 0 ? fallback : process.argv[i + 1]; };
 const url = process.env.PORTFOLIO_URL || 'http://127.0.0.1:8080/Clean_Portofoio/';
 const configPath = argument('--config', process.env.PORTFOLIO_FAST_RETURN_CONFIG || '');
-const out = `output/playwright/fast-return-${before ? 'before' : 'after'}`; await mkdir(out, { recursive: true });
+const out = `output/playwright/fast-reverse-${before ? 'before' : 'after'}`; await mkdir(out, { recursive: true });
 async function source() { const files = []; async function walk(d) { for (const f of await readdir(d, { withFileTypes: true })) { const p = d + '/' + f.name; f.isDirectory() ? await walk(p) : files.push(p); } } await walk('src'); const h = createHash('sha256'); for (const p of files.sort()) { h.update(p); h.update(await readFile(p)); } return h.digest('hex'); }
 async function configuration() {
   if (!configPath) return null;
@@ -16,7 +16,7 @@ async function configuration() {
   return { path: configPath, sha256: createHash('sha256').update(text).digest('hex'), values, destination: values.destination || values.target || values.returnTarget, cooldownMs: values.cooldownMs };
 }
 const config = await configuration();
-const report = { mode: before ? 'unmodified native baseline' : 'native experiment acceptance', verifierVersion: 2, targetOracle: 'Only frames at or after the first actual900px drawdown from the running peak can prove the destination; initial position is excluded.', url, sourceBefore: await source(), verifier: createHash('sha256').update(await readFile('scripts/verify-fast-return.mjs')).digest('hex'), config, checks: [], journeys: [], errors: [], passed: false };
+const report = { mode: before ? 'unmodified native baseline' : 'native experiment acceptance', verifierVersion: 3, targetOracle: 'Continuous reversal must reach the landing and show multiple upward steps after qualification; source origin is not a destination.', url, sourceBefore: await source(), verifier: createHash('sha256').update(await readFile('scripts/verify-fast-return.mjs')).digest('hex'), config, checks: [], journeys: [], errors: [], passed: false };
 const check = (name, passed, evidence) => { report.checks.push({ name, passed: !!passed, evidence }); console.log(`${passed ? 'PASS' : 'FAIL'} ${name}`); };
 const phase = async (name, fn) => { try { await fn(); } catch (error) { check(`${name}: journey completes`, false, error.stack); } };
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
@@ -38,7 +38,7 @@ async function wheel(page, delta, delay, count) { for (let i = 0; i < count; i++
 function movement(frames) { let peak = frames[0]?.y || 0, drop = 0; for (const f of frames) { peak = Math.max(peak, f.y); drop = Math.max(drop, peak - f.y); } return { start: frames[0]?.y, end: frames.at(-1)?.y, maximumDrawdown: drop, min: Math.min(...frames.map(f => f.y)), max: Math.max(...frames.map(f => f.y)) }; }
 function targetEvidence(frames, start) {
   if (!config?.destination) return { configured: false };
-  const top = ['top', 'page-top'].includes(config.destination), burst = ['burst-start', 'burstStart', 'burst_start'].includes(config.destination);
+  const top = ['top', 'page-top', 'continuous-up'].includes(config.destination), burst = ['burst-start', 'burstStart', 'burst_start'].includes(config.destination);
   const target = top ? 0 : burst ? start : null;
   let peak = -Infinity;
   const returnIndex = frames.findIndex(frame => { peak = Math.max(peak, frame.y); return peak - frame.y >= 900; });
@@ -46,7 +46,7 @@ function targetEvidence(frames, start) {
   return { configured: target !== null, destination: config.destination, expectedY: target, returnIndex, returnAt: frames[returnIndex]?.at, eligibleFrames: returnedFrames.length, closest: target === null || !returnedFrames.length ? Infinity : Math.min(...returnedFrames.map(f => Math.abs(f.y - target))) };
 }
 try {
-  if (!before) check('The experiment destination is read from explicit root configuration', !!config && ['top', 'page-top', 'burst-start', 'burstStart', 'burst_start'].includes(config.destination) && Number.isFinite(config.cooldownMs), config);
+  if (!before) check('The experiment destination is read from explicit root configuration', !!config && ['continuous-up'].includes(config.destination) && Number.isFinite(config.cooldownMs), config);
   await phase('Normal and moderate native browsing', async () => {
     const { context, page } = await open(); try {
       for (const [label, delta, delay, count] of [['Ordinary', 80, 140, 8], ['Moderately fast', 220, 60, 8], ['One accidental large notch', 3000, 50, 1]]) {
@@ -57,14 +57,14 @@ try {
   });
   await phase('Very-fast burst, recovery and rearm', async () => {
     const { context, page } = await open(); try {
-      await position(page, 1900); await trace(page); const start = await page.evaluate(() => scrollY); await wheel(page, 500, 50, 10); await page.waitForTimeout(950); const first = await trace(page, false), firstMovement = movement(first), firstTarget = targetEvidence(first, start);
+      await position(page, 8000); await trace(page); const start = await page.evaluate(() => scrollY); await wheel(page, 500, 50, 32); await page.waitForTimeout(950); const first = await trace(page, false), firstMovement = movement(first), firstTarget = targetEvidence(first, start);
       check('A genuinely sustained very-fast500px/50ms burst physically sends the visitor UP', firstMovement.maximumDrawdown >= 900, { ...firstMovement, target: firstTarget });
-      if (!before) check('The actual return reaches the configured destination, rather than an invented target', firstTarget.configured && firstTarget.closest <= 90, firstTarget);
-      await page.screenshot({ path: `${out}/first-return.png` }); report.journeys.push({ name: 'First very-fast burst', frames: first, seen: firstMovement, target: firstTarget });
+      if (!before) check('Continued fast downward input reaches the landing, not Contact', firstTarget.configured && firstTarget.closest <= 3 && firstMovement.end <= 3, firstTarget);
+      check('Reversal contains multiple upward movement steps, not an origin teleport', first.filter((f,i)=>i>0 && f.y < first[i-1].y-100).length >= 6, first.filter((f,i)=>i>0 && f.y < first[i-1].y-100)); await page.screenshot({ path: `${out}/first-return.png` }); report.journeys.push({ name: 'First very-fast burst', frames: first, seen: firstMovement, target: firstTarget });
       await page.waitForTimeout(config?.cooldownMs !== undefined ? config.cooldownMs + 100 : 1200);
       await trace(page); await wheel(page, 80, 140, 4); await page.waitForTimeout(350); const slow = await trace(page, false), slowMovement = movement(slow);
       check('After return, ordinary scrolling proceeds freely without a permanent lock', slowMovement.end > slowMovement.start + 160 && slowMovement.maximumDrawdown < 150, slowMovement);
-      await trace(page); const secondStart = await page.evaluate(() => scrollY); await wheel(page, 500, 50, 10); await page.waitForTimeout(950); const second = await trace(page, false), secondMovement = movement(second), secondTarget = targetEvidence(second, secondStart);
+      await trace(page); const secondStart = await page.evaluate(() => scrollY); await wheel(page, 500, 50, 32); await page.waitForTimeout(950); const second = await trace(page, false), secondMovement = movement(second), secondTarget = targetEvidence(second, secondStart);
       check('A second very-fast burst re-arms after the configured cooldown', secondMovement.maximumDrawdown >= 900, { ...secondMovement, target: secondTarget });
       if (!before) check('The rearmed return still uses the configured destination', secondTarget.configured && secondTarget.closest <= 90, secondTarget);
       report.journeys.push({ name: 'Ordinary browsing after return', frames: slow, seen: slowMovement }, { name: 'Rearmed burst', frames: second, seen: secondMovement, target: secondTarget });

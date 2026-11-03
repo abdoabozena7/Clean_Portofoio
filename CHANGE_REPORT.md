@@ -1,3 +1,11 @@
+# Continuous fast-scroll inversion correction — 3 November 2026
+
+Corrected the interpretation: after high-speed qualification, every downward wheel input moves UP continuously toward the landing and remains at the top during continued fast input. There is no single return to a burst origin. Detection uses input cadence before native scroll, so reversed motion, adaptive layout and document boundaries cannot disable detection. Entry4.5viewport/s for180ms/1viewport/3samples; slow input immediately resumes native browsing. Earlier entries below describe superseded behavior. Local only, no deployment.
+
+Native browser21/21PASS at app526dc09f…: from8000px, repeated actual upward500px steps reach0 and remain there. Ordinary/moderate scrolling, accidental large notch, keyboard/anchors, edit fields and dialogs pass.16unit tests, TypeScript, build and lint pass; seven existing lint warnings and existing bundle/Browserslist warnings remain. Screenshot at landing and actual movement traces inspected. Touch short/moderate negative control passes; positive physical-phone reversal remains unverified. No CSS/content/layout change. See `FAST_REVERSE_PLAN.md` and `output/playwright/fast-reverse-after/report.json`.
+
+---
+
 # Very-fast-scroll return experiment — 3 November 2026
 
 Implemented locally at the owner's request. Sustained downward movement above4.5viewport heights/second for at least300ms,1.5viewport heights and5samples returns to the beginning of that burst. Continuing very-fast wheel input moves upward; slow/upward input immediately resumes native browsing. A1200ms cooldown prevents repeated triggers from the same burst. The optional destination question remains unanswered; burst start is the stated reversible assumption, not inferred approval. No deployment or push.

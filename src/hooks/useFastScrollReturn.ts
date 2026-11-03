@@ -41,10 +41,10 @@ export function useFastScrollReturn() {
         detail: { phase, from, to, burstStart: start, destination: config.destination },
       }));
     };
-    const keepArmed = () => { clearTimeout(reverseIdle); reverseIdle = setTimeout(endReverse, 260); };
+    const keepArmed = () => { clearTimeout(reverseIdle); reverseIdle = setTimeout(endReverse, 350); };
     function reverseWheel(event: WheelEvent) {
       if (!reversing || !allowed || event.defaultPrevented) return;
-      if (wheelDelta <= 0 || wheelSpeed < config.speedViewportsPerSecond) { endReverse(); return; }
+      if (wheelDelta <= 0 || wheelSpeed < config.speedViewportsPerSecond * .75) { endReverse(); return; }
       // The non-passive listener exists ONLY while a qualified fast burst is
       // reversing. Slow input removes it before the browser's default action.
       event.preventDefault();
@@ -54,20 +54,24 @@ export function useFastScrollReturn() {
     }
     const trigger = () => {
       const now = performance.now(), from = scrollY, start = burst.startY;
-      const destination: "burst-start" | "page-top" = config.destination;
-      const to = destination === "page-top" ? 0 : Math.max(0, Math.min(start, from));
-      if (from - to < 24) { burst = initialFastReturnBurst(); return; }
+      // Reverse the current movement, not a one-off jump to an earlier origin.
+      const to = Math.max(0, from - Math.min(kind === "wheel" ? wheelDelta : Math.max(24, from - previousY), innerHeight * 1.25));
       reversing = true; pendingTouch = false; cooldownUntil = now + config.cooldownMs;
       burst = initialFastReturnBurst();
       navigateForScrollReturn(to); previousY = scrollY;
       recordReturn("trigger", from, scrollY, start);
-      if (kind === "wheel") window.addEventListener("wheel", reverseWheel, { passive: false });
       keepArmed();
     };
     const onIntent = () => {
       const now = performance.now(), y = scrollY, delta = y - previousY, intent = getScrollIntent();
       const before = previousY; previousY = y;
-      if (reversing) return;
+      if (kind === "wheel") return; // Wheel qualification uses input, even at page boundaries.
+      if (reversing) {
+        if (kind === "touch" && delta > 0 && allowed) {
+          navigateForScrollReturn(Math.max(0, before - delta)); previousY = scrollY; keepArmed();
+        }
+        return;
+      }
       const eligible = allowed && kind !== "none" && kind !== "keyboard" && now - inputAt < 900 &&
         intent.active && intent.userDriven && !intent.hardJump && intent.direction > 0 && now >= cooldownUntil;
       if (delta === 0 && eligible) return;
@@ -83,8 +87,14 @@ export function useFastScrollReturn() {
       wheelSpeed = wheelDelta * 1000 / Math.max(16, gap) / innerHeight; wheelAt = now;
       kind = "wheel"; inputAt = now;
       allowed = !event.ctrlKey && !event.metaKey && Math.abs(event.deltaY) >= Math.abs(event.deltaX) && !excluded(event.target);
-      if (reversing && (!allowed || wheelDelta <= 0 || wheelSpeed < config.speedViewportsPerSecond)) endReverse();
-      if (!allowed) burst = initialFastReturnBurst();
+      if (reversing && (!allowed || wheelDelta <= 0 || gap > 180 || wheelSpeed < config.speedViewportsPerSecond * .75)) endReverse();
+      if (reversing) { reverseWheel(event); return; }
+      const observed = observeFastReturn(gap > 180 ? initialFastReturnBurst() : burst, {
+        now, previousY: scrollY, delta: wheelDelta, viewportHeight: innerHeight,
+        speed: gap > 180 ? 0 : wheelSpeed, eligible: allowed && !event.defaultPrevented,
+      });
+      burst = observed.burst;
+      if (observed.qualified && event.cancelable) { event.preventDefault(); trigger(); }
     };
     const touchStart = (event: TouchEvent) => {
       endReverse(); previousY = scrollY; kind = "touch"; inputAt = performance.now(); touching = true; allowed = !excluded(event.target);
@@ -93,7 +103,9 @@ export function useFastScrollReturn() {
     const touchEnd = () => { touching = false; if (pendingTouch && allowed) trigger(); };
     const keyboard = () => { cancel(); kind = "keyboard"; };
     const visibility = () => { if (document.hidden) cancel(); };
-    window.addEventListener("wheel", wheel, { passive: true });
+    // Qualification happens before native scrolling; only qualified fast input
+    // is cancelled. It cannot depend on forward scroll that we are reversing.
+    window.addEventListener("wheel", wheel, { passive: false });
     window.addEventListener("touchstart", touchStart, { passive: true }); window.addEventListener("touchmove", touchMove, { passive: true });
     window.addEventListener("touchend", touchEnd, { passive: true }); window.addEventListener("touchcancel", cancel, { passive: true });
     window.addEventListener("keydown", keyboard); window.addEventListener("pointerdown", cancel, { passive: true });

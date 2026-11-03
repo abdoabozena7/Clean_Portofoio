@@ -15,9 +15,9 @@ describe("high-threshold scroll-return experiment", () => {
   });
   it("requires sustained speed, distance and samples together", () => {
     let burst = initialFastReturnBurst(), qualified = false;
-    for (let t = 0; t <= 300; t += 60) {
+    for (let t = 0; t <= 180; t += 60) {
       const result = observeFastReturn(burst, sample(t, 350, 6));
-      if (t < 300) expect(result.qualified).toBe(false);
+      if (t < 180) expect(result.qualified).toBe(false);
       burst = result.burst; qualified = result.qualified;
     }
     expect(qualified).toBe(true);
