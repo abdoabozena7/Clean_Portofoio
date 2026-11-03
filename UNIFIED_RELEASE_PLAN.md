@@ -12,7 +12,7 @@ Root serial TODO:
 - [x] U1: inventory/preserve pre-integration branch refs and checkpoint all approved local changes on feature branch.
 - [x] U2: integrate feature source into main (fast-forward if ancestor), resolve code/test contradictions according to latest user instructions; establish main as source of truth.
 - [x] U3: full integrated native global scroll, crew/orientation/command, hero and responsive checks; build/typecheck/lint/unit tests; inspect actual results and fix failures.
-- [ ] U4: push consolidated source, publish generated gh-pages from main, verify exact public asset bytes plus no Skills, global state/crew interactions, and record source/publication commits.
+- [x] U4: push consolidated source, publish generated gh-pages from main, verify exact public asset bytes plus no Skills, global state/crew interactions, and record source/publication commits.
 
 HarrTest instruction-only; latest installed2.6.1 public-tree check passed. Source-ledger and actual runtime verification, no mechanical root-gate/engagement claim. Preserve original Git history and all prior release commits. No fabricated branch merge for generated assets.
 
@@ -26,3 +26,17 @@ Source checkpoint e09d5cb includes the approved local work, then main was fast-f
 - Actual 390 Finale and 320 Contact screenshots inspected. Browser emulation does not establish physical-device performance.
 - Global verifier now observes the public DOM instead of importing a dev-only TypeScript module, enabling identical production/public checks. No acceptance assertions removed. Repeatable npm aliases added for global and hero checks.
 - This release supersedes the previous isolated bdeeee0 deployment described in AGENTS_DEPLOYMENT.md: its exclusions are now explicitly included by the owner.
+
+## Published unified result
+
+Published directly from clean main source 1906ca671c07a76811193a97d85e16a9412b8ee5. main and codex/scroll-agent-construction were both pushed to that revision; the final documentation-only commit is shared by both as well. Generated gh-pages publication: 2d179099b7c18e68cda52bca6dae550543eb33e1. The local gh-pages branch was fast-forwarded to the published remote revision.
+
+The normal public URL https://abdoabozena7.github.io/Clean_Portofoio/ serves index-D6CP_7Uh.js and index-CegQ09rX.css. Both SHA-256 digests match the clean main dist exactly (output/deploy-unified/published-bytes.json).
+
+Public native Edge verification: 77/77 checks pass, no runtime errors:
+- Global scroll/responsive/no-Skills: 38/38, output/playwright/global-scroll/final-1793728433169/report.json.
+- All-agent crew: 9/9, output/deploy-unified/live-crew/report.json.
+- Orientation, center return, fast/slow recovery: 14/14, output/deploy-unified/live-orientation/report.json.
+- Immediate wheel/touch command, keyboard, dialog and form controls: 16/16, output/deploy-unified/live-command/report.json.
+
+Inspected the live 390px Finale screenshot in addition to the local/production evidence. All four integration tasks are complete. No source feature remains only on the feature branch or uncommitted; Skills and stale navigation are absent. Existing lint/bundle warnings remain as documented above. This scoped integration verification does not claim every historical test suite was rerun or that browser emulation measures physical-device performance.

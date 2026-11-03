@@ -1,4 +1,10 @@
-# Agent crew deployment - 3 November 2026
+# Unified release - 3 November 2026
+
+Supersedes the isolated release below. The owner explicitly requested merging all approved work and removing Skills. Main and codex/scroll-agent-construction now share the integrated source; gh-pages is generated output, not a separate feature branch to merge into Vite.
+
+Published main source 1906ca671c07a76811193a97d85e16a9412b8ee5 to gh-pages 2d179099b7c18e68cda52bca6dae550543eb33e1. All previously excluded approved global scrolling, Skills removal and compact mobile Contact/Finale changes are included. Production JS/CSS bytes match local dist exactly. All 77 public native browser checks pass; production hero 70/70 and local unit 24/24 also pass. See UNIFIED_RELEASE_PLAN.md for the complete branch inventory, backups, evidence and limitations.
+
+# Historical agent crew deployment - 3 November 2026
 
 Explicit user authorization: deploy. Published source bdeeee02fbc122e3cd4624b3190dae7281c06c76 to GitHub Pages branch0fdb2735bd798026f65d9d961bb64bf6100ea578.
 
