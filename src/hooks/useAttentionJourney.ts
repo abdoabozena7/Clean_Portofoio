@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { attentionContent, type AttentionItem } from "@/data/attentionContent";
-import { getScrollIntent, requestDetailedView, subscribeScrollIntent } from "@/lib/scrollIntent";
+import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
 import { publishExploration, resetExploration, type EvidenceConfidence } from "@/lib/exploration";
 import { discoveryScore, earnExposure, exposureRate } from "@/lib/discoveryScore";
 
@@ -9,24 +9,21 @@ type Block = { el: Element; kind: "text" | "media"; weight: number; requiredMs: 
 type Story = {
   item: AttentionItem; el: HTMLElement; heading: HTMLElement; blocks: Block[]; details: HTMLElement[];
   top: number; previousTop: number; credit: number; exposure: number; coverage: number; encountered: boolean;
-  gap: boolean; curated: boolean; resolved: boolean; reminded: boolean; hadLeft: boolean;
+  gap: boolean; hadLeft: boolean;
   qualifiedMs: number; returnAt: number | null; actions: Set<string>; confidence: EvidenceConfidence;
 };
-type Reminder = { cue: AttentionItem | null; count: number };
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
 const cleanTitle = (el: HTMLElement) => (el.textContent || "").replace(/\d+ skills ↗/g, "").replace(/\s+/g, " ").trim();
 const unavailable = '[aria-hidden="true"],[inert],[data-building],[data-scene-building]';
+const sampleIntervalMs = 100;
 
 /** In-memory evidence of expanded exposure. No reading claims, storage or telemetry. */
 export function useAttentionJourney() {
-  const [view, setView] = useState<Reminder>({ cue: null, count: 0 });
-  const controls = useRef({ revisit: (_id?: string) => {}, dismiss: () => {} });
   useEffect(() => {
-    let disposed = false, regrouping = false, measureDirty = true, frame = 0, clock = 0;
-    let lastAt = performance.now(), lastScrollAt = 0, lastScrollY = scrollY, suppressSweepUntil = 0;
-    let current: Story | null = null, cueUntil = 0, nextReminderAt = 0, remindersShown = 0, remindersDismissed = false;
+    let disposed = false, regrouping = false, measureDirty = true, clock = 0;
+    let lastAt = performance.now(), suppressSweepUntil = 0;
     let inspection: { story: Story; started: number } | null = null;
-    const visible = new Set<Story>(), pending = new Set<Story>();
+    const visible = new Set<Story>();
     const candidates = [...document.querySelectorAll<HTMLElement>("[data-scan-item],[data-project],.skill-category,#about > div,#hero .text-center,[data-construction-scene='activity']")];
 
     const makeBlocks = (el: HTMLElement, heading: HTMLElement) => {
@@ -60,7 +57,7 @@ export function useAttentionJourney() {
       el.dataset.discoveryId = id;
       const top = el.getBoundingClientRect().top + scrollY;
       return { item: known || { id, selector: `[data-discovery-id="${id}"]`, title, message: `There’s more to ${title}. Take a closer look.` }, el, heading, blocks: makeBlocks(el, heading), details: [...el.querySelectorAll<HTMLElement>("[data-scan-detail]")],
-        top, previousTop: top - scrollY, credit: 0, exposure: 0, coverage: 0, encountered: false, gap: false, curated: !!known, resolved: false, reminded: false, hadLeft: false, qualifiedMs: 0, returnAt: null, actions: new Set<string>(), confidence: "low" };
+        top, previousTop: top - scrollY, credit: 0, exposure: 0, coverage: 0, encountered: false, gap: false, hadLeft: false, qualifiedMs: 0, returnAt: null, actions: new Set<string>(), confidence: "low" };
     });
 
     const painted = (el: Element) => {
@@ -76,8 +73,7 @@ export function useAttentionJourney() {
     };
     const completeSurface = (story: Story) => !story.el.closest('[data-building],[data-scene-building]') && !story.el.querySelector('[data-building],[data-scene-building]');
     const expanded = (story: Story) => completeSurface(story) && painted(story.el) && story.details.every(detail => !detail.inert && detail.getAttribute("aria-hidden") !== "true" && Number(getComputedStyle(detail).opacity) >= .99);
-    const active = () => !document.hidden && document.hasFocus() && !regrouping && !getScrollIntent().automatic && !document.querySelector('[role="dialog"],[data-exploration-map]');
-    const resolveReminder = (story: Story) => { story.resolved = true; pending.delete(story); if (current === story) current = null; };
+    const canObserve = () => !document.hidden && document.hasFocus() && !getScrollIntent().automatic && !document.querySelector('[role="dialog"],[data-exploration-map]');
 
     const measure = () => {
       records.forEach(story => {
@@ -133,17 +129,15 @@ export function useAttentionJourney() {
       records.forEach(story => {
         const values = { quality: String(Math.round(story.credit * 1000) / 10), qualityCoverage: String(Math.round(story.coverage * 100)), qualityEncountered: String(story.encountered), qualityConfidence: story.confidence };
         Object.entries(values).forEach(([key, value]) => { if (story.el.dataset[key] !== value) story.el.dataset[key] = value; });
-        if (story.el.hasAttribute("data-experience-item")) {
+        if (story.el.matches("[data-experience-item],[data-certificate]")) {
           const progress = String(Math.round(story.credit * 1000) / 1000);
           if (story.el.style.getPropertyValue("--exploration-evidence") !== progress) story.el.style.setProperty("--exploration-evidence", progress);
           const complete = String(story.credit >= .995 && story.coverage >= .95);
           if (story.el.dataset.explorationComplete !== complete) story.el.dataset.explorationComplete = complete;
         }
       });
-      if (current && (current.resolved || remindersDismissed)) current = null;
-      setView(previous => previous.cue?.id === current?.item.id && previous.count === pending.size ? previous : { cue: current?.item || null, count: pending.size });
       publishExploration({ explored: fullyExposed.map(story => story.item.id), total: records.length, items: records.map(story => story.item),
-        suggestedId: current?.item.id || [...pending].find(story => story.item.critical)?.item.id || [...pending][0]?.item.id || records.find(story => story.item.critical && story.credit < .995)?.item.id || null,
+        suggestedId: records.find(story => story.item.critical && story.credit < .995)?.item.id || null,
         score: discoveryScore(records.map(story => ({ id: story.item.id, credit: story.credit, encountered: story.encountered }))), gaps: records.filter(story => story.gap && story.exposure < .6).length,
         credits: Object.fromEntries(records.map(story => [story.item.id, Math.round(story.credit * 1000) / 1000])), encountered: records.filter(story => story.encountered).map(story => story.item.id), coverage: covered.length,
         confidence: Object.fromEntries(records.map(story => [story.item.id, story.confidence])) });
@@ -156,13 +150,7 @@ export function useAttentionJourney() {
       const bonus = qualifies ? Math.min(.1, [...story.actions].reduce((sum, action) => sum + (action === "inspect" ? .05 : .025), 0)) : 0;
       story.credit = Math.max(story.credit, Math.min(1, story.exposure + bonus));
       story.confidence = story.exposure >= .85 && story.coverage >= .9 && (story.actions.size > 0 || story.qualifiedMs >= 8000) ? "high" : story.exposure >= .35 && story.coverage >= .6 ? "medium" : "low";
-      if (story.exposure >= .6 && story.coverage >= .75) { story.gap = false; resolveReminder(story); }
-    };
-    const considerReminder = (now: number) => {
-      if (current && now >= cueUntil) current = null;
-      if (current || remindersDismissed || remindersShown >= 3 || now < nextReminderAt || now - lastScrollAt < 1200 || getScrollIntent().active || !active()) return;
-      const next = [...pending].filter(story => !story.resolved && !story.reminded && story.exposure < .6 && !visible.has(story)).sort((a, b) => Number(!!b.item.critical) - Number(!!a.item.critical))[0];
-      if (next) { current = next; next.reminded = true; remindersShown++; cueUntil = now + 8000; nextReminderAt = now + 20000; }
+      if (story.exposure >= .6 && story.coverage >= .75) story.gap = false;
     };
     const stopClock = () => { clearInterval(clock); clock = 0; };
     const sample = () => {
@@ -175,10 +163,9 @@ export function useAttentionJourney() {
           inspection.story.actions.add("inspect"); scoreStory(inspection.story); inspection = null;
         }
       }
-      if (active()) {
+      if (canObserve() && !regrouping) {
         const intent = getScrollIntent(), rate = exposureRate((intent.active ? Math.abs(intent.speed) : 0) * 1000 / innerHeight);
         visible.forEach(story => {
-          if (!completeSurface(story)) return;
           const heading = story.heading.getBoundingClientRect();
           if (heading.bottom > 76 && heading.top < innerHeight - 56 && painted(story.heading)) encounter(story);
           if (!expanded(story)) return;
@@ -201,41 +188,42 @@ export function useAttentionJourney() {
           });
           if (observed) {
             encounter(story); story.qualifiedMs += dt * rate;
-            if (story.returnAt !== null && story.qualifiedMs - story.returnAt >= 1000) { story.actions.add("revisit"); story.returnAt = null; resolveReminder(story); }
+            if (story.returnAt !== null && story.qualifiedMs - story.returnAt >= 1000) { story.actions.add("revisit"); story.returnAt = null; }
             scoreStory(story);
           }
         });
       }
-      considerReminder(now); publish();
+      publish();
       // Keep the last qualified sample alive until the evidence is actually
       // saturated; a near-complete99.9% logo must not freeze just before its end.
-      if (![...visible].some(story => story.credit < 1) && !current && !(remindersShown < 3 && !remindersDismissed && [...pending].some(story => !story.reminded && !story.resolved)) && !inspection) stopClock();
+      if (![...visible].some(story => story.credit < 1) && !inspection) stopClock();
     };
-    const startClock = () => { if (!clock && !document.hidden && document.hasFocus()) { lastAt = performance.now(); clock = window.setInterval(sample, 200); } };
+    const startClock = () => { if (!clock && !document.hidden && document.hasFocus()) { lastAt = performance.now(); clock = window.setInterval(sample, sampleIntervalMs); } };
     const observer = new IntersectionObserver(entries => {
       entries.forEach(entry => {
         const story = records.find(story => story.el === entry.target); if (!story) return;
         if (entry.isIntersecting) { visible.add(story); if (story.hadLeft && getScrollIntent().userDriven && getScrollIntent().direction < 0) story.returnAt ??= story.qualifiedMs; }
         else { if (visible.has(story) && story.encountered) story.hadLeft = true; visible.delete(story); }
       });
-      if (visible.size || pending.size) startClock(); else stopClock();
+      if (visible.size) startClock(); else stopClock();
     }, { rootMargin: "-76px 0px -56px 0px", threshold: [0, .25, .5, 1] });
     records.forEach(story => observer.observe(story.el));
     const onIntent = () => {
-      const intent = getScrollIntent(), now = performance.now(), distance = Math.abs(scrollY - lastScrollY);
+      const intent = getScrollIntent(), now = performance.now();
       let changed = false;
-      if (distance > .5) { lastScrollAt = now; lastScrollY = scrollY; }
-      const sweep = !regrouping && active() && intent.inputDriven && intent.userDriven && !intent.hardJump && now >= suppressSweepUntil;
+      const userPass = intent.active && intent.inputDriven && intent.userDriven && !intent.hardJump && now >= suppressSweepUntil && canObserve();
       records.forEach(story => {
         const top = story.top - scrollY;
         const heading = story.heading.getBoundingClientRect();
         const currentlyVisible = heading.bottom > 76 && heading.top < innerHeight - 56;
         const crossed = intent.direction > 0 ? story.previousTop >= 76 && top < 76 : story.previousTop <= innerHeight - 56 && top > innerHeight - 56;
-        if (sweep && completeSurface(story) && painted(story.heading) && (currentlyVisible || crossed)) {
+        // A painted heading can be encountered before the rest of a story is
+        // ready. Only infer crossed positions when layout measurements are stable.
+        const passed = currentlyVisible || (!regrouping && !measureDirty && crossed);
+        if (userPass && passed && painted(story.heading)) {
           changed = encounter(story) || changed;
           if (Math.abs(intent.speed) * 1000 / innerHeight >= 1.2 && story.exposure < .6) {
             changed ||= !story.gap; story.gap = true;
-            if (story.curated && !story.resolved && intent.direction > 0) pending.add(story);
           }
           if (intent.direction < 0 && story.hadLeft && currentlyVisible) story.returnAt ??= story.qualifiedMs;
         }
@@ -244,20 +232,6 @@ export function useAttentionJourney() {
       if (changed) publish(); startClock();
     };
     const invalidate = () => { measureDirty = true; startClock(); };
-    const cancelRevisit = () => { cancelAnimationFrame(frame); frame = 0; };
-    controls.current = {
-      dismiss: () => { remindersDismissed = true; current = null; pending.clear(); publish(); },
-      revisit: id => {
-        const story = records.find(story => story.item.id === (id || current?.item.id)); if (!story) return;
-        cancelRevisit(); resolveReminder(story); story.returnAt = story.qualifiedMs; publish(); requestDetailedView(); suppressSweepUntil = performance.now() + 1200;
-        window.dispatchEvent(new CustomEvent("portfolio:attention-focus", { detail: story.item.id }));
-        frame = requestAnimationFrame(() => { frame = requestAnimationFrame(() => {
-          if (disposed) return;
-          story.el.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
-          story.heading.setAttribute("tabindex", "-1"); story.heading.focus({ preventScroll: true }); invalidate();
-        }); });
-      },
-    };
     const click = (event: MouseEvent) => {
       const target = event.target as HTMLElement;
       const control = target.closest("a,button"); if (!control) return;
@@ -267,11 +241,9 @@ export function useAttentionJourney() {
       else if (control.matches("button") && (control.hasAttribute("aria-haspopup") || control.closest(".project-media") || /zoom/i.test(control.getAttribute("aria-label") || ""))) inspection = { story, started: performance.now() };
       scoreStory(story); publish(); startClock();
     };
-    const input = (event: Event) => {
-      cancelRevisit();
-      if (event instanceof KeyboardEvent && ["Home", "End", "PageDown", "PageUp"].includes(event.key)) suppressSweepUntil = performance.now() + 800;
+    const keyboardJump = (event: KeyboardEvent) => {
+      if (["Home", "End", "PageDown", "PageUp"].includes(event.key)) suppressSweepUntil = performance.now() + 800;
     };
-    const revisit = (event: Event) => controls.current.revisit((event as CustomEvent<string>).detail);
     const visibility = () => { lastAt = performance.now(); if (document.hidden || !document.hasFocus()) stopClock(); else startClock(); };
     const onLayoutStart = () => { regrouping = true; };
     const onLayoutSettled = () => { regrouping = false; invalidate(); };
@@ -279,18 +251,17 @@ export function useAttentionJourney() {
     const unsubscribe = subscribeScrollIntent(onIntent);
     const resize = new ResizeObserver(invalidate); records.forEach(story => resize.observe(story.el));
     document.fonts.ready.then(() => { if (!disposed) invalidate(); });
-    window.addEventListener("wheel", input, { passive: true }); window.addEventListener("touchstart", input, { passive: true }); window.addEventListener("keydown", input);
-    window.addEventListener("portfolio:explore-highlight", revisit); window.addEventListener("resize", invalidate, { passive: true });
+    window.addEventListener("keydown", keyboardJump);
+    window.addEventListener("resize", invalidate, { passive: true });
     window.addEventListener("portfolio:layout-start", onLayoutStart); window.addEventListener("portfolio:layout-settled", onLayoutSettled); window.addEventListener("portfolio:activity-ready", activityReady);
     document.addEventListener("click", click, true); document.addEventListener("visibilitychange", visibility); window.addEventListener("focus", visibility); window.addEventListener("blur", visibility);
     measure(); publish(); startClock();
     return () => {
-      disposed = true; unsubscribe(); observer.disconnect(); resize.disconnect(); stopClock(); cancelRevisit();
-      window.removeEventListener("wheel", input); window.removeEventListener("touchstart", input); window.removeEventListener("keydown", input); window.removeEventListener("portfolio:explore-highlight", revisit); window.removeEventListener("resize", invalidate);
+      disposed = true; unsubscribe(); observer.disconnect(); resize.disconnect(); stopClock();
+      window.removeEventListener("keydown", keyboardJump); window.removeEventListener("resize", invalidate);
       window.removeEventListener("portfolio:layout-start", onLayoutStart); window.removeEventListener("portfolio:layout-settled", onLayoutSettled); window.removeEventListener("portfolio:activity-ready", activityReady);
       document.removeEventListener("click", click, true); document.removeEventListener("visibilitychange", visibility); window.removeEventListener("focus", visibility); window.removeEventListener("blur", visibility);
       records.forEach(story => { delete story.el.dataset.discoveryId; delete story.el.dataset.quality; delete story.el.dataset.qualityCoverage; delete story.el.dataset.qualityEncountered; delete story.el.dataset.qualityConfidence; delete story.el.dataset.explorationComplete; story.el.style.removeProperty("--exploration-evidence"); }); resetExploration();
     };
   }, []);
-  return { ...view, revisit: (id?: string) => controls.current.revisit(id), dismiss: () => controls.current.dismiss() };
 }

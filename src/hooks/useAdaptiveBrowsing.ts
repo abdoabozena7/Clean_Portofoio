@@ -101,7 +101,9 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const restore = () => {
       for (const [el, style] of original) {
         const clip = el.style.getPropertyValue("--construction-clip"), opacity = el.style.getPropertyValue("--construction-opacity");
+        const evidence = el.style.getPropertyValue("--exploration-evidence");
         if (style === null) el.removeAttribute("style"); else el.setAttribute("style", style);
+        if (evidence) el.style.setProperty("--exploration-evidence", evidence);
         el.style.removeProperty("--construction-clip"); el.style.removeProperty("--construction-opacity");
         if (el.dataset.building) { if (clip) el.style.setProperty("--construction-clip", clip); if (opacity) el.style.setProperty("--construction-opacity", opacity); }
       }
@@ -265,7 +267,6 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const onResize = () => { if (innerWidth !== cachedWidth) { cachedWidth = innerWidth; transition(0, true); } };
     const onJump = () => { requestDetailedView(); transition(0, true); };
     const onVisibility = () => { if (document.hidden) onJump(); };
-    const onAttentionFocus = () => { requestDetailedView(); transition(0, true); };
     const unsubscribe = subscribeScrollIntent(onIntent);
     document.addEventListener("focusin", onFocus); document.addEventListener("click", onClick, true);
     document.addEventListener("pointerdown", onPointerDown, { passive: true }); document.addEventListener("pointerup", onPointerUp, { passive: true }); document.addEventListener("pointercancel", onPointerCancel, { passive: true });
@@ -273,8 +274,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     document.addEventListener("touchmove", onTouchMove, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("resize", onResize); window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump);
-    window.addEventListener("portfolio:attention-focus", onAttentionFocus); reduced.addEventListener("change", onJump);
-    window.addEventListener("portfolio:attention-release", onJump);
+    reduced.addEventListener("change", onJump);
     window.addEventListener("portfolio:fast-return-start", onJump);
     return () => {
       unsubscribe(); cancelAnimationFrame(frame); clearTimeout(activationTimer); if (boxes.length) restore(); hideEditors();
@@ -284,8 +284,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onResize); window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump);
-      window.removeEventListener("portfolio:attention-focus", onAttentionFocus); reduced.removeEventListener("change", onJump);
-      window.removeEventListener("portfolio:attention-release", onJump);
+      reduced.removeEventListener("change", onJump);
       window.removeEventListener("portfolio:fast-return-start", onJump);
     };
   }, [editorRef]);

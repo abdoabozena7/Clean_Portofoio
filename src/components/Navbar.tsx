@@ -42,7 +42,7 @@ const Navbar = () => {
         </div>
 
         <div className="lg:hidden flex justify-center">
-          <button onClick={() => setOpen(!open)} className="nav-link">
+          <button onClick={() => setOpen(!open)} className="nav-link" aria-expanded={open}>
             {open ? "Close" : "Menu"}
           </button>
         </div>

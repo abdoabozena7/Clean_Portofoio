@@ -113,9 +113,9 @@ export function semanticSurfaces(unit: SceneUnit): { el: PaintElement; kind: Sur
     all(".experience-role", "text", "role"); all(".experience-detail p", "text", "body");
   } else if (unit.kind === "credential") {
     all(".achievement-ribbon", "asset", "award"); all(".credential-copy h3", "text", "heading");
-    all(".credential-copy > div > span", "text", "metadata"); all(".credential-copy p", "text", "body");
-    all(".credential-story", "asset", "action"); all(".certificate-image-trigger", "shell", "media-slot");
+    all(".credential-copy > div > span", "text", "metadata"); all(".certificate-image-trigger", "shell", "media-slot");
     all(".certificate-thumb", "asset", "media"); all(".certificate-zoom", "asset", "action");
+    all(".credential-description p", "text", "body"); all(".credential-story", "asset", "action");
   } else if (unit.kind === "skill") {
     add(root.firstElementChild, "shell", "category");
     all("h3", "text", "heading"); all(".palette-tag", "token", "token");

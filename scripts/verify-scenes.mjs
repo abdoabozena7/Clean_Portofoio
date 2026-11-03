@@ -5,9 +5,10 @@ import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const negative = process.argv.includes('--negative-control');
-const recipesOnly = process.argv.includes('--recipes-only');
+const credentialsOnly = process.argv.includes('--credentials-only');
+const recipesOnly = credentialsOnly || process.argv.includes('--recipes-only');
 const url = process.env.PORTFOLIO_URL || 'http://127.0.0.1:8080/Clean_Portofoio/';
-const out = `output/playwright/scenes${negative ? '-negative' : recipesOnly ? '-recipes' : ''}`;
+const out = `output/playwright/scenes${negative ? '-negative' : credentialsOnly ? '-credentials' : recipesOnly ? '-recipes' : ''}`;
 await mkdir(out, { recursive: true });
 async function fingerprint() {
   const files = []; async function walk(dir) { for (const f of await readdir(dir, { withFileTypes: true })) { const p = `${dir}/${f.name}`; f.isDirectory() ? await walk(p) : files.push(p); } }
@@ -89,7 +90,7 @@ try {
       { id: 'contact', selector: '#contact form' },
       { id: 'finale', selector: 'section[data-construction-section]:last-of-type .max-w-6xl > .grid' },
     ];
-    for (const item of cases) {
+    for (const item of credentialsOnly ? cases.filter(item => ['education', 'honors'].includes(item.id)) : cases) {
       const target = page.locator(item.selector).first();
       if (item.id === 'activity') await page.waitForSelector('[data-activity-ready] rect[data-date]', { state: 'attached', timeout: 15000 });
       const daysBefore = item.id === 'activity' ? await target.locator('rect[data-date]').evaluateAll(es => es.map(e => [e.getAttribute('data-date'), e.getAttribute('fill'), e.getAttribute('data-level')])) : null;

@@ -10,11 +10,28 @@ let userDriven = false;
 let pace = initialScrollPace();
 let lastDelta = 0, keyboardJump = false;
 let automaticUntil = 0;
+let commandScan = false;
+let commandIdle: ReturnType<typeof setTimeout> | undefined;
 const publish = () => { listeners.forEach(listener => listener()); };
 
 export function getScrollIntent(): ScrollIntent {
   const elapsed = performance.now() - lastAt;
-  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: scan && !held, active: elapsed < 220, hardJump, leap: elapsed < 220 && Math.abs(lastDelta) > innerHeight * .95, automatic: performance.now() < automaticUntil, userDriven, inputDriven: performance.now() - inputAt < 900 };
+  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: (scan || commandScan) && !held, active: elapsed < 220, hardJump, leap: elapsed < 220 && Math.abs(lastDelta) > innerHeight * .95, automatic: performance.now() < automaticUntil, userDriven, inputDriven: performance.now() - inputAt < 900 };
+}
+
+/** A repeated fast command can use the existing scan layout while it lasts. */
+export function continueFastBrowsing() {
+  held = false; automaticUntil = 0; commandScan = true;
+  clearTimeout(commandIdle);
+  commandIdle = setTimeout(endFastBrowsing, 280);
+  publish();
+}
+
+export function endFastBrowsing() {
+  if (!commandScan) return;
+  clearTimeout(commandIdle);
+  commandScan = false; scan = false; pace = initialScrollPace();
+  publish();
 }
 
 /** Our anchor corrections are geometry bookkeeping, never evidence of user speed. */
@@ -25,6 +42,7 @@ export function compensateScroll(top: number) {
 }
 
 export function requestDetailedView() {
+  clearTimeout(commandIdle); commandScan = false;
   held = true; scan = false; pace = initialScrollPace(); speed = 0; hardJump = false; userDriven = false; publish();
 }
 
@@ -75,7 +93,7 @@ function start() {
   window.addEventListener("wheel", input, { passive: true }); window.addEventListener("touchmove", input, { passive: true });
   window.addEventListener("keydown", input); window.addEventListener("hashchange", jump); window.addEventListener("popstate", jump);
   stop = () => {
-    cancelAnimationFrame(frame); clearTimeout(idle);
+    cancelAnimationFrame(frame); clearTimeout(idle); clearTimeout(commandIdle); commandScan = false;
     window.removeEventListener("scroll", onScroll); window.removeEventListener("wheel", input); window.removeEventListener("touchmove", input);
     window.removeEventListener("keydown", input); window.removeEventListener("hashchange", jump); window.removeEventListener("popstate", jump);
     speed = 0; scan = false; pace = initialScrollPace(); held = false; compensatedY = null; automaticUntil = 0; stop = undefined;

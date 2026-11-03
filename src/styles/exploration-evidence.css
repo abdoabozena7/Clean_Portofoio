@@ -41,10 +41,40 @@
 [data-exploration-complete="true"] .company-evidence-finish { opacity: 1; transform: scale(1); }
 .company-evidence-stamp { fill: var(--accent, var(--accent-mint)); stroke: #111920; stroke-width: .75; }
 .company-evidence-check, .company-evidence-spark { fill: none; stroke: #111920; stroke-width: 1.2; stroke-linecap: round; stroke-linejoin: round; }
+@property --credential-fill {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+.credential-evidence {
+  --credential-fill: calc(var(--exploration-evidence, 0) * 100%);
+  --credential-ink: var(--accent, var(--accent-teal));
+  --credential-track: color-mix(in srgb, var(--credential-ink) 30%, transparent);
+  border-left-color: var(--credential-ink);
+  border-image: linear-gradient(to bottom, var(--credential-ink) var(--credential-fill), var(--credential-track) var(--credential-fill)) 1;
+  transition: --credential-fill .24s linear;
+}
+.credential-evidence[data-achievement] { --credential-ink: var(--accent-amber); }
+.credential-evidence[data-scene-shell] { border-image: none; }
+.credential-evidence .certificate-image-trigger::after {
+  /* Trace the exposed right side of the offset shadow, then turn left at the foot. */
+  --shadow-side: clamp(0%, calc(var(--credential-fill) / .6), 100%);
+  --shadow-foot: clamp(0%, calc((var(--credential-fill) - 60%) / .4), 100%);
+  content: "";
+  position: absolute;
+  inset: 5px -6px -6px 5px;
+  pointer-events: none;
+  background:
+    linear-gradient(to bottom, var(--credential-ink) var(--shadow-side), var(--credential-track) var(--shadow-side)) right top / 5px 100% no-repeat,
+    linear-gradient(to left, var(--credential-ink) var(--shadow-foot), var(--credential-track) var(--shadow-foot)) left bottom / calc(100% - 5px) 5px no-repeat;
+}
+.credential-evidence .certificate-image-trigger[data-scene-shell]::after { content: none; }
 @media (prefers-reduced-motion: reduce) {
-  .company-logo > img, .company-evidence-progress, .company-evidence-finish { transition: none; }
+  .company-logo > img, .company-evidence-progress, .company-evidence-finish, .credential-evidence { transition: none; }
 }
 @media print {
+  .credential-evidence { border-image: none; }
+  .credential-evidence .certificate-image-trigger::after { content: none; }
   .company-logo > img { filter: none; opacity: 1; }
   .company-evidence { display: none; }
   [data-experience-item] .experience-brand .company-logo { border-color: #111920; }

@@ -1,11 +1,15 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useState } from "react";
 import { FAST_SCROLL_RETURN_CONFIG as config } from "@/lib/fastScrollReturn";
 import { initialScrollVelocity, sampleScrollVelocity, wheelPixels } from "@/lib/scrollVelocity";
 import { scrollCommand } from "@/lib/scrollCommand";
-import { navigateForScrollReturn } from "@/lib/scrollIntent";
+import { continueFastBrowsing, endFastBrowsing, navigateForScrollReturn } from "@/lib/scrollIntent";
+
+const repeatWindowMs = 3000;
+const attemptsToContinue = 3;
 
 /** Interpret eligible commands before page movement. No section/exposure gate. */
-export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
+export function useFastScrollReturn() {
+  const [cue, setCue] = useState({ activation: 0, message: 0, visible: false, showMessage: false });
   useEffect(() => {
     if (!config.enabled) return;
     let velocity = initialScrollVelocity(), wheelAt: number | null = null;
@@ -13,18 +17,31 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
     let timer: ReturnType<typeof setTimeout> | undefined, frame = 0;
     let touching = false, owned = false, allowed = false;
     let x = 0, y = 0, touchAt = 0, releaseVelocity = 0, lastMove = 0;
-    const cue = cueRef.current;
+    let attempts = 0, lastAttempt = -Infinity, gestureAttempt = false, passFast = false, lastReverse = false;
     let lineHeight = 20;
     const font = () => { const s = getComputedStyle(document.documentElement); lineHeight = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2 || 20; };
     font();
-    const hide = () => { if (cue) cue.dataset.visible = 'false'; };
-    const show = () => {
-      if (!cue) return;
-      if (cue.dataset.visible !== 'true') cue.style.setProperty('--return-color', ['#2bbaa5','#93d3ae','#faecb6','#f9a822','#f96635'][Math.floor(Math.random() * 5)]);
-      cue.dataset.visible = 'true'; clearTimeout(timer); timer = setTimeout(hide, 900);
+    const hide = () => setCue(previous => previous.visible ? { ...previous, visible: false } : previous);
+    const fastAttempt = (now: number) => {
+      if (!gestureAttempt) {
+        gestureAttempt = true;
+        attempts = now - lastAttempt <= repeatWindowMs ? attempts + 1 : 1;
+        lastAttempt = now;
+        passFast = attempts >= attemptsToContinue;
+        const showMessage = !passFast;
+        setCue(previous => ({ activation: previous.activation + 1, message: previous.message + Number(showMessage), visible: true, showMessage }));
+        clearTimeout(timer); timer = setTimeout(hide, 900);
+      }
+      if (passFast) continueFastBrowsing();
+      return passFast;
     };
     const stopInertia = () => { cancelAnimationFrame(frame); frame = 0; };
-    const cancel = () => { stopInertia(); velocity = initialScrollVelocity(); source = 'none'; wheelAt = null; touching = false; owned = false; allowed = false; releaseVelocity = 0; hide(); };
+    const stopGesture = () => { stopInertia(); velocity = initialScrollVelocity(); source = 'none'; wheelAt = null; touching = false; owned = false; allowed = false; releaseVelocity = 0; gestureAttempt = false; passFast = false; lastReverse = false; };
+    const cancel = () => { stopGesture(); attempts = 0; lastAttempt = -Infinity; endFastBrowsing(); hide(); };
+    const ordinaryInput = () => {
+      if (passFast) { passFast = false; gestureAttempt = false; attempts = 0; endFastBrowsing(); }
+      hide();
+    };
     const blocked = (origin: EventTarget | null) => {
       if (document.hidden || !document.hasFocus() || document.querySelector('[role="dialog"],[data-exploration-map]')) return true;
       if (document.activeElement?.matches('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return true;
@@ -37,8 +54,8 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
     };
     const apply = (delta: number, reverse: boolean, input: "wheel" | "touch" | "momentum") => {
       const from = scrollY;
-      if (reverse) { navigateForScrollReturn(Math.max(0, from + delta)); show(); }
-      else { hide(); window.scrollTo({ top: Math.max(0, from + delta), behavior: 'instant' }); }
+      if (reverse) navigateForScrollReturn(Math.max(0, from + delta));
+      else window.scrollTo({ top: Math.max(0, from + delta), behavior: 'instant' });
       window.dispatchEvent(new CustomEvent('portfolio:scroll-command', { detail: { input, reverse, from, to: scrollY, delta } }));
     };
     const wheel = (event: WheelEvent) => {
@@ -47,14 +64,16 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       const now = performance.now(), delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, lineHeight);
       if (source !== 'wheel') { velocity = initialScrollVelocity(); wheelAt = null; source = 'wheel'; }
       const gap = wheelAt === null || now - wheelAt > 240 ? null : now - wheelAt;
+      if (gap === null) { gestureAttempt = false; passFast = false; }
       wheelAt = now;
       const sample = sampleScrollVelocity(velocity, now, delta, innerHeight); velocity = sample.state;
       const command = scrollCommand(delta, gap, innerHeight, sample.recentSpeed, true);
-      if (command.reverse && event.cancelable) { event.preventDefault(); apply(command.delta, true, 'wheel'); }
-      else hide();
+      if (command.reverse && event.cancelable) {
+        if (!fastAttempt(now)) { event.preventDefault(); apply(command.delta, true, 'wheel'); }
+      } else ordinaryInput();
     };
     const touchStart = (event: TouchEvent) => {
-      cancel();
+      stopGesture();
       if (event.touches.length !== 1 || blocked(event.target)) return;
       source = 'touch'; touching = true; allowed = true;
       x = event.touches[0].clientX; y = event.touches[0].clientY; touchAt = performance.now();
@@ -74,8 +93,11 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       const dt = Math.max(1, now - touchAt);
       const sample = sampleScrollVelocity(velocity, now, delta, innerHeight); velocity = sample.state;
       const command = scrollCommand(delta, dt, innerHeight, sample.recentSpeed);
-      apply(command.delta, command.reverse, 'touch');
-      releaseVelocity = command.delta / dt; lastMove = now;
+      const reverse = command.reverse && !fastAttempt(now);
+      if (!command.reverse) ordinaryInput();
+      const movement = reverse ? command.delta : delta;
+      apply(movement, reverse, 'touch');
+      lastReverse = reverse; releaseVelocity = movement / dt; lastMove = now;
       touchAt = now; y = point.clientY; x = point.clientX;
     };
     const touchEnd = () => {
@@ -86,7 +108,7 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       const releasedSpeed = releaseVelocity * Math.exp(-Math.max(0, now - lastMove - 16) / 100);
       if (now - lastMove > 240 || Math.abs(releasedSpeed) < .05 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       let previous = now, elapsed = 0, pending = 0, speed = Math.max(-6, Math.min(6, releasedSpeed));
-      const reverse = speed < 0 && cue?.dataset.visible === 'true';
+      const reverse = lastReverse;
       const coast = (at: number) => {
         frame = 0;
         if (touching || blocked(null)) return;
@@ -111,5 +133,6 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       window.removeEventListener('wheel', wheel); window.removeEventListener('touchstart', touchStart); window.removeEventListener('touchmove', touchMove); window.removeEventListener('touchend', touchEnd); window.removeEventListener('touchcancel', cancel);
       window.removeEventListener('keydown', cancel); window.removeEventListener('hashchange', cancel); window.removeEventListener('popstate', cancel); window.removeEventListener('blur', cancel); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility);
     };
-  }, [cueRef]);
+  }, []);
+  return cue;
 }

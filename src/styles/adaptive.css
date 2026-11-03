@@ -25,24 +25,10 @@
 [data-scan-active="true"] .skill-category h3 { color: #111920; letter-spacing: .08em; }
 [data-scan-active="true"] .skill-count { font-size: 10px; letter-spacing: 0; }
 .scan-agent span { display: block; margin-left: 14px; padding: 4px 6px; background: var(--agent-color); border: 1px solid #111920; font: 9px/1.2 monospace; color: #111920; white-space: nowrap; }
-.quick-pass-cue { position: fixed; bottom: 88px; left: 16px; right: 16px; z-index: 45; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid #111920; background: var(--accent-cream); box-shadow: 4px 4px 0 #111920; color: #111920; }
-.quick-pass-cue > div { min-width: 0; flex: 1; }
-.quick-pass-cue strong { line-height: 1.45; }
-.quick-pass-cue button { min-height: 36px; display: flex; align-items: center; gap: 4px; font: 11px monospace; }
-.quick-pass-cue button:focus-visible { outline: 2px solid #111920; outline-offset: 3px; }
-.quick-pass-cue .cue-dismiss { min-width: 28px; justify-content: center; }
-@media (min-width: 768px) { .quick-pass-cue { left: auto; width: 340px; } }
 [data-scan-active] [data-scan-item] { transition: none !important; }
 .skill-disclosure { text-decoration: inherit; text-decoration-color: inherit; text-decoration-thickness: inherit; text-underline-offset: inherit; }
 @media (prefers-reduced-motion: reduce), print { .scan-agent, .scan-trails { display: none; } .scroll-ring svg { animation: none !important; } }
 
-/* A small optional invitation. No overlay, countdown or scroll interception. */
-.quick-pass-cue { max-width: 340px; left: auto; right: 16px; bottom: 84px; padding: 9px 12px 9px 9px; gap: 4px; border-radius: 28px 28px 8px 28px; box-shadow: 0 4px 16px #11192016; }
-.quick-pass-cue .cue-revisit { flex: 1; min-width: 0; gap: 9px; text-align: left; }
-.cue-circle { position: relative; flex: 0 0 32px; width: 32px; height: 32px; color: #11192030; }
-.cue-circle > svg:last-child { position: absolute; left: 9px; top: 9px; color: #111920; }
-.cue-kicker { display: block; font: 8px/1.3 monospace; letter-spacing: .05em; text-transform: uppercase; color: #111920aa; margin-bottom: 3px; }
-.quick-pass-cue strong { display: block; font: 600 11px/1.4 Inter, sans-serif; }
 @media (pointer: coarse), (max-width: 767px) {
   [data-scan-agent] { display: none !important; }
   [data-mobile-enter] > h2 { animation: mobile-surface .18s ease-out both; }
@@ -55,7 +41,7 @@
 .exploration-trigger strong { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; width: 56px; height: 56px; font: bold 12px/1 monospace; }
 .exploration-trigger strong span { font-size: 8px; }
 .exploration-label { text-align: left; font: 9px/1.4 monospace; }
-.exploration-arc { transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset .25s ease; }
+.exploration-arc { transform: rotate(-90deg); transform-origin: center; transition: stroke-dashoffset .12s ease-out; }
 .exploration-map { position: absolute; bottom: 74px; left: 0; width: min(350px,calc(100vw - 32px)); max-height: calc(100dvh - 180px); overflow-y: auto; overscroll-behavior: contain; border: 1px solid #11192030; border-radius: 24px 24px 24px 8px; padding: 18px; background: #fff; box-shadow: 0 8px 32px #11192020; }
 .exploration-map-head { display: flex; justify-content: space-between; gap: 8px; align-items: start; }
 .exploration-map h2 { font-size: 15px; line-height: 1.4; font-weight: 800; }
@@ -76,6 +62,5 @@
 .discovery-rules p { margin-top: 8px; color: #111920bb; }
 .exploration-control button:focus-visible { outline: 2px solid #111920; outline-offset: 3px; }
 .exploration-control button:hover { text-decoration: underline; text-underline-offset: 3px; }
-body:has([data-exploration-map]) .quick-pass-cue { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .exploration-arc { transition: none; } }
-@media print { .exploration-control, .quick-pass-cue { display: none; } }
+@media print { .exploration-control { display: none; } }

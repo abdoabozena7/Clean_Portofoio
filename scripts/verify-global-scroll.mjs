@@ -22,8 +22,11 @@ async function open(mobile = false, reduced = false, width = mobile ? 390 : 1440
   const context = await browser.newContext({ viewport: { width, height: mobile ? 844 : 900 }, isMobile: mobile, hasTouch: mobile, reducedMotion: reduced ? 'reduce' : 'no-preference', recordVideo: { dir: out } });
   const page = await context.newPage();
   page.on('pageerror', e => report.errors.push(e.message));
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  await page.evaluate(() => document.fonts.ready);
+  await page.goto(url, { waitUntil: 'load' });
+  await page.evaluate(async () => {
+    await Promise.all([400, 600, 700, 800, 900].map(weight => document.fonts.load(`${weight} 16px Inter`)));
+    await document.fonts.ready;
+  });
   await page.addStyleTag({ content: 'html{scroll-behavior:auto!important}' });
   return { context, page };
 }
@@ -91,7 +94,7 @@ try {
         for (const y of [620,500,380,260,140,20]) { await page.waitForTimeout(40); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y }] }); touchFrames.push(await page.evaluate(() => ({ mode: document.documentElement.dataset.browsing, y: scrollY, at: performance.now() }))); }
         const fast = await state(page); report.journeys.push({ mobile, natural, fast, touchFrames });
         check('Native touch: all offscreen groups share scan', allActive(fast), fast);
-        if (!baseline) check('Native touch: offscreen media and passed logos enlarged', fast.rows.some((r,i) => r.logo > (natural.rows[i]?.logo || Infinity) + 15) && fast.rows.some((r,i) => r.media > (natural.rows[i]?.media || Infinity) + 25), { natural, fast });
+        if (!baseline) check('Native touch: offscreen certificates use compact previews and passed logos grow', fast.rows.some((r,i) => r.logo > (natural.rows[i]?.logo || Infinity) + 15) && fast.rows.every((r,i) => !r.media || r.media >= 150 && r.media < natural.rows[i].media - 25), { natural, fast });
         await page.screenshot({ path: `${out}/touch-fast.png` });
         if (!baseline) {
           await page.waitForTimeout(950); const heldIdle = await state(page);
@@ -120,7 +123,7 @@ try {
         await page.evaluate(() => { window.__globalFrames = []; window.__globalTimer = setInterval(() => window.__globalFrames.push({ y: scrollY, mode: document.documentElement.dataset.browsing, active: [...document.querySelectorAll('[data-scan-group]')].filter(g => g.dataset.scanActive === 'true').length }), 25); });
         await wheel(page, 180, 8); const fast = await state(page);
         check('Desktop: all offscreen groups share scan', allActive(fast), fast);
-        if (!baseline) check('Desktop: offscreen media already enlarged', fast.rows.some((r,i) => r.media > (natural.rows[i]?.media || Infinity) + 25), { natural, fast });
+        if (!baseline) check('Desktop: offscreen certificates use scan previews', fast.rows.every((r,i) => !r.media || r.media > natural.rows[i].media + 10 && r.media <= 224), { natural, fast });
         await page.screenshot({ path: `${out}/desktop-fast.png` });
         await wheel(page, 180, 26);
         if (!baseline) {

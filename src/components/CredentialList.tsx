@@ -1,6 +1,7 @@
 import type { EducationItem } from "@/data/profileContent";
-import { ArrowUpRight, Trophy, ZoomIn } from "lucide-react";
+import { Trophy, ZoomIn } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
+import "@/styles/exploration-evidence.css";
 
 type CredentialListProps = {
   items: EducationItem[];
@@ -9,16 +10,17 @@ type CredentialListProps = {
 
 /** Real copy and media stay mounted for the scroll-adaptive scan presentation. */
 const CredentialList = ({ items, group }: CredentialListProps) => (
-  <div className="space-y-8" data-scan-group={group}>
-    {items.map((item) => (
+  <div className="credential-list" data-scan-group={group}>
+    {items.map((item, index) => (
       <div
         key={`${item.degree}-${item.school}`}
         data-certificate
+        data-tone={index % 5}
         data-scan-item="credential"
         data-attention-id={item.achievement ? "honors-impact" : item.school === "Harbin Institute of Technology" ? "education-harbin" : item.degree === "Microsoft Machine Learning Engineer" ? "honors-depi" : undefined}
         data-attention-critical={item.achievement || item.school === "Harbin Institute of Technology" || item.degree === "Microsoft Machine Learning Engineer" || undefined}
         data-achievement={item.achievement || undefined}
-        className="credential border-l-2 border-black/10 pl-6 py-2 hover:border-black transition-colors duration-300"
+        className="credential credential-evidence border-l-2 pl-4 sm:pl-6"
       >
         <div className="credential-copy">
           {item.achievement && <span data-scan-detail className="achievement-ribbon" data-construction="asset"><Trophy className="w-3.5 h-3.5" aria-hidden="true" /> 1st place</span>}
@@ -27,13 +29,11 @@ const CredentialList = ({ items, group }: CredentialListProps) => (
             <span className="text-sm text-foreground font-medium">{item.school}</span>
             <span className="font-mono text-xs text-foreground/60">{item.year}</span>
           </div>
-          <p className="text-sm leading-relaxed text-foreground/70 mt-3" data-scan-detail>{item.brief}</p>
-          {item.storyUrl && <a href={item.storyUrl} target="_blank" rel="noopener noreferrer" data-scan-detail className="credential-story inline-flex items-center gap-1 font-mono text-xs font-bold mt-3 underline underline-offset-4">The winning idea <ArrowUpRight className="w-3 h-3" aria-hidden="true" /></a>}
         </div>
         {item.image && (
           <Dialog>
             <DialogTrigger asChild>
-              <button data-construction="asset" data-scan-detail className="certificate-image-trigger transition-shadow" aria-label={`Zoom in ${item.degree} ${item.achievement ? "photo" : "certificate"}`}>
+              <button data-construction="asset" data-scan-detail className="certificate-image-trigger" aria-label={`Zoom in ${item.degree} ${item.achievement ? "photo" : "certificate"}`}>
                 <img src={`${import.meta.env.BASE_URL}${item.image}`} alt={item.imageAlt} className="certificate-thumb" loading="lazy" decoding="async" width={item.imageWidth} height={item.imageHeight} />
                 <span className="certificate-zoom" aria-hidden="true"><ZoomIn className="w-4 h-4" /></span>
               </button>
@@ -47,6 +47,10 @@ const CredentialList = ({ items, group }: CredentialListProps) => (
             </DialogContent>
           </Dialog>
         )}
+        <div className="credential-description">
+          <p className="text-sm leading-relaxed text-foreground/70" data-scan-detail>{item.brief}</p>
+          {item.storyUrl && <a href={item.storyUrl} target="_blank" rel="noopener noreferrer" data-scan-detail className="credential-story inline-block font-mono text-xs font-bold mt-3 underline underline-offset-4">The winning idea</a>}
+        </div>
       </div>
     ))}
   </div>
