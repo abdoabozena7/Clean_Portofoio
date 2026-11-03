@@ -1,5 +1,5 @@
 import { accentPalette } from "./palette";
-/** Owner's five-color palette; names distinguish the eight collaborating builders. */
+/** Owner's five-color palette; names distinguish the ten collaborating builders. */
 export const constructionAgents = [
   { name: "layout.ai", task: "layout", role: "structure", color: accentPalette[0] },
   { name: "frame.ai", task: "frame", role: "structure", color: accentPalette[1] },
@@ -9,4 +9,6 @@ export const constructionAgents = [
   { name: "asset.ai", task: "asset", role: "asset", color: accentPalette[0] },
   { name: "detail.ai", task: "detail", role: "asset", color: accentPalette[3] },
   { name: "polish.ai", task: "polish", role: "asset", color: accentPalette[4] },
+  { name: "wire.ai", task: "wire", role: "structure", color: accentPalette[0] },
+  { name: "verify.ai", task: "verify", role: "asset", color: accentPalette[3] },
 ] as const;

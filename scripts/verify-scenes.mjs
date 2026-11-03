@@ -194,7 +194,9 @@ try {
       check('Mobile retains approved hero agent construction', await page.locator('#hero [data-building]').count() > 0 && await page.locator('[data-agent]').evaluateAll(es => es.some(e => +getComputedStyle(e).opacity > .1)));
       await page.locator('#projects').evaluate(e => e.scrollIntoView({ behavior: 'instant' })); await page.waitForTimeout(200);
       check('Mobile below-hero scenes contain no masked content or active scene pointers', await page.locator('section:not(#hero) [data-building],section:not(#hero) [data-scene-building]').count() === 0 && await page.locator('.scene-actor,.scene-pointer').evaluateAll(es => es.every(e => +getComputedStyle(e).opacity < .05 || getComputedStyle(e).display === 'none')));
-      for (let i = 0; i < 9; i++) { await page.mouse.wheel(0, 65); await page.waitForTimeout(60); }
+      // Ordinary wheel cadence is intentionally no longer a scan trigger.
+      // Exercise an actual sustained fast pass for the adaptive-mode check.
+      for (let i = 0; i < 7; i++) { await page.mouse.wheel(0, 220); await page.waitForTimeout(60); }
       check('Mobile preserves native adaptive collapse without lower decorative agents', await page.locator('[data-scan-group="projects"]').getAttribute('data-scan-active') === 'true' && await page.locator('.scene-pointer').evaluateAll(es => es.every(e => +getComputedStyle(e).opacity < .05 || getComputedStyle(e).display === 'none')));
       await page.waitForTimeout(1000); await page.screenshot({ path: `${out}/mobile-projects.png` });
       check('Mobile has no horizontal overflow', await page.evaluate(() => document.documentElement.scrollWidth === innerWidth));

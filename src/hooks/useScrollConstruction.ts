@@ -4,6 +4,7 @@ import { constructionScene, type SceneBox } from "@/lib/constructionScene";
 import { createConstructionDirector } from "@/lib/constructionDirector";
 import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
 import { createNameConstruction } from "@/lib/nameConstruction";
+import { getHeroOverlayWork, type HeroOverlayJob } from "@/lib/heroOverlayWork";
 
 type Kind = "text" | "asset" | "structure";
 type Target = {
@@ -229,19 +230,41 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       }
       return { rect, x: Math.max(10, Math.min(innerWidth - 20, x)), y: Math.max(78, Math.min(innerHeight - 42, y)) };
     };
+    const renderOverlayBuilder = (job: HeroOverlayJob) => {
+      const index=job.index, cursor=cursors[index], position=positions[index];
+      if(!cursor)return;
+      position.x=job.x-10; position.y=job.y-.625; position.target=null; position.initialized=true;
+      cursor.style.opacity="1"; cursor.style.transform=`translate3d(${position.x}px,${position.y}px,0)`;
+      cursor.dataset.overlayJob=job.kind; cursor.dataset.click="true";
+      cursor.dataset.edge=position.x>innerWidth-135?"right":"left";
+      cursor.querySelector<SVGElement>("svg")!.style.transform="none";
+      const action=cursor.querySelector<HTMLElement>(".agent-action")!;
+      action.textContent=` · ${job.operation}`;action.style.display="inline";
+      props[index].style.opacity="0";carets[index].style.opacity="0";
+      if(job.box){
+        const guide=guides[index],box=job.box;
+        guide.setAttribute("opacity",".5");
+        const rect=guide.querySelector("rect")!;
+        rect.setAttribute("x",String(box.left-3));rect.setAttribute("y",String(box.top-3));
+        rect.setAttribute("width",String(box.width+6));rect.setAttribute("height",String(box.height+6));rect.style.strokeDashoffset="0";
+        const l=box.left-5,r=box.left+box.width+5,top=box.top-5,b=box.top+box.height+5;
+        guide.querySelector("path")!.setAttribute("d",`M${l+6},${top}h-6v6 M${r-6},${top}h6v6 M${l},${b-6}v6h6 M${r-6},${b}h6v-6`);
+      }else guides[index].setAttribute("opacity","0");
+    };
     const schedule = () => { if (!frame && !stopped && !document.hidden && !reflowing) frame = requestAnimationFrame(tick); };
     const tick = (now: number) => {
       frame = 0;
       if (stopped || document.hidden || reflowing) return;
-      const dt = Math.min(50, Math.max(0, now - lastTick)); lastTick = now;
+      const dt = Math.min(50, Math.max(0, now - lastTick)) * 1.15; lastTick = now;
       const repaint = dirty;
       if (dirty) { measure(); positions.forEach((p, i) => { if (p.target) bindProp(p.target, i); }); }
       if (reduced.matches) { targets.forEach(finish); director?.configure(false); hideAgents(); return; }
-      if (mobileRegistry && targets.every(t => t.progress === 1)) { hideAgents(); dirty = false; return; }
+      const overlayWork=getHeroOverlayWork();
+      if (mobileRegistry && targets.every(t => t.progress === 1) && !overlayWork.active) { hideAgents(); dirty = false; return; }
       const simplified = coarse.matches || innerWidth < 768;
       const intent = getScrollIntent(), velocity = Math.abs(intent.speed);
       const urgency = intent.active && intent.userDriven ? clamp01((velocity - .4) / 1.1) : 0;
-      const fast = intent.active && intent.userDriven && (intent.scan || velocity > 3.5);
+      const fast = intent.active && intent.userDriven && intent.scan;
       const lead = fast ? Math.min(innerHeight * 2.5, velocity * 650) : 0;
       for (const section of sections) {
         const rect = section.getBoundingClientRect();
@@ -290,6 +313,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (simplified && ![0, 2, 5].includes(index)) continue;
         const action = cursors[index].querySelector<HTMLElement>(".agent-action")!;
         action.style.removeProperty("display"); delete cursors[index].dataset.letter;
+        delete cursors[index].dataset.overlayJob;
         if (assembling && assembling.progress < 1 && nameScene) {
           const at = nameScene.point(assembling.progress, index), c = cursors[index], p = positions[index];
           if (at) {
@@ -302,6 +326,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
             continue;
           }
         }
+        const overlayJob=overlayWork.jobs.find(job=>job.index===index);
+        if(overlayJob){renderOverlayBuilder(overlayJob);continue;}
         const cursor = cursors[index], position = positions[index];
         const role = cursor.dataset.role;
         const previous = position.target;
@@ -380,8 +406,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         }
       }
       jump = false;
-      const lowerWork = director?.tick(now, intent, work.length > 0) || false;
-      if (work.some(t => t.progress < 1) || lowerWork) schedule();
+      const lowerWork = director?.tick(now, intent, work.length > 0 || overlayWork.active) || false;
+      if (work.some(t => t.progress < 1) || lowerWork || overlayWork.active) schedule();
     };
     const director = createConstructionDirector({ layer, sections, pointers: cursors, guides, carets, enabled: !mobileRegistry && !reduced.matches, wake: schedule });
     const unsubscribe = subscribeScrollIntent(() => { if (getScrollIntent().hardJump) jump = true; schedule(); });
@@ -400,6 +426,17 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       director?.configure(!next && !reduced.matches);
     };
     const onActivityReady = () => { if (!mobileRegistry && !reflowing) { director?.invalidate(); dirty = true; schedule(); } };
+    const onHeroOverlayWork = () => {
+      if(stopped||document.hidden||reflowing||reduced.matches)return;
+      const current=getHeroOverlayWork();
+      cursors.forEach((cursor,index)=>{
+        if(cursor.dataset.overlayJob&&!current.jobs.some(job=>job.index===index)){
+          cursor.style.opacity="0";delete cursor.dataset.overlayJob;guides[index].setAttribute("opacity","0");
+        }
+      });
+      current.jobs.forEach(renderOverlayBuilder);
+      schedule();
+    };
     const onMeasure = () => { refreshMode(); director?.configure(!mobileRegistry && !reduced.matches); if (reflowing) return; director?.invalidate(); dirty = true; schedule(); };
     const onLayoutStart = () => { reflowing = true; cancelAnimationFrame(frame); frame = 0; hideAgents(); director?.pause(); nameScene?.hide(); };
     const onLayoutSettled = () => { reflowing = false; lastTick = performance.now(); director?.resume(); dirty = true; schedule(); };
@@ -423,6 +460,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     window.addEventListener("portfolio:layout-start", onLayoutStart); window.addEventListener("portfolio:layout-settled", onLayoutSettled);
     window.addEventListener("resize", onMeasure, { passive: true }); window.addEventListener("portfolio:regroup", onRegroup);
     window.addEventListener("portfolio:activity-ready", onActivityReady);
+    window.addEventListener("portfolio:hero-overlay-work",onHeroOverlayWork);
     window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump); window.addEventListener("pageshow", onPageShow);
     document.addEventListener("focusin", onFocus); document.addEventListener("visibilitychange", onVisibility);
     reduced.addEventListener("change", onMeasure); coarse.addEventListener("change", onMeasure);
@@ -435,6 +473,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       window.removeEventListener("portfolio:layout-start", onLayoutStart); window.removeEventListener("portfolio:layout-settled", onLayoutSettled);
       unsubscribe(); window.removeEventListener("resize", onMeasure); window.removeEventListener("portfolio:regroup", onRegroup);
       window.removeEventListener("portfolio:activity-ready", onActivityReady);
+      window.removeEventListener("portfolio:hero-overlay-work",onHeroOverlayWork);
       window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump); window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("focusin", onFocus); document.removeEventListener("visibilitychange", onVisibility);
       reduced.removeEventListener("change", onMeasure); coarse.removeEventListener("change", onMeasure);

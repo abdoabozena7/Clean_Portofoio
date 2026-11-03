@@ -1,3 +1,48 @@
+# Paced construction repair and compact score popup — 3 November 2026
+
+Fixed ordinary scrolling being classified as fast browsing and cancelling visible construction. Agents now resume real work in the current visible section after slowing down, including repeated scan/recovery cycles. Local preview: http://127.0.0.1:8080/Clean_Portofoio/ ; production preview: http://127.0.0.1:8083/Clean_Portofoio/ . No deployment or push.
+
+- Pace uses actual elapsed movement, viewport-relative sustained speed, travel and entry/exit hysteresis. A single accidental large jump makes destination content available immediately without switching the presentation to scan. Keyboard page jumps and anchors remain immediate.
+- Removed the ordinary-scroll completion floor and current-viewport blanket completion on recovery. Fast preparation stays provisional; unfinished/skimmed current scenes can establish slots, type and place assets again. The static folding-worker display was removed; visible workers perform actual scene jobs.
+- Fast Experience shows larger logos/company names/roles and hides secondary copy. Credential summaries keep a prominent title and enlarge real photographs. Mobile logos reach68px from40px and certificate imagery was measured almost twice its original width; normal dimensions restore exactly. Rows above the reading line keep their footprint so native touch momentum cannot pull titles out of view.
+- The same circular score opens a small curved numeric popup: current percentage, plain count, visit-local **Best score**, and “Think you know what this number means? Message me.” linked to https://www.instagram.com/abdoabozena1/ . Algorithm explanations, routes and story lists were removed from this UI. Actual exposure evidence, coverage and local-memory behavior stay unchanged; no invented scores or persistence.
+
+## Files and verification
+
+Runtime: new `src/lib/scrollPace.ts`, `src/styles/score-popup.css`; updated `scrollIntent.ts`, `constructionDirector.ts`, `useAdaptiveBrowsing.ts`, one fast-intent condition in `useScrollConstruction.ts`, `ExperienceSection.tsx`, `ScrollToTop.tsx` and the supplied Instagram in `profileContent.ts`. Existing concurrent hero integration and the later shorter About copy are retained. See `PACED_BROWSING_PLAN.md` for the ordered checklist and provenance.
+
+The independent native browser pace verifier was written before implementation: the original source fails8of15checks. The same assertions now pass15/15, observing each agent's motion relative to the current Education item and real changing masks over two recovery cycles. Ordinary80px/140ms movement stays detailed; sustained220px/60ms input triggers scan. Merely showing several stationary agents cannot pass.
+
+Verification artifacts under ignored `output/`:
+
+| Journey | Result | Evidence |
+|---|---|---|
+| Pace, current-section recovery, scan hierarchy, touch/reduced motion | 15/15PASS | `playwright/paced-browsing-after/report.json` |
+| Four-size natural geometry/content/pixel comparison | 2277/2277PASS | `playwright/scene-layout/report.json` |
+| Actual construction recipes in all lower sections | 37/37PASS | `playwright/scenes-recipes/report.json` |
+| Production interactions/cursor/zoom/CV/terminal/form/history/keyboard | 60/60PASS | `playwright/paced-production/report.json` |
+| Quality model, generic popup, Instagram, company evidence | 46/46PASS | `playwright/quality/report.json` |
+| Genuine all33-story exposure and numeric33/33/Best100 | 6/6PASS | `playwright/discovery-completion/report.json` |
+| Native momentum, optional reminders and natural restoration | 65/65PASS | `research/fluid-review/report.json` |
+| Wheel/touch material continuity and idle restoration | 16/16PASS | `research/scan-continuity/report.json` |
+| Build, TypeScript, lint, unit tests | PASS;13unit tests,0lint errors | Existing seven Fast Refresh warnings remain |
+
+Final copy-inclusive app fingerprint: `99ce0687ae0cc0279581e6e3ac544512a8abaa593dffb74dc60afce5b00b5646`. The earlier final algorithm freeze `a40d665a…` also passed33semantic scene checks,37section-recipe checks and52quality/reminder-budget checks, including20-second cooldown, three-appearance cap and dismissal. The only later app change is the concurrent About shortening; current pace, production, model/popup and complete33-story routes were rerun for that copy. Each JSON report records its actual full or narrower source scope; old receipts are not relabeled.
+
+Four-size capture compares desktop1440×900, laptop1366×768, tablet768×1024and mobile390×844 against preserved3daca4b. All2277checks pass; natural bounds/font/spacing and unchanged sections remain within1CSS pixel with no overflow. The later About shortening is an intentional content exception (height falls175.5px desktop/laptop and182px tablet/mobile); downstream Y offsets match that reduction exactly. Pixel reference is a separate3daca4b checkout amended ONLY with the current profileContent, avoiding fractional-origin differences. The original geometry baseline is preserved. The clock-derived last_build date is normalized across UTC midnight; the About inline symbol can move with the approved text, while the actual portrait remains invariant. Construction and scan behavior are exercised separately from finished-state captures.
+
+Screenshots and recorded motion were inspected, including enlarged mobile images/roles, current-section slot/type/resize work and the plain curved popup. The model is still a behavioral exposure estimate, not proof of reading or concentration. Native headless Edge/touch emulation is covered; physical-device/CWV or engagement improvement is not claimed.
+
+## Failure history and limits
+
+The old80ms velocity cap inflated ordinary wheel speed. Recovery released every visible surface as if complete; a repeated scan could also arrive after construction had finished but before meaningful exposure. Those causes were fixed. Tests then caught a146px title shift from shrinking a preceding row and a touch guard that treated scrolling like an interactive press; both are fixed. A genuinely fast timestamped fling can continue beyond1.3seconds, so restoration is checked after real native idle, without stopping inertia. Old tests that used moderate input to demand collapse now use genuine fast input; their layout/momentum oracles were not relaxed. The benchmark function remains identical to the preserved reference.
+
+The original red pace run is retained as a negative control. An isolated10px Hivo image-width fault is also checked against the geometry oracle. No production source is fault-injected. Source-drift failures correctly invalidated runs when the parallel About copy changed; copy-specific captures and relevant journeys were repeated.
+
+Build warnings remain: stale Browserslist and a519.02kB main bundle (167.23kB gzip), plus seven existing ESLint warnings. No warning threshold was suppressed or dependency added. No known functional failure remains in the declared verified scope. HarrTest is instruction-only: product VERIFIED_WITHIN_SCOPE; sealed mechanical ROOT_GOAL_UNVERIFIED(not executed); BEHAVIORAL_IMPACT_UNPROVEN.
+
+---
+
 # Semantic construction scenes and exploration quality — 3 November 2026
 
 Implemented and verified locally on `codex/scroll-agent-construction`. No deployment or push was performed for this revision. Stable tested production preview: http://127.0.0.1:8083/Clean_Portofoio/ . The development preview at8080can advance with concurrent work. The release notes below this entry describe earlier published versions.

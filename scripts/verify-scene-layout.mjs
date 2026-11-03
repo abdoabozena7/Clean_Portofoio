@@ -7,6 +7,7 @@ const sharp = require(process.env.SHARP_MODULE || 'C:/Users/A-plus/.cache/codex-
 const arg = (name, fallback) => { const i = process.argv.indexOf(name); return i < 0 ? fallback : process.argv[i + 1]; };
 const beforeName = arg('--before', 'scenes-before'), afterName = arg('--after', 'scenes-after');
 const pixelBeforeName = arg('--pixel-before', beforeName);
+const expectedHead = arg('--expected-head', '52cfa85');
 const negative = process.argv.includes('--negative-control');
 const out = `output/playwright/scene-layout${negative ? '-negative' : ''}`;
 await mkdir(out, { recursive: true });
@@ -22,11 +23,12 @@ async function fingerprint() {
   return hash.digest('hex');
 }
 const within = (a, b) => Math.abs(a - b) <= 1;
-const stableCopy = text => text.replace(/\d+ contributions in the last year/g, '<live contribution count>');
+const stableCopy = text => text.replace(/\d+ contributions in the last year/g, '<live contribution count>')
+  .replace(/last_build: \d{4}-\d{2}-\d{2}/g, 'last_build: <runtime calendar date>');
 if (negative) after.viewports.desktop.elements.find(e => e.section === 'projects' && e.tag === 'img').rect.width += 10;
 try {
   check('Before and after captures are source-coherent', before.sourceBefore === before.sourceAfter && after.sourceBefore === after.sourceAfter);
-  check('Baseline is the approved52cfa85 source', before.head.startsWith('52cfa85'), before.head);
+  check(`Baseline is the approved${expectedHead} source`, before.head.startsWith(expectedHead), before.head);
   check('Final capture belongs to the source currently checked out', await fingerprint() === after.sourceAfter);
   for (const viewport of ['desktop', 'laptop', 'tablet', 'mobile']) {
     const a = before.viewports[viewport], b = after.viewports[viewport];
@@ -43,8 +45,9 @@ try {
       const expected = { ...old.rect, y: old.rect.y + (followingAbout(old.key) ? aboutDelta : 0) };
       check(`${viewport}: ${old.key} section geometry`, !!now && ['x', 'y', 'width', ...(old.key === 'about' ? [] : ['height'])].every(k => within(expected[k], now.rect[k])), { before: old.rect, expected, after: now?.rect });
     }
+    const portraitSelector = a.elements.find(e => e.section === 'about' && e.tag === 'img')?.selector;
     for (const old of a.elements.filter(e => e.rect.width > 0 && e.rect.height > 0)) {
-      if (old.section === 'about' && old.tag !== 'h2' && !(old.tag === 'img' && old.selector.includes('img:nth-of-type(1)'))) continue;
+      if (old.section === 'about' && old.tag !== 'h2' && old.selector !== portraitSelector) continue;
       const now = b.elements.find(e => e.selector === old.selector);
       check(`${viewport}: ${old.selector} element retained`, !!now);
       if (!now) continue;

@@ -21,8 +21,8 @@
     "test:live": "node scripts/verify-live.mjs",
     "test:dynamic": "node scripts/verify-dynamic.mjs",
     "test:profile": "node scripts/verify-fluid-browsing.mjs",
-    "test:layout:capture": "node scripts/capture-layout.mjs --label scenes-final-reviewed --settle-construction",
-    "test:layout": "node scripts/verify-scene-layout.mjs --before scenes-baseline-settled --after scenes-final-reviewed --pixel-before scenes-approved-reference",
+    "test:layout:capture": "node scripts/capture-layout.mjs --label paced-final --settle-construction",
+    "test:layout": "node scripts/verify-scene-layout.mjs --before paced-baseline --after paced-final --pixel-before paced-copy-reference --expected-head 3daca4b",
     "test:layout:cinematic": "node scripts/verify-fluid-layout.mjs",
     "test:layout:adaptive": "node scripts/verify-fluid-layout.mjs",
     "predeploy": "npm run build",
@@ -36,10 +36,11 @@
     "test:discovery:complete": "node scripts/verify-discovery-completion.mjs",
     "test:scenes": "node scripts/verify-scenes.mjs",
     "test:scenes:recipes": "node scripts/verify-scenes.mjs --recipes-only",
-    "test:scenes:layout": "node scripts/verify-scene-layout.mjs --before scenes-baseline-settled --after scenes-final-reviewed --pixel-before scenes-approved-reference",
+    "test:scenes:layout": "node scripts/verify-scene-layout.mjs --before paced-baseline --after paced-final --pixel-before paced-copy-reference --expected-head 3daca4b",
     "test:quality": "node scripts/verify-quality.mjs",
     "test:media-readiness": "node scripts/verify-media-readiness.mjs",
-    "test:scroll-recovery": "node scripts/verify-scroll-recovery.mjs"
+    "test:scroll-recovery": "node scripts/verify-scroll-recovery.mjs",
+    "test:pace": "node scripts/verify-paced-browsing.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

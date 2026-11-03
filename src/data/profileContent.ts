@@ -286,6 +286,7 @@ export const repositoryStats = {
 };
 
 export const profileContent = {
+  instagramUrl: "https://www.instagram.com/abdoabozena1/",
   name: "Abdelrahman Abozena",
   headline: "SWE Intern at Microsoft",
   microsoftStoryUrl: "https://lnkd.in/p/e-7HV-sM",
@@ -297,9 +298,9 @@ export const profileContent = {
   avatar: "images/portrait-cutout.png",
   avatarStatus: "AI Engineer",
   about: [
-    "I’m Abdelrahman, an AI Engineer who started coding before university. I’ve always had an engineer’s brain: I like logic, asking why, and figuring things out. Computers felt like good company—they usually make sense. Usually.",
-    "Software got me started; data got me curious. I found I loved digging into patterns and questioning what the numbers were saying. Data analysis led me to machine learning, then deep learning. When ChatGPT came along, that curiosity pulled me into LLMs. Today, I build RAG systems and AI agents with Python and FastAPI, connecting models, tools, and skills to solve practical problems.",
-    "I’m now a fourth-year Computer Science student at Egyptian Chinese University, with one year to go, and currently a SWE Intern at Microsoft. Still learning, still building—and still asking why.",
+    "I’m Abdelrahman, an AI Engineer who started coding before university. I like logic, figuring things out, and asking why. Computers usually make sense. Usually.",
+    "Curiosity took me from software through data, ML, and deep learning to LLMs. Today, I build practical RAG systems and AI agents with Python and FastAPI.",
+    "I’m a fourth-year Computer Science student at Egyptian Chinese University, with one year remaining, and a SWE Intern at Microsoft. Still learning, building, and asking why.",
   ],
   contactIntro: "Currently a SWE Intern at Microsoft. For AI, backend, or open-source collaboration, feel free to reach out.",
   footerNote: "Based in Giza, Egypt | Let's talk AI, agents, and engineering",

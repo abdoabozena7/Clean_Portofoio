@@ -31,9 +31,9 @@ try {
  const shown = parseFloat(await page.locator('.exploration-trigger strong').textContent());
  check('All33 actual stories retain genuine full exposure evidence', ids.length === 33 && report.steps.every(step => step.quality === 100 && step.coverage === 100 && step.encountered), report.steps.filter(step => step.quality !== 100 || step.coverage !== 100));
  check('The quality indicator reaches100 from actual expanded exposure', shown === 100, shown);
- await page.getByRole('button', { name: /Exploration quality: .*Open exploration map/ }).click();
- check('Coverage separately reports33 of33 meaningfully exposed stories', (await page.locator('.exploration-map h2').innerText()) === 'Coverage: 33 of 33 stories');
- check('The all-stories list retains all33 native navigation links', await page.locator('.discovery-all .exploration-items li').count() === 33);
+ await page.getByRole('button', { name: /Current score: .*Open score details/ }).click();
+ check('The completed popup separately reports the genuine plain33 / 33 count', (await page.locator('.score-popup-count').innerText()) === '33 / 33');
+ check('Actual full exposure reaches100 current and100 Best score without requiring story-list clicks', parseFloat(await page.locator('.score-popup-current').innerText()) === 100 && parseFloat(await page.locator('.score-popup-best strong').innerText()) === 100 && await page.locator('[data-exploration-map] details,[data-exploration-map] ul,.exploration-routes').count() === 0);
  await page.screenshot({ path: out + '/all-stories-complete.png' }); check('Completion generated no browser errors', report.errors.length === 0, report.errors);
  report.sourceAfter = await source(); check('The complete journey stayed coherent with its source', report.sourceBefore === report.sourceAfter); report.passed = report.checks.every(item => item.passed);
 } catch (error) { report.failure = error.stack; console.error(error); }

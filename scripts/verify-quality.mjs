@@ -11,7 +11,7 @@ async function source() { const files = []; async function walk(dir) { for (cons
 const report = { url, sourceBefore: await source(), mode: 'native browser / real application / headless Edge', negative, faultApplied: false, checks: [], observations: [], errors: [], passed: false };
 const check = (name, passed, evidence) => { report.checks.push({ name, passed: !!passed, evidence }); console.log(`${passed ? 'PASS' : 'FAIL'} ${name}`); };
 const browser = await chromium.launch({ channel: 'msedge', headless: true });
-const gauge = page => page.getByRole('button', { name: /Exploration quality: .*Open exploration map/ });
+const gauge = page => page.getByRole('button', { name: /Current score: .*Open score details/ });
 const score = page => page.locator('.exploration-trigger strong').textContent().then(value => parseFloat(value));
 const evidence = (page, selector) => page.locator(selector).evaluate(el => ({ quality: Number(el.dataset.quality), coverage: Number(el.dataset.qualityCoverage), encountered: el.dataset.qualityEncountered === 'true', confidence: el.dataset.qualityConfidence }));
 const records = page => page.locator('[data-discovery-id]').evaluateAll(es => es.map(el => ({ id: el.dataset.discoveryId, quality: Number(el.dataset.quality), coverage: Number(el.dataset.qualityCoverage), encountered: el.dataset.qualityEncountered === 'true' })));
@@ -19,7 +19,11 @@ const move = async (page, selector, wait = 450) => { await page.locator(selector
 const fresh = async (mobile = true) => {
  const context = await browser.newContext({ viewport: mobile ? { width: 390, height: 844 } : { width: 1440, height: 900 }, isMobile: mobile, hasTouch: mobile, reducedMotion: 'reduce' });
  if (negative) await context.route('**/src/lib/discoveryScore.ts*', async route => { const response = await route.fetch(), original = await response.text(); const altered = original.replace(/return Math\.round\([^\n;]+\)\s*\/\s*10;/, 'return Math.round(1000 * earned / (encountered.length + 2)) / 10;'); report.faultApplied ||= altered !== original; await route.fulfill({ response, body: altered }); });
- const page = await context.newPage(); page.on('pageerror', error => report.errors.push(error.message)); await page.goto(url + '#contact', { waitUntil: 'networkidle' }); await page.evaluate(() => document.fonts.ready); await page.bringToFront(); return { context, page };
+ const page = await context.newPage(); page.on('pageerror', error => report.errors.push(error.message)); await page.goto(url + '#contact', { waitUntil: 'networkidle' }); await page.evaluate(() => document.fonts.ready); await page.bringToFront();
+ // Observe only the genuine rendered score, independently of the component's
+ // visit-local maximum. This does not inject evidence or alter its calculation.
+ await page.evaluate(() => { const value = document.querySelector('.exploration-trigger strong'); const sample = () => { window.__observedScoreMaximum = Math.max(window.__observedScoreMaximum || 0, parseFloat(value.textContent) || 0); }; sample(); new MutationObserver(sample).observe(value, { childList: true, characterData: true, subtree: true }); });
+ return { context, page };
 };
 
 async function verifyCompanies() {
@@ -77,12 +81,14 @@ try {
  check('A visible expanded revisit strengthens its own story evidence', afterReturn.quality > beforeReturn.quality, { beforeReturn, afterReturn });
  await gauge(page).click();
  check('The optional panel retains its curved side corners', await page.locator('[data-exploration-map]').evaluate(el => parseFloat(getComputedStyle(el).borderTopLeftRadius) >= 20));
- check('Coverage is separate from quality and does not imply full-site completion', await page.locator('.exploration-map h2').innerText().then(text => /^Coverage: \d+ of 33 stories$/.test(text)) && await page.locator('.exploration-explainer').innerText().then(text => text.includes('encountered stories')));
- check('The explanation states the local evidence boundary without a reading claim or penalty rules', await page.locator('.discovery-rules p').textContent().then(text => text.includes('not reading or comprehension') && text.includes('nothing is saved or sent') && !/penalt|game|debt/i.test(text)));
+ check('The compact popup keeps the genuine count as plain numbers separate from the current percentage', await page.locator('.score-popup-count').innerText().then(text => /^\d+ \/ 33$/.test(text)) && Math.abs(parseFloat(await page.locator('.score-popup-current').innerText()) - await score(page)) < .1);
+ check('The popup follows the requested mystery contract without explanatory labels or route/story menus', await page.locator('[data-exploration-map]').innerText().then(text => text.includes('Think you know what this number means?') && !/exposure|quality|reading|comprehension|coverage|encountered|stories|penalt|game|debt/i.test(text)) && await page.locator('[data-exploration-map] details,[data-exploration-map] ul,.exploration-routes,.exploration-next').count() === 0);
+ const best = parseFloat(await page.locator('.score-popup-best strong').innerText()), observedMaximum = await page.evaluate(() => window.__observedScoreMaximum);
+ check('Best score retains the independently observed genuine visit maximum', Math.abs(best - observedMaximum) < .1 && best >= await score(page), { best, observedMaximum, current: await score(page) });
  const covered = await records(page); await page.waitForTimeout(1600);
  check('The open panel cannot earn background story exposure', JSON.stringify(await records(page)) === JSON.stringify(covered));
- await page.getByRole('button', { name: 'AI & agents', exact: true }).click(); check('Visitor-chosen route controls still work', await page.getByRole('button', { name: 'AI & agents', exact: true }).getAttribute('aria-pressed') === 'true');
- await page.locator('.discovery-rules summary').click(); await page.screenshot({ path: out + '/mobile-quality-coverage.png' }); await page.keyboard.press('Escape');
+ check('The invitation links to the exact owner-supplied Instagram without invented profile data', await page.locator('.score-popup-message').getAttribute('href') === 'https://www.instagram.com/abdoabozena1/' && await page.locator('.score-popup-message').getAttribute('rel') === 'noopener noreferrer');
+ await page.screenshot({ path: out + '/mobile-quality-coverage.png' }); await page.keyboard.press('Escape');
  check('Escape closes the nonmodal map and restores keyboard focus', await page.locator('[data-exploration-map]').count() === 0 && await gauge(page).evaluate(el => document.activeElement === el));
  await move(page, '#project-ya-rab-ostorha', 0); await page.locator('#project-ya-rab-ostorha [data-scan-detail]').evaluateAll(es => es.forEach(el => { el.inert = true; el.style.opacity = '0'; })); const collapsed = await evidence(page, '#project-ya-rab-ostorha'); await page.waitForTimeout(2000);
  check('Collapsed details earn no story exposure while their title remains visible', (await evidence(page, '#project-ya-rab-ostorha')).quality === collapsed.quality);
@@ -118,7 +124,7 @@ try {
  const sourceClick = await evidence(sp, '#project-hivo');
  check('A genuine source-link activation without visible exposure gives no instant credit', sourceClick.quality === 0, sourceClick);
  await popup.close(); await sourceCase.context.close();
- const desktop = await fresh(false); await gauge(desktop.page).click(); check('Desktop offers all33 genuine story links', await desktop.page.locator('.discovery-all .exploration-items li').count() === 33); await desktop.page.screenshot({ path: out + '/desktop-quality-panel.png' }); await desktop.context.close();
+ const desktop = await fresh(false); await gauge(desktop.page).click(); check('Desktop retains the compact numeric count and Instagram invitation without a story menu', await desktop.page.locator('.score-popup-count').innerText().then(text => /^\d+ \/ 33$/.test(text)) && await desktop.page.locator('.score-popup-message').getAttribute('href') === 'https://www.instagram.com/abdoabozena1/' && await desktop.page.locator('[data-exploration-map] details,[data-exploration-map] ul,.exploration-routes').count() === 0); await desktop.page.screenshot({ path: out + '/desktop-quality-panel.png' }); await desktop.context.close();
  await verifyCompanies();
  if (reminders) {
   const run = await fresh(), p = run.page, appearances = [];

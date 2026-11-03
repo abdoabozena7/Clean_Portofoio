@@ -49,7 +49,6 @@ export default function HeroAgentsOverlay({ headingRef }: Props) {
             <path d="M-16 0C-19-4-16-9-12-8C-8-10-4-6-6-1M-15-2L-14-5M-11-1L-10-5" />
             <path d="M6-1C4-6 8-10 12-8C16-9 19-4 16 0M10-1L10-5M14-2L14-5" />
           </g>
-          {kind === "teal" && <g data-drawing-pen><path d="M11-10L0 0" strokeWidth="3" /><path d="M0 0L-2 2" strokeWidth="1" /></g>}
         </g>
       ))}
       <g data-hero-celebration strokeWidth="2.3">

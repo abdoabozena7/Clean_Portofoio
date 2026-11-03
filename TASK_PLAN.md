@@ -1,5 +1,7 @@
 # Current revision
 
+Latest local repair: `PACED_BROWSING_PLAN.md` tracks sustained pace detection, current-section agent recovery, larger scan imagery/credentials and the compact numeric popup with the supplied Instagram. Current results are at the top of `CHANGE_REPORT.md`. Earlier release entries remain historical; no new deployment is part of this revision.
+
 Current local work: see SCENE_IMPLEMENTATION_PLAN.md and the newest CHANGE_REPORT.md entry for the completed semantic construction, quality metric, logo-loader, fast-recovery and preload revision. Baseline52cfa85 is preserved. All required local acceptance is verified; this revision has not been published. User-confirmed concurrent About and Hero additions are retained. Entries below describe prior completed releases.
 
 See DISCOVERY_PLAN.md and the newest CHANGE_REPORT.md entry. Reversible all-story exposure score, round controls/curved side panel and complete per-element hero construction are implemented, tested and deployed under existing authorization. Sourcefbac916; publishedgh-pagesd2b58a9, successfulPagesrun41457057276 and21livechecks/productionbytehashes verified. Prior5-highlight/source-click instant-award contract is superseded by the user's expanded-visible-content requirement. Existing free native scrolling/mobile hero-only agents remain. Earlier plans below are historical.

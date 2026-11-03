@@ -1,7 +1,7 @@
 import { clamp01, textFrame } from "./construction";
 import { operationPose, type SceneBox } from "./constructionScene";
 import { compileRecipe, discoverScenes, readBox, semanticSurfaces, type PaintElement, type RuntimeScene, type SceneUnit, type Surface, type TimedJob } from "./constructionRecipes";
-import type { ScrollIntent } from "./scrollIntent";
+import { getScrollIntent, type ScrollIntent } from "./scrollIntent";
 
 type DirectorOptions = { layer: HTMLDivElement; sections: HTMLElement[]; pointers: HTMLElement[]; guides: SVGGElement[]; carets: HTMLElement[]; enabled: boolean; wake: () => void };
 type Prop = { el: HTMLDivElement; target: string; source: string; clone?: HTMLElement };
@@ -119,16 +119,16 @@ export function createConstructionDirector(options: DirectorOptions) {
     scene.units.forEach(u => { u.root.dataset.sceneBypassed = "true"; });
   }
 
-  function rearm(scene: RuntimeScene, direction: number) {
+  function rearm(scene: RuntimeScene) {
     scene.bypassed = false; scene.state = "unstarted"; scene.elapsed = 0; scene.progress = 0; scene.entered = false; scene.lastAt = 0;
     scene.timeline.forEach(job => copyOrigins.delete(job.id));
     for (const u of scene.units) {
       u.complete = false; u.root.dataset.sceneState = "unstarted"; delete u.root.dataset.sceneBypassed;
       for (const s of u.surfaces) {
         s.progress = 0; s.populated = false;
-        const b = viewportBox(s.box);
-        const beingRead = b.top < innerHeight * .6 && b.top + b.height > 76 && (direction >= 0 || b.top + b.height > innerHeight * .4);
-        if (beingRead) release(s); else hide(s);
+        // Retain a visible heading for orientation, then actually rebuild the
+        // current item's unfinished body/media instead of declaring it all read.
+        if (s.part === "heading" && visibleBox(s.box)) release(s); else hide(s);
       }
     }
   }
@@ -339,7 +339,8 @@ export function createConstructionDirector(options: DirectorOptions) {
     try {
       if (dirty) measure();
       hideActors(true);
-      const velocity = Math.abs(intent.speed), fast = intent.active && intent.userDriven && (intent.scan || velocity > 3.5);
+      const velocity = Math.abs(intent.speed), fast = intent.active && intent.userDriven && intent.scan;
+      const leap = intent.active && intent.userDriven && intent.leap;
       const lead = fast ? Math.min(innerHeight * 2.5, velocity * 650) : 0;
       const activeJobs: { job: TimedJob; scene: RuntimeScene; p: number }[] = [];
       let working = false;
@@ -347,9 +348,9 @@ export function createConstructionDirector(options: DirectorOptions) {
         const top = scene.top - scrollY, bottom = scene.bottom - scrollY;
         const reading = top < innerHeight && bottom > 76;
         if (intent.hardJump && reading) { finish(scene); continue; }
-        if (scene.bypassed && !fast && !intent.hardJump && reading) {
-          const explored = scene.units.every(u => Number(u.root.dataset.quality || 0) >= 60);
-          if (!explored) rearm(scene, intent.direction); else scene.bypassed = false;
+        if (leap && reading) { bypass(scene); continue; }
+        if (scene.bypassed && !fast && !leap && !intent.hardJump && reading) {
+          rearm(scene);
         }
         if (scene.state === "complete") continue;
         const approaching = fast && (intent.direction > 0 ? top < innerHeight + lead && bottom > 76 : bottom > 76 - lead && top < innerHeight);
@@ -367,9 +368,11 @@ export function createConstructionDirector(options: DirectorOptions) {
           scene.lastAt = 0; continue;
         }
         if (!scene.entered) { scene.entered = true; scene.state = "building"; scene.lastAt = now; scene.units.forEach(u => { u.root.dataset.sceneState = "building"; u.root.dataset.sceneBuilding = ""; }); }
-        const dt = Math.min(50, Math.max(0, now - (scene.lastAt || now))); scene.lastAt = now;
-        const floor = reverse ? clamp01((workBottom - 76) / (innerHeight * .42)) : clamp01((innerHeight * .94 - workTop) / (innerHeight * .42));
-        const desired = Math.max(scene.elapsed + dt, !scene.dataWait || intent.active ? floor * scene.duration : 0);
+        const dt = Math.min(50, Math.max(0, now - (scene.lastAt || now))) * 1.15; scene.lastAt = now;
+        // Ordinary movement must not teleport the job clock to a viewport floor.
+        // Actual fast intent has already prepared content in the branch above.
+        const tempo = 1 + Math.min(.35, Math.max(0, velocity * 1000 / innerHeight - .8) * .2);
+        const desired = scene.elapsed + dt * tempo;
         let limit = Infinity;
         for (const job of scene.timeline) {
           if (["drag", "replace"].includes(job.operation) && !imageReady(job.surface)) limit = Math.min(limit, job.start);
@@ -383,9 +386,10 @@ export function createConstructionDirector(options: DirectorOptions) {
         working ||= !waiting;
         for (const u of scene.units) {
           if (u.complete) continue;
-          // Only the active semantic surface fails open at the reading line.
+          // Release surfaces only once they have left the reading area. The
+          // current visible text/image retains its full construction timeline.
           for (const s of u.surfaces) {
-            const b = viewportBox(s.box), inReadingBand = reverse ? b.top + b.height > innerHeight * .48 && b.top < innerHeight - 56 : b.top < innerHeight * .52 && b.top + b.height > 76;
+            const b = viewportBox(s.box), inReadingBand = b.top + b.height <= 76;
             if (s.kind !== "shell" && inReadingBand && (s.kind === "text" || !scene.dataWait || intent.active) && imageReady(s)) release(s);
           }
           if (scene.elapsed >= u.end) { finishUnit(u); continue; }
@@ -445,7 +449,14 @@ export function createConstructionDirector(options: DirectorOptions) {
   configure(options.enabled);
   return {
     tick, configure, invalidate() { dirty = true; wake(); },
-    pause() { paused = true; hideActors(); },
+    pause() {
+      // A scan summary needs readable real surfaces, but completion is only
+      // provisional: restoration resumes current visible assembly in place.
+      const scanning = getScrollIntent().scan;
+      scenes.filter(s => s.top - scrollY < innerHeight && s.bottom - scrollY > 76 &&
+        (s.state !== "complete" || scanning && s.units.some(u => Number(u.root.dataset.quality || 0) < 85))).forEach(bypass);
+      paused = true; hideActors();
+    },
     resume() { paused = false; dirty = true; scenes.forEach(s => { s.lastAt = 0; }); wake(); },
     jump() { if (enabled) { measure(); scenes.filter(s => s.bottom - scrollY > 76 && s.top - scrollY < innerHeight).forEach(finish); hideActors(); } },
     dispose() {

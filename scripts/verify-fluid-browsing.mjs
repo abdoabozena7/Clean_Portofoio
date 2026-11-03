@@ -80,8 +80,8 @@ try{
     const y=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,120);await page.waitForTimeout(120);const moved=await page.evaluate(()=>scrollY);check(label+' wheel continues freely after reminder',Math.abs(moved-y)>50);
     check(label+' does not cancel native input',await page.evaluate(()=>window.__fluid.prevented.length===0));
     await checkIdlePosition(page,label);await page.screenshot({path:`${out}/${label}-optional.png`});
-    if(label==='hivo'){
-     await page.locator('.exploration-trigger').tap();const button=page.locator('.exploration-items').first().getByRole('button',{name:/Hivo Studio/});await button.tap();await page.waitForTimeout(800);
+    if(label==='hivo'&&await cue.count()){
+     await cue.getByRole('button',{name:/Revisit/}).tap();await page.waitForTimeout(800);
      check('Explicit touch Revisit reaches full Hivo without a lock',await page.locator('#project-hivo h3').evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=76&&r.bottom<innerHeight;})&&await page.locator('#project-hivo [data-scan-detail]').evaluateAll(es=>es.every(e=>!e.inert&&+getComputedStyle(e).opacity>.99)));
      check('Explicit Revisit removes reminder',await page.locator('.quick-pass-cue').count()===0);
      const start=await page.evaluate(()=>scrollY);await page.mouse.wheel(0,100);await page.waitForTimeout(100);check('Scrolling remains free immediately after explicit Revisit',Math.abs(await page.evaluate(()=>scrollY)-start)>50);
@@ -113,7 +113,7 @@ try{
   await phase('Mobile hero-only builders and preserved lower controls',async()=>{
    const{context,page}=await setup(url,true);await page.reload({waitUntil:'domcontentloaded'});await page.waitForTimeout(600);check('Mobile hero retains construction pointers',await mobileAgents(page)>0);
    await page.evaluate(()=>document.getElementById('projects').scrollIntoView({behavior:'instant'}));await page.waitForTimeout(200);check('Mobile lower sections never show agent pointers',await mobileAgents(page)===0);
-   for(let i=0;i<9;i++){await page.mouse.wheel(0,65);await page.waitForTimeout(60);}check('Mobile collapse remains active without decorative agents',await page.locator('[data-scan-group="projects"]').getAttribute('data-scan-active')==='true'&&await mobileAgents(page)===0);await page.waitForTimeout(900);
+     for(let i=0;i<7;i++){await page.mouse.wheel(0,220);await page.waitForTimeout(60);}check('Mobile collapse remains active without decorative agents',await page.locator('[data-scan-group="projects"]').getAttribute('data-scan-active')==='true'&&await mobileAgents(page)===0);await page.waitForTimeout(900);
    const item=page.locator('#project-harrtest');await item.evaluate(e=>e.scrollIntoView({behavior:'instant',block:'center'}));await page.waitForTimeout(150);check('Lower mobile content is real and fully readable',await item.locator('[data-scan-detail]').evaluateAll(es=>es.every(e=>!e.inert&&+getComputedStyle(e).opacity>.99))&&await item.locator('[data-building]').count()===0);
    check('Mobile has no horizontal overflow',await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth));await page.screenshot({path:`${out}/mobile-lower-readable.png`});await context.close();
   });
@@ -122,7 +122,7 @@ try{
     const{context,page}=await setup();const selector=`[data-scan-group="${group}"]`;await position(page,selector,350);
     const shape=el=>[...el.querySelectorAll('[data-scan-item],[data-project],.skill-category')].map(item=>{const r=item.getBoundingClientRect(),h=item.querySelector('h3'),s=getComputedStyle(h);return{text:h.textContent,top:r.top,width:r.width,height:r.height,font:s.font,line:s.lineHeight,details:[...item.querySelectorAll('[data-scan-detail]')].map(d=>({inert:d.inert,opacity:+getComputedStyle(d).opacity}))};});
     const before=await page.locator(selector).evaluate(shape);let reducedHeight=false,active=false;
-    for(let i=0;i<12;i++){await page.mouse.wheel(0,65);await page.waitForTimeout(60);const sample=await page.locator(selector).evaluate(shape);reducedHeight ||=sample.some((item,index)=>item.height<before[index].height-10);active ||=await page.locator(selector).getAttribute('data-scan-active')==='true';}
+    for(let i=0;i<8;i++){await page.mouse.wheel(0,220);await page.waitForTimeout(60);const sample=await page.locator(selector).evaluate(shape);reducedHeight ||=sample.some((item,index)=>item.height<before[index].height-10);active ||=await page.locator(selector).getAttribute('data-scan-active')==='true';}
     const allAlreadyVisible=before.every(item=>item.top<812);
     check(group+' keeps adaptive mode without shrinking already visible short groups',active&&(reducedHeight||allAlreadyVisible),{active,reducedHeight,allAlreadyVisible});await page.waitForTimeout(1100);const after=await page.locator(selector).evaluate(shape);
     check(group+' restores exact natural boxes/fonts and accessible opaque details',after.every((item,index)=>Math.abs(item.width-before[index].width)<.2&&Math.abs(item.height-before[index].height)<.2&&item.font===before[index].font&&item.line===before[index].line&&item.details.every(d=>!d.inert&&d.opacity>.99)),{before,after});await context.close();

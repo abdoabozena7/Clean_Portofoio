@@ -41,9 +41,12 @@ try{
   await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});
   const initialHeights=await page.locator('.skill-category').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().height));
   await page.locator('.skill-category').first().evaluate(e=>scrollTo({top:scrollY+e.getBoundingClientRect().top-250,behavior:'instant'}));await page.waitForTimeout(350);
-  if(touch){const cdp=await context.newCDPSession(page);await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:180,y:700}]});for(let i=1;i<=8;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x:180,y:700-i*60}]});await page.waitForTimeout(35);}await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}
-  else for(let i=0;i<8;i++){await page.mouse.wheel(0,80);await page.waitForTimeout(65);}
+  if(touch){const cdp=await context.newCDPSession(page),timestamp=Date.now()/1000;await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',timestamp,touchPoints:[{x:180,y:700}]});for(let i=1;i<=6;i++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',timestamp:timestamp+i*.018,touchPoints:[{x:180,y:700-i*100}]});await page.waitForTimeout(18);}await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',timestamp:timestamp+.126,touchPoints:[]});}
+  else for(let i=0;i<8;i++){await page.mouse.wheel(0,220);await page.waitForTimeout(60);}
   await page.waitForTimeout(1300);
+  // A genuinely fast timestamped fling can still have native inertia at1300ms.
+  // Check restoration after that real gesture settles, never by aborting it.
+  if(touch)await page.waitForFunction(()=>!document.documentElement.dataset.browsing&&!document.querySelector('[data-scan-active]'),null,{timeout:6000});
   const data=await page.evaluate(()=>{const s=window.__continuity;return{initial:s.initial,samples:s.samples,corrections:s.corrections,began:s.began,ended:s.ended,compactHeights:s.compactHeights};});
   const restored=await page.locator('.skill-category').evaluateAll(es=>es.map(e=>e.getBoundingClientRect().height));
   if(data.initial){const during=data.samples.filter(s=>s.mode==='scan');data.materialEdge=data.initial.title>=80&&data.initial.title<764?'title':'bottom';const edge=data.materialEdge;const drift=during.map(s=>(s[edge]-data.initial[edge])+(s.y-data.initial.y)-data.corrections.filter(c=>c.at<=s.at).reduce((sum,c)=>sum+c.delta,0));data.materialDrift=Math.max(0,...drift.map(Math.abs));const last=during.at(-1);data.nativeDistance=last?last.y-data.initial.y-data.corrections.filter(c=>c.at<=last.at).reduce((sum,c)=>sum+c.delta,0):0;data.activeCorrections=last?data.corrections.filter(c=>c.at<=last.at).length:0;}

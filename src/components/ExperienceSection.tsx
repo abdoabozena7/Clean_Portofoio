@@ -57,11 +57,11 @@ const Timeline = ({ items }: { items: TimelineItem[] }) => (
           <h3 className="experience-company font-bold">{exp.company}</h3>
         </div>
 
-        <div data-scan-detail className="experience-detail">
+        <div className="experience-detail">
           <h3 className="experience-role text-base font-medium text-foreground/70 mb-3">
             {exp.role}
           </h3>
-          {exp.description && <p className="body-text text-sm md:text-base">{exp.description}</p>}
+          {exp.description && <p data-scan-detail className="body-text text-sm md:text-base">{exp.description}</p>}
         </div>
       </div>
     ))}
