@@ -82,6 +82,7 @@ async function motionAndControls(label, url, mobile) {
     await page.locator('#project-hivo').evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
     const zoom = page.getByRole('button', { name: 'Zoom in Hivo Studio', exact: true });
     await zoom.waitFor();
+    await page.locator('#project-hivo .project-image-trigger img').evaluate(image => image.decode());
     await screenshot('projects');
     const zoomImage = page.getByRole('dialog').locator('img');
     const client = mobile ? await context.newCDPSession(page) : null;
@@ -127,8 +128,12 @@ async function motionAndControls(label, url, mobile) {
     await focused.press('Enter');
     await page.getByText('Learn about me', { exact: true }).waitFor({ state: 'hidden' });
     await page.keyboard.press('Escape');
-    await page.locator('#contact textarea').fill('Local verification');
-    assert.equal(await page.locator('#contact textarea').inputValue(), 'Local verification');
+    const contact = page.locator('#contact form');
+    assert.equal(await contact.evaluate(form => form.checkValidity()), false);
+    await contact.locator('input[type="text"]').fill('Local verification');
+    await contact.locator('input[type="email"]').fill('verification@example.test');
+    await contact.locator('textarea').fill('Local verification');
+    assert.equal(await contact.evaluate(form => form.checkValidity()), true);
     if (mobile) {
       await page.setViewportSize({ width: 844, height: 390 });
       await page.waitForTimeout(300);
