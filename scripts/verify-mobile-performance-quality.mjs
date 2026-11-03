@@ -113,6 +113,16 @@ async function motionAndControls(label, url, mobile) {
       assert(reopenMemory[1].Nodes <= reopenMemory[0].Nodes + 30, 'Zoom should release dialog nodes');
       assert(reopenMemory[1].JSHeapUsedSize <= reopenMemory[0].JSHeapUsedSize * 1.15, 'Zoom should release retained JavaScript objects');
     }
+    const certificate = page.locator('#education .certificate-image-trigger').first();
+    await certificate.click();
+    const certificateSize = await zoomImage.evaluate(async image => {
+      await image.decode();
+      return [image.naturalWidth, image.naturalHeight, image.currentSrc.split('/').at(-1)];
+    });
+    assert.deepEqual(certificateSize, [489, 695, 'hit-summer-school-2025.jpg']);
+    await screenshot('certificate');
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'hidden' });
     const score = page.getByRole('button', { name: /Open score details/ });
     await score.click();
     await page.getByRole('region', { name: 'Score details' }).waitFor();
@@ -141,7 +151,48 @@ async function motionAndControls(label, url, mobile) {
     }
     assert.deepEqual(errors, [], 'No runtime errors');
     video = page.video();
-    return { label, mobile, phases: [...shotNames], zoomSize, reopenMemory, screenshots, errors, video };
+    return { label, mobile, phases: [...shotNames], zoomSize, certificateSize, reopenMemory, screenshots, errors, video };
+  } finally { await context.close(); }
+}
+
+async function mediaRecoveryAndExposure() {
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true,
+    deviceScaleFactor: 2, reducedMotion: 'reduce',
+  });
+  try {
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', error => errors.push(error.message));
+    let release;
+    const gate = new Promise(resolve => { release = resolve; });
+    await page.route('**/images/projects/hivo-*.webp', async route => {
+      await gate;
+      await route.abort('failed');
+    });
+    const request = page.waitForRequest(r => /hivo-\d+\.webp$/.test(r.url()));
+    await page.goto(after + '#project-hivo', { waitUntil: 'domcontentloaded' });
+    const media = page.locator('#project-hivo .project-media');
+    await media.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    await request;
+    const beforeBox = await media.boundingBox();
+    await page.waitForTimeout(500);
+    release();
+    await page.waitForFunction(() => {
+      const image = document.querySelector('#project-hivo .project-image-trigger img');
+      return image?.complete && image.naturalWidth === 1920 && image.currentSrc.endsWith('/hivo.png');
+    });
+    const afterBox = await media.boundingBox();
+    for (const key of ['width', 'height']) assert(Math.abs(beforeBox[key] - afterBox[key]) <= 1);
+    const story = page.locator('[data-attention-id="experience-microsoft"]');
+    await story.evaluate(el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
+    const initial = Number(await story.getAttribute('data-quality'));
+    await page.waitForFunction(initial => {
+      const story = document.querySelector('[data-attention-id="experience-microsoft"]');
+      return Number(story?.dataset.quality) > initial;
+    }, initial, { timeout: 10000 });
+    assert.deepEqual(errors, []);
+    return { beforeBox, afterBox, recoveredOriginal: true, exposure: [initial, Number(await story.getAttribute('data-quality'))] };
   } finally { await context.close(); }
 }
 
@@ -174,6 +225,7 @@ try {
       report.journeys.push({ ...journey, video: await video.path() });
     }
   }
+  report.recovery = await mediaRecoveryAndExposure();
 } catch (error) {
   report.failure = error.stack;
   throw error;
