@@ -41,7 +41,8 @@
     "test:media-readiness": "node scripts/verify-media-readiness.mjs",
     "test:scroll-recovery": "node scripts/verify-scroll-recovery.mjs",
     "test:pace": "node scripts/verify-paced-browsing.mjs",
-    "test:fast-return": "node scripts/verify-section-return.mjs"
+    "test:fast-return": "node scripts/verify-scroll-command.mjs",
+    "test:scroll-command": "node scripts/verify-scroll-command.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

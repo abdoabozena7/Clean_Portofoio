@@ -1,33 +1,30 @@
 import { useEffect, type RefObject } from "react";
 import { FAST_SCROLL_RETURN_CONFIG as config } from "@/lib/fastScrollReturn";
 import { initialScrollVelocity, sampleScrollVelocity, wheelPixels } from "@/lib/scrollVelocity";
-import { getScrollIntent, navigateForScrollReturn, requestDetailedView, subscribeScrollIntent } from "@/lib/scrollIntent";
+import { scrollCommand } from "@/lib/scrollCommand";
+import { navigateForScrollReturn } from "@/lib/scrollIntent";
 
-/** A local, section-aware experiment. Exposure never proves reading. */
+/** Interpret eligible commands before page movement. No section/exposure gate. */
 export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
   useEffect(() => {
     if (!config.enabled) return;
-    const sections = [...document.querySelectorAll<HTMLElement>('section[id]')].filter(el => !['hero', 'contact'].includes(el.id));
-    const entered = new Set<HTMLElement>(), returned = new Set<HTMLElement>();
-    let previousY = scrollY, bounds = sections.map(el => el.getBoundingClientRect());
-    let velocity = initialScrollVelocity(), inputAt = -Infinity;
+    let velocity = initialScrollVelocity(), wheelAt: number | null = null;
     let source: "wheel" | "touch" | "none" = "none";
-    const rootFont = getComputedStyle(document.documentElement);
-    let lineHeight = parseFloat(rootFont.lineHeight) || parseFloat(rootFont.fontSize) * 1.2 || 20;
-    let target: HTMLElement | null = null, reversing = false, arrived = false, qualifiedUntil = 0;
-    let cueTimer: ReturnType<typeof setTimeout> | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined, frame = 0;
+    let touching = false, owned = false, allowed = false;
+    let x = 0, y = 0, touchAt = 0, releaseVelocity = 0, lastMove = 0;
     const cue = cueRef.current;
+    let lineHeight = 20;
+    const font = () => { const s = getComputedStyle(document.documentElement); lineHeight = parseFloat(s.lineHeight) || parseFloat(s.fontSize) * 1.2 || 20; };
+    font();
     const hide = () => { if (cue) cue.dataset.visible = 'false'; };
     const show = () => {
-      if (!cue || !target) return;
+      if (!cue) return;
       if (cue.dataset.visible !== 'true') cue.style.setProperty('--return-color', ['#2bbaa5','#93d3ae','#faecb6','#f9a822','#f96635'][Math.floor(Math.random() * 5)]);
-      cue.dataset.visible = 'true'; cue.dataset.section = target.id;
-      const label = cue.querySelector('[data-return-section]');
-      if (label) label.textContent = target.querySelector('h2')?.textContent?.trim() || target.id;
-      clearTimeout(cueTimer); cueTimer = setTimeout(hide, 1100);
+      cue.dataset.visible = 'true'; clearTimeout(timer); timer = setTimeout(hide, 900);
     };
-    const resetBounds = () => { previousY = scrollY; bounds = sections.map(el => el.getBoundingClientRect()); };
-    const cancel = () => { target = null; reversing = false; arrived = false; qualifiedUntil = 0; velocity = initialScrollVelocity(); source = "none"; entered.clear(); hide(); resetBounds(); };
+    const stopInertia = () => { cancelAnimationFrame(frame); frame = 0; };
+    const cancel = () => { stopInertia(); velocity = initialScrollVelocity(); source = 'none'; wheelAt = null; touching = false; owned = false; allowed = false; releaseVelocity = 0; hide(); };
     const blocked = (origin: EventTarget | null) => {
       if (document.hidden || !document.hasFocus() || document.querySelector('[role="dialog"],[data-exploration-map]')) return true;
       if (document.activeElement?.matches('input,textarea,select,[contenteditable]:not([contenteditable="false"])')) return true;
@@ -38,81 +35,81 @@ export function useFastScrollReturn(cueRef: RefObject<HTMLDivElement>) {
       }
       return false;
     };
-    const hasExposure = (section: HTMLElement) => [...section.querySelectorAll<HTMLElement>('[data-discovery-id]')].some(el => Number(el.dataset.quality || 0) >= 60 && Number(el.dataset.qualityCoverage || 0) >= 75);
-    const returnStep = (delta: number) => {
-      if (!target) return;
-      requestDetailedView(); // Restore adaptive geometry before measuring destination.
-      const stopY = Math.max(0, scrollY + target.getBoundingClientRect().top - 96);
-      const from = scrollY, to = Math.max(stopY, from - Math.min(delta, innerHeight * 1.25));
-      navigateForScrollReturn(Math.min(from, to)); resetBounds(); show();
-      if (scrollY <= stopY + 2) { arrived = true; returned.add(target); }
-      window.dispatchEvent(new CustomEvent('portfolio:fast-scroll-return', { detail: { phase: 'reverse', from, to: scrollY, section: target.id, arrived } }));
-    };
-    const onIntent = () => {
-      const now = performance.now(), intent = getScrollIntent(), y = scrollY;
-      const next = sections.map(el => el.getBoundingClientRect());
-      const nativeForward = y > previousY + .5 && !intent.automatic && !intent.hardJump && intent.userDriven && now - inputAt < 900;
-      if (nativeForward && !target && !blocked(null)) {
-        sections.forEach((section, i) => {
-          const before = bounds[i], after = next[i];
-          if (before.top >= 76 && after.top < innerHeight) entered.add(section);
-          if (entered.has(section) && before.bottom > 96 && after.bottom <= 96 && !returned.has(section) && !hasExposure(section) && (now < qualifiedUntil || Math.abs(intent.speed) * 1000 / innerHeight > 1.8)) {
-            target = section; arrived = false;
-          }
-        });
-      }
-      previousY = y; bounds = next;
+    const apply = (delta: number, reverse: boolean, input: "wheel" | "touch" | "momentum") => {
+      const from = scrollY;
+      if (reverse) { navigateForScrollReturn(Math.max(0, from + delta)); show(); }
+      else { hide(); window.scrollTo({ top: Math.max(0, from + delta), behavior: 'instant' }); }
+      window.dispatchEvent(new CustomEvent('portfolio:scroll-command', { detail: { input, reverse, from, to: scrollY, delta } }));
     };
     const wheel = (event: WheelEvent) => {
-      const now = performance.now(); inputAt = now;
-      const delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, lineHeight);
-      const eligible = !event.defaultPrevented && !event.ctrlKey && !event.metaKey && Math.abs(event.deltaY) >= Math.abs(event.deltaX) && !blocked(event.target);
-      if (!eligible) { reversing = false; qualifiedUntil = 0; velocity = initialScrollVelocity(); return; }
-      if (target && hasExposure(target)) cancel();
-      if (source !== "wheel") { velocity = initialScrollVelocity(); qualifiedUntil = 0; source = "wheel"; }
-      const result = sampleScrollVelocity(velocity, now, delta, innerHeight);
-      velocity = result.state;
-      if (reversing && (delta <= 0 || result.recentSpeed < config.speedViewportsPerSecond * .75)) {
-        reversing = false;
-        if (arrived) { target = null; arrived = false; show(); }
-      }
-      if (result.qualified) qualifiedUntil = now + 350;
-      if (target && delta > 0 && (reversing || result.qualified) && event.cancelable) {
-        event.preventDefault(); reversing = true; returnStep(delta);
-      }
+      stopInertia();
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || blocked(event.target)) { velocity = initialScrollVelocity(); wheelAt = null; return; }
+      const now = performance.now(), delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, lineHeight);
+      if (source !== 'wheel') { velocity = initialScrollVelocity(); wheelAt = null; source = 'wheel'; }
+      const gap = wheelAt === null || now - wheelAt > 240 ? null : now - wheelAt;
+      wheelAt = now;
+      const sample = sampleScrollVelocity(velocity, now, delta, innerHeight); velocity = sample.state;
+      const command = scrollCommand(delta, gap, innerHeight, sample.recentSpeed, true);
+      if (command.reverse && event.cancelable) { event.preventDefault(); apply(command.delta, true, 'wheel'); }
+      else hide();
     };
-    // Touch remains native while held; its fast native momentum can return only
-    // after an actual skipped section, using the same bounded destination.
-    let touchY = 0;
-    const touchStart = (event: TouchEvent) => { if (event.touches.length !== 1) { cancel(); return; } inputAt = performance.now(); touchY = event.touches[0]?.clientY || 0; reversing = false; qualifiedUntil = 0; velocity = initialScrollVelocity(); source = "touch"; };
+    const touchStart = (event: TouchEvent) => {
+      cancel();
+      if (event.touches.length !== 1 || blocked(event.target)) return;
+      source = 'touch'; touching = true; allowed = true;
+      x = event.touches[0].clientX; y = event.touches[0].clientY; touchAt = performance.now();
+      // A timestamp anchor lets the first movement carry its own command.
+      velocity = { ...initialScrollVelocity(), at: touchAt, direction: 1 };
+    };
     const touchMove = (event: TouchEvent) => {
-      if (event.touches.length !== 1) { velocity = initialScrollVelocity(); qualifiedUntil = 0; return; }
-      const now = performance.now(), y = event.touches[0]?.clientY || touchY;
-      const result = sampleScrollVelocity(velocity, now, touchY - y, innerHeight);
-      inputAt = now; touchY = y;
-      velocity = result.state;
-      if (blocked(event.target) || result.recentSpeed < config.speedViewportsPerSecond * .75) { qualifiedUntil = 0; if (blocked(event.target)) velocity = initialScrollVelocity(); }
-      else if (result.qualified) qualifiedUntil = now + 350;
+      if (!touching || !allowed) return;
+      if (event.touches.length !== 1 || blocked(event.target)) { cancel(); return; }
+      const point = event.touches[0], now = performance.now(), delta = y - point.clientY, dx = point.clientX - x;
+      if (!owned && Math.abs(delta) < 4 && Math.abs(dx) < 4) return;
+      if (!owned && Math.abs(dx) > Math.abs(delta) * 1.2) { cancel(); return; }
+      // Cancel the FIRST vertical move, before native momentum takes ownership.
+      // Taps, horizontal gestures, nested scrolling and pinch keep native behavior.
+      if (!event.cancelable) { cancel(); return; }
+      event.preventDefault(); owned = true;
+      const dt = Math.max(1, now - touchAt);
+      const sample = sampleScrollVelocity(velocity, now, delta, innerHeight); velocity = sample.state;
+      const command = scrollCommand(delta, dt, innerHeight, sample.recentSpeed);
+      apply(command.delta, command.reverse, 'touch');
+      releaseVelocity = command.delta / dt; lastMove = now;
+      touchAt = now; y = point.clientY; x = point.clientX;
     };
-    const touchEnd = () => { if (target && performance.now() < qualifiedUntil && !blocked(null)) returnStep(innerHeight * .75); };
-    const jump = () => cancel();
-    const unsubscribe = subscribeScrollIntent(onIntent);
+    const touchEnd = () => {
+      touching = false;
+      if (!owned || !allowed) return;
+      owned = false;
+      const now = performance.now();
+      const releasedSpeed = releaseVelocity * Math.exp(-Math.max(0, now - lastMove - 16) / 100);
+      if (now - lastMove > 240 || Math.abs(releasedSpeed) < .05 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      let previous = now, elapsed = 0, pending = 0, speed = Math.max(-6, Math.min(6, releasedSpeed));
+      const reverse = speed < 0 && cue?.dataset.visible === 'true';
+      const coast = (at: number) => {
+        frame = 0;
+        if (touching || blocked(null)) return;
+        const dt = Math.min(32, at - previous); previous = at; elapsed += dt;
+        speed *= Math.exp(-dt / 180);
+        pending += speed * dt;
+        if (Math.abs(pending) >= .5) {
+          const before = scrollY; apply(pending, reverse, 'momentum'); pending -= scrollY - before;
+        }
+        const boundary = speed < 0 ? scrollY <= 0 : scrollY >= document.documentElement.scrollHeight - innerHeight - 1;
+        if (Math.abs(speed) > .05 && elapsed < 700 && !boundary) frame = requestAnimationFrame(coast);
+      };
+      frame = requestAnimationFrame(coast);
+    };
+    const resize = () => { font(); cancel(); };
+    const visibility = () => { if (document.hidden) cancel(); };
     window.addEventListener('wheel', wheel, { passive: false });
-    window.addEventListener('touchstart', touchStart, { passive: true }); window.addEventListener('touchmove', touchMove, { passive: true }); window.addEventListener('touchend', touchEnd, { passive: true });
-    window.addEventListener('touchcancel', cancel, { passive: true });
-    window.addEventListener('keydown', jump); window.addEventListener('hashchange', jump); window.addEventListener('popstate', jump); window.addEventListener('blur', jump);
-    // A resize callback can run between native scroll and its intent frame.
-    // Updating the previous bounds there would erase a real section crossing.
-    const onResize = () => { if (performance.now() - inputAt > 500) resetBounds(); };
-    const onViewportResize = () => { const style = getComputedStyle(document.documentElement); lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2 || 20; cancel(); };
-    window.addEventListener('resize', onViewportResize);
-    const resize = new ResizeObserver(onResize); sections.forEach(el => resize.observe(el));
+    window.addEventListener('touchstart', touchStart, { passive: true }); window.addEventListener('touchmove', touchMove, { passive: false }); window.addEventListener('touchend', touchEnd, { passive: true }); window.addEventListener('touchcancel', cancel, { passive: true });
+    window.addEventListener('keydown', cancel); window.addEventListener('hashchange', cancel); window.addEventListener('popstate', cancel); window.addEventListener('blur', cancel); window.addEventListener('resize', resize); document.addEventListener('visibilitychange', visibility);
     return () => {
-      unsubscribe(); resize.disconnect(); clearTimeout(cueTimer); hide();
-      window.removeEventListener('resize', onViewportResize);
-      window.removeEventListener('wheel', wheel); window.removeEventListener('touchstart', touchStart); window.removeEventListener('touchmove', touchMove); window.removeEventListener('touchend', touchEnd);
-      window.removeEventListener('touchcancel', cancel);
-      window.removeEventListener('keydown', jump); window.removeEventListener('hashchange', jump); window.removeEventListener('popstate', jump); window.removeEventListener('blur', jump);
+      cancel(); clearTimeout(timer);
+      window.removeEventListener('wheel', wheel); window.removeEventListener('touchstart', touchStart); window.removeEventListener('touchmove', touchMove); window.removeEventListener('touchend', touchEnd); window.removeEventListener('touchcancel', cancel);
+      window.removeEventListener('keydown', cancel); window.removeEventListener('hashchange', cancel); window.removeEventListener('popstate', cancel); window.removeEventListener('blur', cancel); window.removeEventListener('resize', resize); document.removeEventListener('visibilitychange', visibility);
     };
   }, [cueRef]);
 }

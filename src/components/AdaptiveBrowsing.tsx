@@ -15,7 +15,7 @@ export default function AdaptiveBrowsing() {
   const journey = useAttentionJourney();
   return <>
     <div ref={returnCue} className="section-return-cue" data-visible="false">
-      <div role="status" aria-live="polite"><strong>Slow Down</strong><span>Take another look · <span data-return-section /></span></div>
+      <div role="status" aria-live="polite"><strong>Slow Down</strong><span>Fast gesture · scrolling up</span></div>
     </div>
     <div ref={editor} data-scan-agent aria-hidden="true">
       <svg className="scan-trails">{[0, 1, 2].map(i => <path key={i} data-scan-trail={i} fill="none" stroke={i === 1 ? "#2bbaa5" : i === 2 ? "#f96635" : "#f9a822"} />)}</svg>
