@@ -26,13 +26,13 @@ html .palette-tag:hover, html .accent-button:hover {
   padding: 3px; border: 1px solid #111920; background: white; z-index: 1;
 }
 .company-logo img { width: 100%; height: 100%; object-fit: contain; }
-.experience-brand { display: flex; align-items: flex-start; gap: 12px; }
-.experience-brand .company-logo { position: static; width: 40px; height: 40px; flex: 0 0 40px; padding: 4px; }
-.experience-company { min-width: 0; font-size: 32px; line-height: 1.15; overflow-wrap: anywhere; }
-.experience-date { padding-left: 52px; }
-.experience-detail { margin-left: 52px; margin-top: 8px; }
+.experience-brand { display: flex; align-items: flex-start; gap: 16px; }
+.experience-brand .company-logo { position: static; width: 68px; height: 68px; flex: 0 0 68px; padding: 4px; }
+.experience-copy { min-width: 0; }
+.experience-company { font-size: 38px; line-height: 1.2; overflow-wrap: anywhere; }
+.experience-role { margin-top: 6px; font-size: 19px; line-height: 1.25; overflow-wrap: anywhere; }
 .experience-item + .experience-item { border-top: 1px solid #11192016; padding-top: 16px; }
-@media (max-width: 767px) { .experience-company { font-size: 26px; } }
+@media (max-width: 767px) { .experience-company { font-size: 30px; } }
 .credential-list { display: grid; gap: 40px; }
 .credential { min-width: 0; }
 .credential-copy { min-width: 0; }
@@ -41,7 +41,6 @@ html .palette-tag:hover, html .accent-button:hover {
   margin: 24px auto 0; border: 1px solid #111920; background: #fff; padding: 5px;
 }
 .certificate-image-trigger img { display: block; width: 100%; height: auto; object-fit: contain; }
-[data-scan-active] .certificate-image-trigger img { height: 100%; }
 .credential-description { margin-top: 14px; }
 .certificate-image-trigger + .credential-description { margin-top: 20px; }
 .certificate-zoom { position: absolute; right: 3px; bottom: 3px; padding: 3px; background: var(--accent-cream); border: 1px solid #111920; }
@@ -55,6 +54,11 @@ html .palette-tag:hover, html .accent-button:hover {
 .microsoft-story-tip a { pointer-events: auto; }
 .microsoft-story-tip a:hover { text-decoration: underline; text-underline-offset: 3px; }
 .certificate-image-trigger:focus-visible { outline: 2px solid #111920; outline-offset: 5px; }
+@media (max-width: 767px) {
+  .credential-description > p,
+  .credential-description:not(:has(.credential-story)) { display: none; }
+  .credential-story { margin-top: 0; }
+}
 @media (min-width: 768px) { .company-logo { left: auto; right: -16px; } }
 @media (min-width: 768px) {
   .credential-list { gap: 32px; }
@@ -78,4 +82,5 @@ html .palette-tag:hover, html .accent-button:hover {
     margin: 0;
   }
   .certificate-image-trigger img { width: auto; height: auto; max-width: 100%; max-height: 100%; }
+  [data-scan-active] .certificate-image-trigger img { height: 100%; }
 }

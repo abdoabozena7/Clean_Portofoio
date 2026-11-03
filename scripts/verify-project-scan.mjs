@@ -37,9 +37,15 @@ try {
       await page.waitForTimeout(500);
       const normal = await snapshot(page);
       await page.screenshot({ path: `${out}/${width}-detail.png` });
-      if (!baseline) check(`${width}: detailed cards match pre-change geometry and wrapping`, normal.cards.every((card,i) => { const previous=old.viewports[width].normal.cards[i]; return card.id===previous.id && card.titleFont===previous.titleFont && card.tagsText===previous.tagsText && ['card','title','tags','media'].every(key => ['x','y','w','h'].every(axis => near(card[key][axis],previous[key][axis]))); }), normal);
+      if (!baseline) check(`${width}: ${width < 768 ? 'mobile descriptions removed while media sizes and titles are retained' : 'detailed cards match pre-change geometry and wrapping'}`, normal.cards.every((card,i) => {
+        const previous=old.viewports[width].normal.cards[i];
+        const contentMatches = card.id===previous.id && card.titleFont===previous.titleFont && card.tagsText===previous.tagsText;
+        if (width < 768) return contentMatches && card.briefOpacity===0 && card.card.h < previous.card.h && ['w','h'].every(axis => near(card.media[axis],previous.media[axis]));
+        return contentMatches && ['card','title','tags','media'].every(key => ['x','y','w','h'].every(axis => near(card[key][axis],previous[key][axis])));
+      }), normal);
       await page.emulateMedia({ reducedMotion: 'no-preference' }); await page.waitForTimeout(200);
-      for (let i=0;i<8;i++) { await page.mouse.wheel(0,180); await page.waitForTimeout(60); }
+      for (let i=0;i<12;i++) { await page.mouse.wheel(0,Math.round(height * .2)); await page.waitForTimeout(50); }
+      await page.waitForFunction(() => Number(document.querySelector('[data-scan-group="projects"]').style.getPropertyValue('--scan')) > .99);
       const fast = await snapshot(page); report.viewports[width] = { normal, fast };
       await page.screenshot({ path: `${out}/${width}-fast.png` });
       if (baseline) check(`${width}: old thumbnail behavior rejected by full-size oracle`, fast.mode==='scan' && fast.cards.some((card,i) => card.media.w < normal.cards[i].media.w - 20));
@@ -53,7 +59,7 @@ try {
       }
       await page.waitForTimeout(1300); const restored = await snapshot(page);
       if (!baseline) {
-        check(`${width}: slowing restores original card, image, tags and actions`, !restored.mode && restored.cards.every((card,i) => near(card.card.h,normal.cards[i].card.h) && ['x','y','w','h'].every(key => near(card.media[key],normal.cards[i].media[key])) && card.tagsOpacity>.99 && card.briefOpacity>.99 && card.actionsOpacity>.99 && !card.actionsInert), restored);
+        check(`${width}: slowing restores original card, image, tags and actions`, !restored.mode && restored.cards.every((card,i) => near(card.card.h,normal.cards[i].card.h) && ['x','y','w','h'].every(key => near(card.media[key],normal.cards[i].media[key])) && card.tagsOpacity>.99 && near(card.briefOpacity,normal.cards[i].briefOpacity) && card.actionsOpacity>.99 && !card.actionsInert), restored);
         if (width===390) {
           const cdp=await context.newCDPSession(page);
           await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:195,y:740}]});
@@ -66,7 +72,24 @@ try {
         await page.locator('#project-ya-rab-ostorha .project-image-trigger').click();
         check(`${width}: screenshot still opens real zoom dialog`,await page.getByRole('dialog').isVisible());
         await page.keyboard.press('Escape');
+        await page.getByRole('dialog').waitFor({state:'hidden'});
         check(`${width}: no horizontal overflow`,await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth));
+        if (width===390) {
+          const card = page.locator('#project-hivo');
+          await card.locator('.project-image-trigger img').evaluate(img => img.decode());
+          await card.evaluate(el => scrollTo({ top: scrollY + el.getBoundingClientRect().top - 140, behavior: 'instant' }));
+          await page.waitForFunction(() => {
+            const card=document.querySelector('#project-hivo');
+            const progress=Number(card.style.getPropertyValue('--exploration-evidence'));
+            return progress>0 && progress<1;
+          });
+          const partial = await card.evaluate(el => ({ progress:Number(el.style.getPropertyValue('--exploration-evidence')), shadow:getComputedStyle(el,'::after').backgroundImage, pointerEvents:getComputedStyle(el,'::after').pointerEvents }));
+          await page.screenshot({path:`${out}/390-shadow-partial.png`});
+          await page.waitForFunction(() => document.querySelector('#project-hivo').style.getPropertyValue('--exploration-evidence')==='1');
+          const complete = await card.evaluate(el => ({ progress:Number(el.style.getPropertyValue('--exploration-evidence')), fill:getComputedStyle(el).getPropertyValue('--credential-fill'), shadow:getComputedStyle(el,'::after').backgroundImage }));
+          check('Mobile card shadow earns partial then complete color despite the hidden description',partial.progress>0 && partial.progress<1 && partial.shadow!==complete.shadow && partial.pointerEvents==='none' && complete.fill.trim()==='100%',{partial,complete});
+          await page.screenshot({path:`${out}/390-shadow-complete.png`});
+        }
       }
     } finally { await context.close(); }
   }

@@ -1,4 +1,4 @@
-/* Existing40px boxes retain their dimensions. Only the logo area changes paint. */
+/* The loader traces the logo frame while its image stays in full color. */
 [data-experience-item] .experience-brand .company-logo {
   position: relative;
   top: auto;
@@ -7,9 +7,7 @@
   border-color: transparent;
 }
 .company-logo > img {
-  filter: grayscale(calc(1 - var(--exploration-evidence, 0)));
-  opacity: calc(.5 + .5 * var(--exploration-evidence, 0));
-  transition: filter .24s linear, opacity .24s linear;
+  opacity: 1;
 }
 .company-evidence {
   position: absolute;
@@ -69,12 +67,33 @@
     linear-gradient(to left, var(--credential-ink) var(--shadow-foot), var(--credential-track) var(--shadow-foot)) left bottom / calc(100% - 5px) 5px no-repeat;
 }
 .credential-evidence .certificate-image-trigger[data-scene-shell]::after { content: none; }
+@media (max-width: 767px) {
+  .project-card {
+    --credential-fill: calc(var(--exploration-evidence, 0) * 100%);
+    --project-ink: var(--accent, var(--accent-teal));
+    --project-track: color-mix(in srgb, var(--project-ink) 30%, transparent);
+    transition: --credential-fill .24s linear;
+  }
+  .project-card::after {
+    --shadow-side: clamp(0%, calc(var(--credential-fill) / .6), 100%);
+    --shadow-foot: clamp(0%, calc((var(--credential-fill) - 60%) / .4), 100%);
+    content: "";
+    position: absolute;
+    inset: 7px -8px -8px 7px;
+    pointer-events: none;
+    background:
+      linear-gradient(to bottom, var(--project-ink) var(--shadow-side), var(--project-track) var(--shadow-side)) right top / 7px 100% no-repeat,
+      linear-gradient(to left, var(--project-ink) var(--shadow-foot), var(--project-track) var(--shadow-foot)) left bottom / calc(100% - 7px) 7px no-repeat;
+  }
+  .project-card[data-scene-shell]::after { content: none; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .company-logo > img, .company-evidence-progress, .company-evidence-finish, .credential-evidence { transition: none; }
+  .company-logo > img, .company-evidence-progress, .company-evidence-finish, .credential-evidence, .project-card { transition: none; }
 }
 @media print {
   .credential-evidence { border-image: none; }
   .credential-evidence .certificate-image-trigger::after { content: none; }
+  .project-card::after { content: none; }
   .company-logo > img { filter: none; opacity: 1; }
   .company-evidence { display: none; }
   [data-experience-item] .experience-brand .company-logo { border-color: #111920; }

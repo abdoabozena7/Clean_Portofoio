@@ -7,6 +7,7 @@ import HarrTestFlow from "./HarrTestFlow";
 import { Badge } from "./ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "./ui/dialog";
 import "@/styles/projects.css";
+import "@/styles/exploration-evidence.css";
 
 const actionClass = "accent-button flex items-center justify-center gap-2 px-4 py-2 border-2 border-black bg-white text-[10px] font-black uppercase tracking-wider transition-all duration-300 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-[2px] hover:translate-y-[2px] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
 
@@ -35,7 +36,7 @@ const ProjectsSection = () => {
             <h3 data-construction="text" className="text-xl font-black text-foreground group-hover:underline decoration-4 underline-offset-4 break-words">
               {project.title}
             </h3>
-            <p data-scan-detail data-construction="text" className="body-text mt-4 text-sm font-normal">
+            <p data-scan-detail data-construction="text" className="project-description body-text mt-4 text-sm font-normal">
               {project.description}
             </p>
             <div className="project-tags flex flex-wrap gap-2 mt-4">

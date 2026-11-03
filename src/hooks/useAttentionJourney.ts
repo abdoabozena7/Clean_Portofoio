@@ -37,11 +37,11 @@ export function useAttentionJourney() {
         });
       };
       add([heading], .15, "text");
-      const body = [...el.querySelectorAll("p")].filter(node => !node.matches(".experience-date"));
+      const body = [...el.querySelectorAll("p")];
       const skills = [...el.querySelectorAll(".palette-tag")];
       const introduction = [...el.querySelectorAll("[data-microsoft-headline] > span,.mt-6[data-construction='text'],.palette-tag")];
       add(el.closest("#hero") ? introduction : el.matches(".skill-category") ? skills : body, .45, "text");
-      add([...el.querySelectorAll(".experience-date,.experience-role,.credential-copy > div")], .1, "text", true);
+      add([...el.querySelectorAll(".experience-role,.credential-copy > div")], .1, "text", true);
       const media: Element[] = [...el.querySelectorAll("img,.harrtest-flow")];
       if (el.matches("[data-construction-scene='activity']")) media.push(el);
       add(media, .3, "media");
@@ -64,10 +64,7 @@ export function useAttentionJourney() {
       if (el.closest(unavailable)) return false;
       for (let node: Element | null = el; node && node !== document.body; node = node.parentElement) {
         const style = getComputedStyle(node);
-        // The requested muted logo is deliberately legible before it gains color;
-        // requiring its final opacity would make that evidence impossible to earn.
-        const logoTint = node instanceof HTMLImageElement && node.parentElement?.matches(".company-logo") && !!node.parentElement.querySelector(".company-evidence");
-        if (style.display === "none" || style.visibility !== "visible" || Number(style.opacity) < (logoTint ? .49 : .99) || (style.clipPath !== "none" && style.clipPath !== "inset(0px)")) return false;
+        if (style.display === "none" || style.visibility !== "visible" || Number(style.opacity) < .99 || (style.clipPath !== "none" && style.clipPath !== "inset(0px)")) return false;
       }
       return true;
     };
@@ -129,7 +126,7 @@ export function useAttentionJourney() {
       records.forEach(story => {
         const values = { quality: String(Math.round(story.credit * 1000) / 10), qualityCoverage: String(Math.round(story.coverage * 100)), qualityEncountered: String(story.encountered), qualityConfidence: story.confidence };
         Object.entries(values).forEach(([key, value]) => { if (story.el.dataset[key] !== value) story.el.dataset[key] = value; });
-        if (story.el.matches("[data-experience-item],[data-certificate]")) {
+        if (story.el.matches("[data-experience-item],[data-certificate],[data-project]")) {
           const progress = String(Math.round(story.credit * 1000) / 1000);
           if (story.el.style.getPropertyValue("--exploration-evidence") !== progress) story.el.style.setProperty("--exploration-evidence", progress);
           const complete = String(story.credit >= .995 && story.coverage >= .95);
@@ -143,9 +140,10 @@ export function useAttentionJourney() {
         confidence: Object.fromEntries(records.map(story => [story.item.id, story.confidence])) });
     };
     const scoreStory = (story: Story) => {
-      const weight = story.blocks.reduce((sum, block) => sum + block.weight, 0) || 1;
-      story.exposure = Math.max(story.exposure, story.blocks.reduce((sum, block) => sum + block.credit * block.weight, 0) / weight);
-      story.coverage = Math.max(story.coverage, story.blocks.reduce((sum, block) => sum + block.coverage * block.weight, 0) / weight);
+      const availableBlocks = story.blocks.filter(block => getComputedStyle(block.el).display !== "none");
+      const weight = availableBlocks.reduce((sum, block) => sum + block.weight, 0) || 1;
+      story.exposure = Math.max(story.exposure, availableBlocks.reduce((sum, block) => sum + block.credit * block.weight, 0) / weight);
+      story.coverage = Math.max(story.coverage, availableBlocks.reduce((sum, block) => sum + (block.coverage * block.weight), 0) / weight);
       const qualifies = story.qualifiedMs >= 1000 && story.exposure >= .2 && story.coverage >= .6;
       const bonus = qualifies ? Math.min(.1, [...story.actions].reduce((sum, action) => sum + (action === "inspect" ? .05 : .025), 0)) : 0;
       story.credit = Math.max(story.credit, Math.min(1, story.exposure + bonus));

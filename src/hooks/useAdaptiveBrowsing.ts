@@ -58,7 +58,9 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       document.documentElement.style.overflowAnchor = "none";
       boxes = groups.flatMap(group => {
         remember(group);
-        return [...group.querySelectorAll<HTMLElement>("[data-project],.skill-category,[data-scan-item]")].map(el => {
+        return [...group.querySelectorAll<HTMLElement>("[data-project],.skill-category,[data-scan-item]")]
+          .filter(el => el.dataset.scanItem !== "experience" && (innerWidth >= 768 || el.dataset.scanItem !== "credential"))
+          .map(el => {
           const r = el.getBoundingClientRect(), title = el.querySelector<HTMLElement>("h3")!;
           const media = el.querySelector<HTMLElement>(".project-media,.certificate-image-trigger"), actions = el.querySelector<HTMLElement>(".project-actions");
           const m = media?.getBoundingClientRect(), a = actions?.getBoundingClientRect();

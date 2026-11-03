@@ -94,7 +94,7 @@ try {
         for (const y of [620,500,380,260,140,20]) { await page.waitForTimeout(40); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y }] }); touchFrames.push(await page.evaluate(() => ({ mode: document.documentElement.dataset.browsing, y: scrollY, at: performance.now() }))); }
         const fast = await state(page); report.journeys.push({ mobile, natural, fast, touchFrames });
         check('Native touch: all offscreen groups share scan', allActive(fast), fast);
-        if (!baseline) check('Native touch: offscreen certificates use compact previews and passed logos grow', fast.rows.some((r,i) => r.logo > (natural.rows[i]?.logo || Infinity) + 15) && fast.rows.every((r,i) => !r.media || r.media >= 150 && r.media < natural.rows[i].media - 25), { natural, fast });
+        if (!baseline) check('Native touch: certificates and Experience retain their full presentation', fast.rows.every((r,i) => (!r.logo || r.logo === 68 && r.logo === natural.rows[i].logo) && (!r.media || r.media === natural.rows[i].media && !r.inert)), { natural, fast });
         await page.screenshot({ path: `${out}/touch-fast.png` });
         if (!baseline) {
           await page.waitForTimeout(950); const heldIdle = await state(page);
@@ -141,7 +141,7 @@ try {
       check(`${mobile ? 'Touch' : 'Desktop'}: idle restores EVERY group and row`, idle.groups.every(g => !g.active) && idle.rows.every((r,i) => !r.inert && r.font === natural.rows[i]?.font && r.logo === natural.rows[i]?.logo && r.media === natural.rows[i]?.media && r.style === natural.rows[i]?.style), { natural, idle });
       if (!baseline && !mobile) {
         await position(page, '#projects', 500); await wheel(page, -180, 8); const repeat = await state(page);
-        check('Repeat upward burst enlarges previously passed Experience logos', allActive(repeat) && repeat.rows.some(r => r.logo > 60), repeat);
+        check('Repeat upward burst retains the large Experience logos', allActive(repeat) && repeat.rows.filter(r => r.logo).every(r => r.logo === 68), repeat);
         await page.waitForTimeout(900);
         await page.locator('#contact input[type=text]').fill('Keyboard visitor');
         check('Focus restores detail without losing form content', !(await state(page)).groups.some(g => g.active) && await page.locator('#contact input[type=text]').inputValue() === 'Keyboard visitor');

@@ -109,8 +109,7 @@ export function semanticSurfaces(unit: SceneUnit): { el: PaintElement; kind: Sur
     all(".harrtest-flow > text", "text", "caption");
   } else if (unit.kind === "experience") {
     all(".company-logo", "shell", "logo-slot"); all(".company-logo img,.company-logo > span", "asset", "logo");
-    all(".experience-date", "text", "metadata"); all(".experience-company", "text", "heading");
-    all(".experience-role", "text", "role"); all(".experience-detail p", "text", "body");
+    all(".experience-company", "text", "heading"); all(".experience-role", "text", "role");
   } else if (unit.kind === "credential") {
     all(".achievement-ribbon", "asset", "award"); all(".credential-copy h3", "text", "heading");
     all(".credential-copy > div > span", "text", "metadata"); all(".certificate-image-trigger", "shell", "media-slot");

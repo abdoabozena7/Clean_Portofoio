@@ -27,8 +27,6 @@ const ExperienceSection = () => (
 type TimelineItem = {
   role: string;
   company: string;
-  period: string;
-  description: string | null;
 };
 
 const Timeline = ({ items }: { items: TimelineItem[] }) => (
@@ -43,9 +41,6 @@ const Timeline = ({ items }: { items: TimelineItem[] }) => (
         data-scan-item="experience"
         className="experience-item relative pb-4 last:pb-0"
       >
-        <p data-scan-detail className="experience-date font-mono text-xs tracking-wider text-foreground/50 uppercase mb-2">
-          {exp.period}
-        </p>
         <div className="experience-brand">
           <div className="company-logo" data-construction="asset">
             {companyLogos[exp.company]
@@ -54,14 +49,10 @@ const Timeline = ({ items }: { items: TimelineItem[] }) => (
             <CompanyEvidence variant={index} />
           </div>
 
-          <h3 className="experience-company font-bold">{exp.company}</h3>
-        </div>
-
-        <div className="experience-detail">
-          <h3 className="experience-role text-base font-medium text-foreground/70 mb-3">
-            {exp.role}
-          </h3>
-          {exp.description && <p data-scan-detail className="body-text text-sm md:text-base">{exp.description}</p>}
+          <div className="experience-copy">
+            <h3 className="experience-company font-bold">{exp.company}</h3>
+            <h4 className="experience-role font-medium text-foreground/70">{exp.role}</h4>
+          </div>
         </div>
       </div>
     ))}
