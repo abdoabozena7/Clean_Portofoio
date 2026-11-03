@@ -2,6 +2,7 @@ import { useState } from "react";
 import SectionBlock from "./SectionBlock";
 import { profileContent } from "@/data/profileContent";
 import { Mail, MapPin, Copy, Check, Linkedin, Globe, Github } from "lucide-react";
+import "@/styles/contact.css";
 
 const ContactSection = () => {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
@@ -28,14 +29,14 @@ const ContactSection = () => {
 
   return (
     <SectionBlock id="contact" title="Get in touch">
-      <div className="grid md:grid-cols-2 gap-8 md:gap-20">
-        <div className="space-y-8 md:space-y-10">
+      <div className="contact-layout grid md:grid-cols-2 gap-8 md:gap-20">
+        <div className="contact-info space-y-8 md:space-y-10">
           <p className="text-foreground/80 leading-relaxed font-light text-lg">
             {profileContent.contactIntro}
           </p>
 
-          <div className="space-y-6">
-            <div className="group flex items-center gap-4 p-4 border border-foreground/10 bg-white/50 hover:border-black transition-colors duration-300">
+          <div className="contact-methods space-y-6">
+            <div className="contact-method group flex items-center gap-4 p-4 border border-foreground/10 bg-white/50 hover:border-black transition-colors duration-300">
               <div className="p-3 bg-black text-white self-start">
                 <Mail className="w-5 h-5" />
               </div>
@@ -58,7 +59,7 @@ const ContactSection = () => {
               </button>
             </div>
 
-            <div className="flex items-center gap-4 p-4 border border-foreground/10 bg-white/50 hover:border-black transition-colors duration-300">
+            <div className="contact-method flex items-center gap-4 p-4 border border-foreground/10 bg-white/50 hover:border-black transition-colors duration-300">
               <div className="p-3 bg-black text-white self-start">
                 <MapPin className="w-5 h-5" />
               </div>
@@ -71,7 +72,7 @@ const ContactSection = () => {
             </div>
           </div>
 
-          <div>
+          <div className="contact-connect">
             <p className="text-xs uppercase tracking-widest text-foreground/50 mb-4">
               Connect
             </p>

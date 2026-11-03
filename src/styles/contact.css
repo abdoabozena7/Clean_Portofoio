@@ -1,0 +1,30 @@
+/* The desktop contact and finale keep their original utilities and geometry. */
+@media (max-width: 767px) {
+  #contact { padding-top: 40px; padding-bottom: 40px; }
+  #contact > h2 { margin-bottom: 24px; }
+  #contact .contact-layout { gap: 24px; }
+  #contact .contact-info > * + * { margin-top: 20px; }
+  #contact .contact-info > p { font-size: 16px; line-height: 1.6; }
+  #contact .contact-methods > * + * { margin-top: 12px; }
+  #contact .contact-method { padding: 12px; gap: 12px; }
+  #contact .contact-method > div:first-child { padding: 10px; }
+  #contact .contact-method button { min-width: 44px; min-height: 44px; }
+  #contact .contact-connect > p { margin-bottom: 10px; }
+  #contact .contact-connect > div { gap: 12px; }
+  #contact form > * + * { margin-top: 20px; }
+  #contact input, #contact textarea { padding-top: 12px; padding-bottom: 12px; font-size: 16px; }
+  #contact textarea { height: 112px; }
+  #contact form label { top: 14px; }
+  #contact form button { min-height: 48px; padding-top: 12px; padding-bottom: 12px; }
+
+  .finale { padding-top: 56px; }
+  .finale .finale-content { padding-top: 40px; padding-bottom: 32px; }
+  .finale .finale-heading { margin-bottom: 32px; }
+  .finale .finale-socials { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 32px; }
+  .finale .finale-socials > a { padding: 16px 4px; box-shadow: 4px 4px 0 #000; }
+  .finale .finale-socials svg { width: 24px; height: 24px; }
+  .finale .finale-socials span { margin-top: 8px; font-size: 8px; letter-spacing: .08em; }
+  .finale .finale-note { gap: 12px; }
+  .finale .finale-footer { padding-top: 20px; padding-bottom: 88px; }
+  .finale .finale-footer > div { gap: 12px; }
+}

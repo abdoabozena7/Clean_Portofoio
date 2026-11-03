@@ -31,7 +31,7 @@ const Finale = () => {
   const marqueeTags = profileContent.marqueeTags;
 
   return (
-    <section data-construction-section className="relative w-full bg-white border-t-8 border-black pt-20 overflow-hidden">
+    <section data-construction-section className="finale relative w-full bg-white border-t-8 border-black pt-20 overflow-hidden">
       <div className="absolute top-0 left-0 w-full py-4 bg-black overflow-hidden flex whitespace-nowrap">
         <div className="animate-marquee flex items-center shrink-0">
           {[...Array(10)].map((_, i) => (
@@ -49,8 +49,8 @@ const Finale = () => {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-20 flex flex-col items-center">
-        <div className="relative mb-20 text-center">
+      <div className="finale-content max-w-6xl mx-auto px-6 py-20 flex flex-col items-center">
+        <div className="finale-heading relative mb-20 text-center">
           <h2 className="text-[12vw] md:text-[8vw] font-black uppercase leading-none tracking-tighter text-black/5 absolute -top-1/2 left-1/2 -translate-x-1/2 select-none pointer-events-none">
             THANK YOU
           </h2>
@@ -63,7 +63,7 @@ const Finale = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full mb-24">
+        <div className="finale-socials grid grid-cols-2 md:grid-cols-4 gap-4 w-full mb-24">
           {socialLinks.map((link, index) => (
             <a
               key={link.label}
@@ -81,7 +81,7 @@ const Finale = () => {
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-4 text-center">
+        <div className="finale-note flex flex-col md:flex-row items-center gap-4 text-center">
           <div className="flex items-center gap-2 px-4 py-2 bg-green-100 border-2 border-green-600 rounded-full">
             <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse" />
             <span className="text-[10px] font-black uppercase tracking-widest text-green-800">
@@ -94,7 +94,7 @@ const Finale = () => {
         </div>
       </div>
 
-      <div className="w-full bg-white pt-10 pb-24 md:pb-10 px-6 mt-auto border-t border-black/10">
+      <div className="finale-footer w-full bg-white pt-10 pb-24 md:pb-10 px-6 mt-auto border-t border-black/10">
         <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 md:gap-4 opacity-70">
           <p className="text-[10px] md:text-[11px] font-mono text-black uppercase tracking-[0.1em] md:tracking-[0.2em] text-center md:text-left">
             (c) {currentYear} Abdelrahman Abozena

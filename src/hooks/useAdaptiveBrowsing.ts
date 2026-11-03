@@ -1,10 +1,10 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { compensateScroll, getScrollIntent, requestDetailedView, subscribeScrollIntent } from "@/lib/scrollIntent";
 
-type Box = { el: HTMLElement; height: number; width: number; title: HTMLElement; media?: HTMLElement; actions?: HTMLElement; mediaX: number; mediaY: number; mediaW: number; mediaH: number; actionsY: number; details: HTMLElement[]; kind: string; titleSize: number; compactHeight: number; brand?: HTMLElement; logo?: HTMLElement; role?: HTMLElement; roleX: number; roleY: number; roleSize: number; summaryTitleSize: number; summaryTitleHeight: number; summaryMediaW: number; summaryMediaH: number; copy?: HTMLElement; copyW: number; copyTargetW: number; lift: number; frozen: boolean; passed: boolean; badge?: HTMLElement; ribbon?: HTMLElement; toggle?: HTMLElement };
+type Box = { el: HTMLElement; height: number; width: number; title: HTMLElement; media?: HTMLElement; actions?: HTMLElement; mediaX: number; mediaY: number; mediaW: number; mediaH: number; actionsY: number; details: HTMLElement[]; kind: string; titleSize: number; compactHeight: number; brand?: HTMLElement; logo?: HTMLElement; role?: HTMLElement; roleX: number; roleY: number; roleSize: number; summaryTitleSize: number; summaryTitleHeight: number; summaryMediaW: number; summaryMediaH: number; copy?: HTMLElement; copyW: number; copyTargetW: number; lift: number; frozen: boolean; badge?: HTMLElement; ribbon?: HTMLElement; toggle?: HTMLElement };
 type Anchor = { el: HTMLElement; edge: "top" | "bottom"; y: number; lastScroll: number };
 
-/** Real mobile layouts regroup with one viewport anchor; full-detail styles restore exactly. */
+/** One site-wide pace transition; section boundaries never reset its progress. */
 export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
   useLayoutEffect(() => {
     const groups = [...document.querySelectorAll<HTMLElement>("[data-scan-group]")];
@@ -16,6 +16,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     let boxes: Box[] = [], anchor: Anchor | null = null, progress = 0, goal = 0, frame = 0, tickAt = 0;
     let pointerHeld = false, touching = false, overflowAnchor = "", cachedWidth = innerWidth;
     let activationTarget: HTMLElement | null = null, activationTimer: ReturnType<typeof setTimeout> | undefined;
+    let activationX = 0, activationY = 0;
     let activeGroup: HTMLElement | null = null;
     let paintedProgress = -1;
     const measureTextHeight = (el: HTMLElement, fontSize: number, width: number) => {
@@ -29,9 +30,8 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       return lines * fontSize * 1.2;
     };
     const decorative = () => !coarse.matches && innerWidth >= 768;
-    const mobileMoving = () => { const intent = getScrollIntent(); return !decorative() && (touching || (intent.active && intent.userDriven)); };
+    const mobileMoving = () => { const intent = getScrollIntent(); return !decorative() && intent.active && intent.userDriven; };
     const remember = (el: HTMLElement) => { if (!original.has(el)) original.set(el, el.getAttribute("style")); };
-    const relevant = () => groups.some(g => { const r = g.getBoundingClientRect(); return r.top < innerHeight * .9 && r.bottom > 110; });
     const currentGroup = () => groups.find(g => { const r = g.getBoundingClientRect(); return r.top <= 150 && r.bottom > 150; }) || groups.find(g => { const r = g.getBoundingClientRect(); return r.top < innerHeight * .8 && r.bottom > 110; }) || null;
     const blocked = () => pointerHeld && !touching || !!document.querySelector('[role="dialog"]') || !!document.activeElement?.closest("[data-scan-group] button:focus-visible,[data-scan-group] a:focus-visible");
     const pickAnchor = (): Anchor | null => {
@@ -51,11 +51,11 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     };
     const capture = () => {
       activeGroup = currentGroup(); paintedProgress = -1;
-      const active = activeGroup ? [activeGroup.dataset.scanGroup] : [];
+      const active = groups.map(group => group.dataset.scanGroup);
       window.dispatchEvent(new CustomEvent("portfolio:regroup", { detail: active }));
       overflowAnchor = document.documentElement.style.overflowAnchor;
       document.documentElement.style.overflowAnchor = "none";
-      boxes = (activeGroup ? [activeGroup] : []).flatMap(group => {
+      boxes = groups.flatMap(group => {
         remember(group);
         return [...group.querySelectorAll<HTMLElement>("[data-project],.skill-category,[data-scan-item]")].map(el => {
           const r = el.getBoundingClientRect(), title = el.querySelector<HTMLElement>("h3")!;
@@ -75,10 +75,10 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           const compactHeight = kind === "project" ? 112 : kind === "skill" ? 60 : kind === "experience" ? Math.max(132, summaryTitleHeight + 62) : Math.max(summaryTitleHeight + 28, m ? summaryMediaH + 24 : 72);
           [el, title, media, actions, brand, logo, role, copy, ...details, el.querySelector<HTMLElement>(".project-building")].forEach(node => { if (node) remember(node); });
           const headingRect = title.getBoundingClientRect();
-          // Already passed rows retain their height. A tall row being viewed in its
-          // middle waits for the next burst instead of collapsing out from under touch.
-          const frozen = r.bottom <= 80 || (!decorative() && r.top <= 150) || (r.top < 80 && headingRect.bottom < 80 && r.bottom > innerHeight - 64);
-          return { el, height: r.height, width: r.width, title, media: media || undefined, actions: actions || undefined, mediaX: m ? m.left - r.left - parseFloat(getComputedStyle(el).borderLeftWidth) : 0, mediaY: m ? m.top - r.top - parseFloat(getComputedStyle(el).borderTopWidth) : 0, mediaW: m?.width || 0, mediaH: m?.height || 0, actionsY: a ? a.top - r.top - 2 : 0, details, kind, titleSize, compactHeight, brand: brand || undefined, logo: logo || undefined, role: role || undefined, roleX: roleRect ? roleRect.left - r.left : 0, roleY: roleRect ? roleRect.top - r.top : 0, roleSize: role ? parseFloat(getComputedStyle(role).fontSize) : 16, summaryTitleSize, summaryTitleHeight, summaryMediaW, summaryMediaH, copy: copy || undefined, copyW: copyRect?.width || 0, copyTargetW, lift: brand ? brand.getBoundingClientRect().top - r.top - parseFloat(getComputedStyle(el).paddingTop) : 0, frozen, passed: r.bottom <= 80, badge: el.querySelector<HTMLElement>(".project-building") || undefined, ribbon: el.querySelector<HTMLElement>(".achievement-ribbon") || undefined, toggle: el.querySelector<HTMLElement>("[data-scan-toggle]") || undefined };
+          // Reserve upstream mobile footprints so a global transition cannot
+          // steal native touch momentum. Their visual summary still changes.
+          const frozen = !decorative() && r.top <= 150 || (r.top < 80 && headingRect.bottom < 80 && r.bottom > innerHeight - 64);
+          return { el, height: r.height, width: r.width, title, media: media || undefined, actions: actions || undefined, mediaX: m ? m.left - r.left - parseFloat(getComputedStyle(el).borderLeftWidth) : 0, mediaY: m ? m.top - r.top - parseFloat(getComputedStyle(el).borderTopWidth) : 0, mediaW: m?.width || 0, mediaH: m?.height || 0, actionsY: a ? a.top - r.top - 2 : 0, details, kind, titleSize, compactHeight, brand: brand || undefined, logo: logo || undefined, role: role || undefined, roleX: roleRect ? roleRect.left - r.left : 0, roleY: roleRect ? roleRect.top - r.top : 0, roleSize: role ? parseFloat(getComputedStyle(role).fontSize) : 16, summaryTitleSize, summaryTitleHeight, summaryMediaW, summaryMediaH, copy: copy || undefined, copyW: copyRect?.width || 0, copyTargetW, lift: brand ? brand.getBoundingClientRect().top - r.top - parseFloat(getComputedStyle(el).paddingTop) : 0, frozen, badge: el.querySelector<HTMLElement>(".project-building") || undefined, ribbon: el.querySelector<HTMLElement>(".achievement-ribbon") || undefined, toggle: el.querySelector<HTMLElement>("[data-scan-toggle]") || undefined };
         });
       });
     };
@@ -116,14 +116,13 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       const changed = paintedProgress !== progress;
       if (changed && anchor) { anchor.y -= scrollY - anchor.lastScroll; anchor.lastScroll = scrollY; }
       if (changed) {
-      for (const group of activeGroup ? [activeGroup] : []) {
+      for (const group of groups) {
         group.dataset.scanActive = "true"; group.style.setProperty("--scan", String(progress));
         // Keep existing gaps: shrinking gaps above the current row steals scroll
         // distance before the user has actually moved through those rows.
       }
       for (const b of boxes) {
-        b.toggle?.setAttribute("aria-expanded", String(b.frozen || progress < .6));
-        if (b.frozen && (b.passed || !["experience", "credential"].includes(b.kind))) continue;
+        b.toggle?.setAttribute("aria-expanded", String(progress < .6));
         const project = b.kind === "project";
         // Visible mobile rows retain their footprint during native momentum,
         // while their logo/photo summary can still grow inside that reservation.
@@ -210,9 +209,8 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const onIntent = () => {
       if (activationTarget) return; // Keep a touched thumbnail still through synthetic click dispatch.
       const intent = getScrollIntent();
-      if (mobileMoving() && boxes.length && (goal === 0 || currentGroup() !== activeGroup || !intent.scan)) return;
-      if (intent.scan && boxes.length && currentGroup() && currentGroup() !== activeGroup) transition(0, true);
-      transition(!reduced.matches && intent.scan && relevant() && !blocked() ? 1 : 0);
+      if (mobileMoving() && boxes.length && (goal === 0 || !intent.scan)) return;
+      transition(!reduced.matches && intent.scan && !blocked() ? 1 : 0);
     };
     const onFocus = (event?: FocusEvent) => {
       if (activationTarget && (event?.target as HTMLElement | undefined)?.closest("[data-scan-group]")) return;
@@ -222,9 +220,17 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const resume = () => { if (boxes.length && progress !== goal && !frame && !mobileMoving()) { anchor = pickAnchor(); tickAt = performance.now(); frame = requestAnimationFrame(animate); } };
     const onPointerDown = (event: PointerEvent) => {
       pointerHeld = true;
-      if (event.pointerType === "touch") { touching = true; if (!goal) { cancelAnimationFrame(frame); frame = 0; } }
+      if (event.pointerType === "touch") touching = true;
+      activationX = event.clientX; activationY = event.clientY;
       activationTarget = (event.target as HTMLElement).closest<HTMLElement>("[data-scan-group] button,[data-scan-group] a");
       if (activationTarget) { clearTimeout(activationTimer); cancelAnimationFrame(frame); frame = 0; }
+    };
+    const onTouchMove = (event: TouchEvent) => {
+      const touch = event.touches[0];
+      if (!activationTarget || !touch || Math.hypot(touch.clientX - activationX, touch.clientY - activationY) < 8) return;
+      // A drag starting over a link is scrolling, not a pending tap. It must
+      // not restore every section when that link's activation timer expires.
+      clearTimeout(activationTimer); activationTarget = null; onIntent();
     };
     const onPointerUp = () => {
       pointerHeld = false; touching = false;
@@ -248,6 +254,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     document.addEventListener("focusin", onFocus); document.addEventListener("click", onClick, true);
     document.addEventListener("pointerdown", onPointerDown, { passive: true }); document.addEventListener("pointerup", onPointerUp, { passive: true }); document.addEventListener("pointercancel", onPointerCancel, { passive: true });
     document.addEventListener("touchend", onTouchEnd, { passive: true }); document.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: true });
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("resize", onResize); window.addEventListener("hashchange", onJump); window.addEventListener("popstate", onJump);
     window.addEventListener("portfolio:attention-focus", onAttentionFocus); reduced.addEventListener("change", onJump);
@@ -258,6 +265,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       document.removeEventListener("focusin", onFocus); document.removeEventListener("click", onClick, true);
       document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("pointerup", onPointerUp); document.removeEventListener("pointercancel", onPointerCancel);
       document.removeEventListener("touchend", onTouchEnd); document.removeEventListener("touchcancel", onTouchEnd);
+      document.removeEventListener("touchmove", onTouchMove);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("resize", onResize); window.removeEventListener("hashchange", onJump); window.removeEventListener("popstate", onJump);
       window.removeEventListener("portfolio:attention-focus", onAttentionFocus); reduced.removeEventListener("change", onJump);

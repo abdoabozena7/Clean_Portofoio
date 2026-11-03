@@ -6,7 +6,6 @@ const links = [
   { label: "Education", href: "#education" },
   { label: "Honors", href: "#honors" },
   { label: "Projects", href: "#projects" },
-  { label: "Technical Skills", href: "#skills" },
   {
     label: "Portfolio",
     href: "https://abdoabozena7.github.io/Clean_Portofoio/",
