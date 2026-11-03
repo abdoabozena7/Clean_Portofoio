@@ -23,3 +23,5 @@ Live CSS negative control freezes only support pointers at0,0 while preserving t
 Regression: agent-orientation14/14PASS (angles, real SVG tip anchors, center return/parking, fast hide/slow recovery, pointer hit testing, mobile and reduced motion); scroll-command16/16PASS (wheel, held touch, slowdown, inertia, keyboard, form/dialog/taps). Build, app TypeScript, lint and24unit tests pass. Existing7Fast Refresh warnings, Browserslist age and509.81kB bundle warning remain; no thresholds suppressed. Whole-site old geometry baselines are not claimed as freshly repeated because another task is changing unrelated layout concurrently. Actual component dimensions and all pointer/guide positions are checked in current runtime; source-scope hashes isolate the owned animation paths.
 
 Local only, no deployment or push. Source0408b01preserved. Physical-phone/CWV or engagement improvements are not established by browser emulation.
+
+Owner subsequently authorized deployment. The isolated committed source bdeeee0 was published and39live native checks plus exact production byte hashes pass. See AGENTS_DEPLOYMENT.md. Concurrent main-checkout layout edits were excluded.
