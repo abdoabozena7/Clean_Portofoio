@@ -3,6 +3,7 @@ import { editorTravel, operationPose, operationTiming, type SceneBox } from "./c
 import { compileRecipe, discoverScenes, readBox, semanticSurfaces, type PaintElement, type RuntimeScene, type SceneUnit, type Surface, type TimedJob } from "./constructionRecipes";
 import { getScrollIntent, type ScrollIntent } from "./scrollIntent";
 import { agentHeading, rendezvousPoint } from "./agentOrientation";
+import { crewEdge } from "./crewSupport";
 
 type DirectorOptions = { layer: HTMLDivElement; sections: HTMLElement[]; pointers: HTMLElement[]; guides: SVGGElement[]; carets: HTMLElement[]; enabled: boolean; wake: () => void };
 type Prop = { el: HTMLDivElement; target: string; source: string; clone?: HTMLElement };
@@ -45,6 +46,7 @@ export function createConstructionDirector(options: DirectorOptions) {
   const headings = new Map<number, { angle: number; at: number }>();
   const hubs = new Map<number, { from: { x: number; y: number }; last: { x: number; y: number }; at: number; visit: number }>();
   const visits = new Map<number, number>();
+  const supportStarts = new Map<number, number>();
   const decoded = new WeakSet<HTMLImageElement>(), requested = new WeakSet<HTMLImageElement>(), failed = new WeakSet<HTMLImageElement>();
   const copyOrigins = new Map<string, SceneBox>();
   const activityFailed = (scene: RuntimeScene) => scene.root.querySelector<HTMLElement>("[data-construction-scene='activity']")?.textContent?.includes("Error – Fetching GitHub contribution data") || false;
@@ -210,16 +212,18 @@ export function createConstructionDirector(options: DirectorOptions) {
   }
 
   function hideActors(preservePointerPaint = false) {
-    if (!preservePointerPaint) { motions.clear(); hubs.clear(); headings.clear(); }
+    if (!preservePointerPaint) { motions.clear(); hubs.clear(); headings.clear(); supportStarts.clear(); }
     for (const [i, prop] of props.entries()) {
       prop.el.parentElement!.style.opacity = "0";
       const pointer = pointers[i];
       if (!preservePointerPaint && pointer.hasAttribute("data-scene-operation")) pointer.style.opacity = "0";
       pointer.classList.remove("scene-pointer");
       pointer.classList.remove("scene-hub");
+      pointer.classList.remove("scene-support");
       for (const el of [pointer, prop.el, prop.el.parentElement!, guides[i]]) {
         delete el.dataset.sceneId; delete el.dataset.sceneOperation; delete el.dataset.sceneTarget;
         delete el.dataset.scenePhase;
+        delete el.dataset.sceneSupportFor;
       }
     }
   }
@@ -257,6 +261,43 @@ export function createConstructionDirector(options: DirectorOptions) {
     pointer.style.opacity = progress < 1 ? ".8" : ".58";
     pointer.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
     return progress < 1;
+  }
+
+  function assist(job: TimedJob, scene: RuntimeScene, progress: number, index: number, now: number) {
+    const timing = operationTiming(job.operation, progress, job.durationMs);
+    const measured = viewportBox(job.unit.box);
+    // Work on the visible portion of the same measured component. Helpers do
+    // not repaint its contents or compete with the primary job's ownership.
+    const left = Math.max(12, measured.left), top = Math.max(90, measured.top);
+    const box = { left, top, width: Math.max(1, Math.min(innerWidth - 12, measured.left + measured.width) - left),
+      height: Math.max(1, Math.min(innerHeight - 20, measured.top + measured.height) - top) };
+    const edge = crewEdge(box, timing.work, index, pointers.length);
+    const contact = { x: edge.point.x + scrollX, y: edge.point.y + scrollY };
+    const id = `${job.id}-helper-${index}`;
+    let motion = motions.get(index); hubs.delete(index);
+    if (!motion || motion.job !== id) {
+      const home = rendezvousPoint(index, visits.get(index) || 0, innerWidth, innerHeight);
+      const prior = motion?.last;
+      const from = prior && prior.y - scrollY > 76 && prior.y - scrollY < innerHeight ? { ...prior } : { x: home.x + scrollX, y: home.y + scrollY };
+      motion = { job: id, from, last: from }; motions.set(index, motion);
+      supportStarts.set(index, now);
+    }
+    const arrival = Math.min(timing.approach, clamp01((now - (supportStarts.get(index) ?? now)) / 120));
+    const approaching = arrival < 1;
+    const point = approaching ? editorTravel(motion.from, contact, arrival, index) : contact;
+    face(index, point.x - motion.last.x, point.y - motion.last.y, now); motion.last = point;
+    const pointer = pointers[index]; pointer.classList.add("scene-pointer", "scene-support");
+    pointer.dataset.sceneId = scene.id; pointer.dataset.sceneOperation = "assist";
+    pointer.dataset.sceneTarget = `${job.surface.id}-helper-${index}`;
+    pointer.dataset.sceneSupportFor = job.surface.id; pointer.dataset.scenePhase = approaching ? "approach" : timing.phase;
+    pointer.dataset.click = "false"; pointer.style.opacity = ".85";
+    pointer.style.transform = `translate3d(${point.x - scrollX}px,${point.y - scrollY}px,0)`;
+    const guide = guides[index]; guide.dataset.sceneGuide = "";
+    guide.dataset.sceneTarget = pointer.dataset.sceneTarget; guide.dataset.sceneSupportFor = job.surface.id;
+    guide.dataset.sceneOperation = "assist"; guide.dataset.sceneId = scene.id;
+    guide.querySelector<SVGRectElement>("rect")!.style.opacity = "0";
+    guide.querySelector<SVGPathElement>("path")!.setAttribute("d", `M${edge.start.x},${edge.start.y}L${edge.point.x},${edge.point.y} m-3,0h6 m-3,-3v6`);
+    guide.setAttribute("opacity", approaching ? "0" : ".55");
   }
 
   function snapshot(u: SceneUnit, empty: boolean) {
@@ -363,6 +404,7 @@ export function createConstructionDirector(options: DirectorOptions) {
       el.dataset.scenePhase = timing.phase;
     }
     const guide = guides[index], selection = guide.querySelector("rect")!, handles = guide.querySelector("path")!;
+    selection.style.opacity = "1";
     guide.dataset.sceneGuide = "";
     const box = pose.box;
     selection.setAttribute("x", String(box.left)); selection.setAttribute("y", String(box.top));
@@ -484,6 +526,8 @@ export function createConstructionDirector(options: DirectorOptions) {
       }
       {
         const occupied = new Set<string>();
+        const spare: number[] = [];
+        const leaders: { job: TimedJob; scene: RuntimeScene; p: number }[] = [];
         // Persistent assignments avoid job thrashing; layout and content can
         // work simultaneously without two agents gripping the same surface.
         for (const [i, pointer] of pointers.entries()) {
@@ -497,14 +541,25 @@ export function createConstructionDirector(options: DirectorOptions) {
           const selected = candidates.find(a => a.job.id === prior) || candidates.sort((a, b) =>
             (a.job.agentRole === role ? 0 : 2) - (b.job.agentRole === role ? 0 : 2) || a.job.start - b.job.start)[0];
           if (!selected) {
-            // The waiting crew stays near the viewport center. Once parked it
-            // needs no rAF work until the next scroll/task wakes the controller.
-            if (!fast && !intent.hardJump && scrollY > innerHeight * .45 && !heroOwnsPointers) working = park(i, now) || working;
+            spare.push(i);
             continue;
           }
           occupied.add(selected.job.surface.id);
           histories.set(`agent-${i}`, selected.job.id);
           showActor(selected.job, selected.scene, selected.p, i);
+          leaders.push(selected);
+        }
+        for (const i of spare) {
+          if (leaders.length && !fast && !intent.hardJump) {
+            // All available workers participate, even in a one-job scene.
+            // Persistent helper bindings avoid jumping between unrelated tasks.
+            const prior = histories.get(`helper-${i}`);
+            const selected = leaders.find(a => a.job.id === prior) || leaders[i % leaders.length];
+            histories.set(`helper-${i}`, selected.job.id);
+            assist(selected.job, selected.scene, selected.p, i, now);
+          } else if (!fast && !intent.hardJump && scrollY > innerHeight * .45 && !heroOwnsPointers) {
+            working = park(i, now) || working;
+          }
         }
       }
       return working;

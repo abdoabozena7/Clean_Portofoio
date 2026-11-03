@@ -28,6 +28,7 @@ html [data-construction="structure"], html [data-building] { transition-property
 .scene-snapshot * { pointer-events: none !important; }
 .scene-pointer .agent-pointer-shape { transform: translate(-50%, -3.125%) rotate(var(--agent-heading, 0deg)) !important; transform-origin: 50% 3.125%; }
 .scene-hub .agent-label, .scene-hub .agent-click { display: none; }
+.scene-support .agent-label, .scene-support .agent-click { display: none; }
 .construction-letters { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .construction-letters > span { position: absolute; left: 0; top: 0; display: block; white-space: pre; transform-origin: 0 0; will-change: transform; }
 .virtual-agent[data-edge="right"] .agent-label { left: auto; right: 0; }
