@@ -2,6 +2,7 @@ import { clamp01, textFrame } from "./construction";
 import { editorTravel, operationPose, operationTiming, type SceneBox } from "./constructionScene";
 import { compileRecipe, discoverScenes, readBox, semanticSurfaces, type PaintElement, type RuntimeScene, type SceneUnit, type Surface, type TimedJob } from "./constructionRecipes";
 import { getScrollIntent, type ScrollIntent } from "./scrollIntent";
+import { agentHeading, rendezvousPoint } from "./agentOrientation";
 
 type DirectorOptions = { layer: HTMLDivElement; sections: HTMLElement[]; pointers: HTMLElement[]; guides: SVGGElement[]; carets: HTMLElement[]; enabled: boolean; wake: () => void };
 type Prop = { el: HTMLDivElement; target: string; source: string; clone?: HTMLElement };
@@ -41,6 +42,9 @@ export function createConstructionDirector(options: DirectorOptions) {
   const surfaces = new Map<PaintElement, Surface>();
   const histories = new Map<string, string>();
   const motions = new Map<number, { job: string; from: { x: number; y: number }; last: { x: number; y: number } }>();
+  const headings = new Map<number, { angle: number; at: number }>();
+  const hubs = new Map<number, { from: { x: number; y: number }; last: { x: number; y: number }; at: number; visit: number }>();
+  const visits = new Map<number, number>();
   const decoded = new WeakSet<HTMLImageElement>(), requested = new WeakSet<HTMLImageElement>(), failed = new WeakSet<HTMLImageElement>();
   const copyOrigins = new Map<string, SceneBox>();
   const activityFailed = (scene: RuntimeScene) => scene.root.querySelector<HTMLElement>("[data-construction-scene='activity']")?.textContent?.includes("Error – Fetching GitHub contribution data") || false;
@@ -206,17 +210,53 @@ export function createConstructionDirector(options: DirectorOptions) {
   }
 
   function hideActors(preservePointerPaint = false) {
-    if (!preservePointerPaint) motions.clear();
+    if (!preservePointerPaint) { motions.clear(); hubs.clear(); headings.clear(); }
     for (const [i, prop] of props.entries()) {
       prop.el.parentElement!.style.opacity = "0";
       const pointer = pointers[i];
       if (!preservePointerPaint && pointer.hasAttribute("data-scene-operation")) pointer.style.opacity = "0";
       pointer.classList.remove("scene-pointer");
+      pointer.classList.remove("scene-hub");
       for (const el of [pointer, prop.el, prop.el.parentElement!, guides[i]]) {
         delete el.dataset.sceneId; delete el.dataset.sceneOperation; delete el.dataset.sceneTarget;
         delete el.dataset.scenePhase;
       }
     }
+  }
+
+  function face(index: number, dx: number, dy: number, now: number) {
+    const prior = headings.get(index);
+    const angle = agentHeading(prior?.angle, dx, dy, prior ? now - prior.at : 16);
+    headings.set(index, { angle, at: now });
+    pointers[index].style.setProperty("--agent-heading", `${angle}deg`);
+  }
+
+  function park(index: number, now: number) {
+    let hub = hubs.get(index);
+    if (!hub) {
+      const visit = (visits.get(index) || 0) + 1; visits.set(index, visit);
+      const destination = rendezvousPoint(index, visit, innerWidth, innerHeight);
+      const last = motions.get(index)?.last;
+      const from = last ? { x: Math.max(12, Math.min(innerWidth - 12, last.x - scrollX)), y: Math.max(90, Math.min(innerHeight - 20, last.y - scrollY)) } : destination;
+      hub = { from, last: from, at: now - (last ? 0 : 520), visit }; hubs.set(index, hub);
+    }
+    const destination = rendezvousPoint(index, hub.visit, innerWidth, innerHeight);
+    const progress = clamp01((now - hub.at) / 520);
+    const position = editorTravel(hub.from, destination, progress, index);
+    const initial = !headings.has(index);
+    face(index, initial ? destination.x - innerWidth * .5 : position.x - hub.last.x,
+      initial ? destination.y - innerHeight * .52 : position.y - hub.last.y, now);
+    hub.last = position;
+    const world = { x: position.x + scrollX, y: position.y + scrollY };
+    motions.set(index, { job: "hub", from: world, last: world });
+    const pointer = pointers[index];
+    pointer.classList.add("scene-pointer", "scene-hub");
+    pointer.dataset.scenePhase = progress < 1 ? "return" : "park";
+    pointer.dataset.sceneOperation = progress < 1 ? "return" : "park";
+    pointer.dataset.click = "false";
+    pointer.style.opacity = progress < 1 ? ".8" : ".58";
+    pointer.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
+    return progress < 1;
   }
 
   function snapshot(u: SceneUnit, empty: boolean) {
@@ -297,13 +337,17 @@ export function createConstructionDirector(options: DirectorOptions) {
     } else if (s.part === "cell") { x = destination.left + destination.width; y = destination.top + destination.height * progress; }
     const contact = { x: x + scrollX, y: y + scrollY };
     let motion = motions.get(index);
+    hubs.delete(index);
     if (!motion || motion.job !== job.id) {
       const prior = motion?.last;
       const reusable = prior && prior.y - scrollY > 76 && prior.y - scrollY < innerHeight && prior.x - scrollX > 0 && prior.x - scrollX < innerWidth;
-      motion = { job: job.id, from: reusable ? { ...prior } : { x: Math.max(scrollX + 12, contact.x - 42), y: Math.min(scrollY + innerHeight - 20, Math.max(scrollY + 90, contact.y - 24)) }, last: contact };
+      const home = rendezvousPoint(index, visits.get(index) || 0, innerWidth, innerHeight);
+      const from = reusable ? { ...prior } : { x: home.x + scrollX, y: home.y + scrollY };
+      motion = { job: job.id, from, last: from };
       motions.set(index, motion);
     }
     const position = timing.phase === "approach" ? editorTravel(motion.from, contact, timing.approach, index) : contact;
+    face(index, position.x - motion.last.x, position.y - motion.last.y, performance.now());
     motion.last = position;
     // Travel is document-relative. During work, the pointer is exactly attached
     // to the real moving handle/caret, even while the viewport scrolls.
@@ -311,7 +355,6 @@ export function createConstructionDirector(options: DirectorOptions) {
     pointer.style.transform = `translate3d(${position.x - scrollX}px,${position.y - scrollY}px,0)`;
     pointer.classList.add("scene-pointer"); pointer.dataset.edge = x > innerWidth - 135 ? "right" : "left";
     pointer.dataset.click = String(operation === "duplicate" && progress < .15 || operation === "align" && progress > .7);
-    pointer.querySelector<SVGElement>("svg")!.style.transform = "none";
     const action = pointer.querySelector<HTMLElement>(".agent-action")!; action.textContent = ` · ${operation}`; action.style.display = "inline";
     const actor = prop.el.parentElement!;
     prop.el.style.clipPath = "none";
@@ -453,7 +496,12 @@ export function createConstructionDirector(options: DirectorOptions) {
           const candidates = activeJobs.filter(a => !occupied.has(a.job.surface.id));
           const selected = candidates.find(a => a.job.id === prior) || candidates.sort((a, b) =>
             (a.job.agentRole === role ? 0 : 2) - (b.job.agentRole === role ? 0 : 2) || a.job.start - b.job.start)[0];
-          if (!selected) continue;
+          if (!selected) {
+            // The waiting crew stays near the viewport center. Once parked it
+            // needs no rAF work until the next scroll/task wakes the controller.
+            if (!fast && !intent.hardJump && scrollY > innerHeight * .45 && !heroOwnsPointers) working = park(i, now) || working;
+            continue;
+          }
           occupied.add(selected.job.surface.id);
           histories.set(`agent-${i}`, selected.job.id);
           showActor(selected.job, selected.scene, selected.p, i);

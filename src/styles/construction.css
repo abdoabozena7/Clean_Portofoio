@@ -26,7 +26,8 @@ html [data-construction="structure"], html [data-building] { transition-property
 .scene-prop { position: absolute; left: 0; top: 0; transform-origin: 0 0; outline: 1px solid var(--agent-color); background: color-mix(in srgb, var(--agent-color) 8%, transparent); overflow: hidden; will-change: transform; }
 .scene-snapshot { position: relative; overflow: hidden; background: white; color: #111920; }
 .scene-snapshot * { pointer-events: none !important; }
-.scene-pointer .agent-pointer-shape { transform: none !important; }
+.scene-pointer .agent-pointer-shape { transform: translate(-50%, -3.125%) rotate(var(--agent-heading, 0deg)) !important; transform-origin: 50% 3.125%; }
+.scene-hub .agent-label, .scene-hub .agent-click { display: none; }
 .construction-letters { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .construction-letters > span { position: absolute; left: 0; top: 0; display: block; white-space: pre; transform-origin: 0 0; will-change: transform; }
 .virtual-agent[data-edge="right"] .agent-label { left: auto; right: 0; }
