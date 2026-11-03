@@ -43,6 +43,8 @@
     "test:pace": "node scripts/verify-paced-browsing.mjs",
     "test:fast-return": "node scripts/verify-scroll-command.mjs",
     "test:scroll-command": "node scripts/verify-scroll-command.mjs",
+    "test:global-scroll": "node scripts/verify-global-scroll.mjs",
+    "test:hero-agents": "node scripts/verify-hero-agents.mjs",
     "test:reference-motion": "node scripts/verify-reference-motion.mjs",
     "test:reference-layout": "node scripts/verify-scene-layout.mjs --before reference-v2-before --after reference-v2-after --expected-head 15e42c5 --strict"
   },

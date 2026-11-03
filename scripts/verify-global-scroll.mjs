@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const baseline = process.argv.includes('--baseline');
 const out = `output/playwright/global-scroll/${baseline ? 'baseline' : `final-${Date.now()}`}`;
-const url = process.env.PORTFOLIO_URL || 'http://127.0.0.1:8081/Clean_Portofoio/';
+const url = process.env.PORTFOLIO_URL || 'http://127.0.0.1:8080/Clean_Portofoio/';
 await mkdir(out, { recursive: true });
 const report = { url, baseline, checks: [], errors: [], journeys: [], geometry: {} };
 async function fingerprint() {
@@ -88,7 +88,7 @@ try {
         const cdp = await context.newCDPSession(page);
         await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: 195, y: 740 }] });
         const touchFrames = [];
-        for (const y of [620,500,380,260,140,20]) { await page.waitForTimeout(40); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y }] }); touchFrames.push(await page.evaluate(async () => ({ ...(await import('/Clean_Portofoio/src/lib/scrollIntent.ts')).getScrollIntent(), y: scrollY, at: performance.now() }))); }
+        for (const y of [620,500,380,260,140,20]) { await page.waitForTimeout(40); await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: 195, y }] }); touchFrames.push(await page.evaluate(() => ({ mode: document.documentElement.dataset.browsing, y: scrollY, at: performance.now() }))); }
         const fast = await state(page); report.journeys.push({ mobile, natural, fast, touchFrames });
         check('Native touch: all offscreen groups share scan', allActive(fast), fast);
         if (!baseline) check('Native touch: offscreen media and passed logos enlarged', fast.rows.some((r,i) => r.logo > (natural.rows[i]?.logo || Infinity) + 15) && fast.rows.some((r,i) => r.media > (natural.rows[i]?.media || Infinity) + 25), { natural, fast });
