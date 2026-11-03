@@ -27,7 +27,7 @@ const ProjectsSection = () => {
           className={`project-card ${project.kind === "skill" ? "project-card--skill" : ""} ${project.id === "hivo" ? "project-card--featured" : ""} group relative border-2 border-black p-5 flex flex-col hover:-translate-x-1 hover:-translate-y-1 transition-all duration-300 bg-white`}
         >
           {project.inProgress && (
-            <span className="project-building" title="Currently working on this project">
+            <span data-scan-detail className="project-building" title="Currently working on this project">
               <span aria-hidden="true" /> In progress
             </span>
           )}
@@ -38,7 +38,7 @@ const ProjectsSection = () => {
             <p data-scan-detail data-construction="text" className="body-text mt-4 text-sm font-normal">
               {project.description}
             </p>
-            <div data-scan-detail className="flex flex-wrap gap-2 mt-4">
+            <div className="project-tags flex flex-wrap gap-2 mt-4">
               {project.tags.map((tag, tagIndex) => (
                 <Badge key={tag} data-tone={(projectIndex + tagIndex) % 5} variant="secondary" className="palette-tag font-mono text-[10px] font-bold border border-black/10 px-1.5 py-0">
                   {tag}

@@ -3,6 +3,7 @@ import { compensateScroll, getScrollIntent, requestDetailedView, subscribeScroll
 
 type Box = { el: HTMLElement; height: number; width: number; title: HTMLElement; media?: HTMLElement; actions?: HTMLElement; mediaX: number; mediaY: number; mediaW: number; mediaH: number; actionsY: number; details: HTMLElement[]; kind: string; titleSize: number; compactHeight: number; brand?: HTMLElement; logo?: HTMLElement; role?: HTMLElement; roleX: number; roleY: number; roleSize: number; summaryTitleSize: number; summaryTitleHeight: number; summaryMediaW: number; summaryMediaH: number; copy?: HTMLElement; copyW: number; copyTargetW: number; lift: number; frozen: boolean; badge?: HTMLElement; ribbon?: HTMLElement; toggle?: HTMLElement };
 type Anchor = { el: HTMLElement; edge: "top" | "bottom"; y: number; lastScroll: number };
+type ProjectSummary = { tags: HTMLElement; tagX: number; tagY: number; tagW: number; tagTargetY: number; mediaTargetY: number };
 
 /** One site-wide pace transition; section boundaries never reset its progress. */
 export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
@@ -13,7 +14,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const editors = [...(editorRef.current?.querySelectorAll<HTMLElement>("[data-scan-editor]") || [])];
     const trails = [...(editorRef.current?.querySelectorAll<SVGPathElement>("[data-scan-trail]") || [])];
     const original = new Map<HTMLElement, string | null>();
-    let boxes: Box[] = [], anchor: Anchor | null = null, progress = 0, goal = 0, frame = 0, tickAt = 0;
+    let boxes: (Box & { projectSummary?: ProjectSummary })[] = [], anchor: Anchor | null = null, progress = 0, goal = 0, frame = 0, tickAt = 0;
     let pointerHeld = false, touching = false, overflowAnchor = "", cachedWidth = innerWidth;
     let activationTarget: HTMLElement | null = null, activationTimer: ReturnType<typeof setTimeout> | undefined;
     let activationX = 0, activationY = 0;
@@ -72,13 +73,28 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           const copyTargetW = Math.max(110, r.width - 28 - summaryMediaW - 18);
           const summaryTitleSize = kind === "experience" ? titleSize + (innerWidth < 768 ? 4 : 6) : kind === "credential" ? titleSize + 2 : titleSize;
           const summaryTitleHeight = measureTextHeight(title, summaryTitleSize, kind === "credential" && media ? copyTargetW : Math.max(120, r.width - 90));
-          const compactHeight = kind === "project" ? 112 : kind === "skill" ? 60 : kind === "experience" ? Math.max(132, summaryTitleHeight + 62) : Math.max(summaryTitleHeight + 28, m ? summaryMediaH + 24 : 72);
+          let compactHeight = kind === "skill" ? 60 : kind === "experience" ? Math.max(132, summaryTitleHeight + 62) : Math.max(summaryTitleHeight + 28, m ? summaryMediaH + 24 : 72);
+          let projectSummary: ProjectSummary | undefined;
+          if (kind === "project" && m) {
+            const tags = el.querySelector<HTMLElement>(".project-tags");
+            if (tags) {
+              const t = tags.getBoundingClientRect(), h = title.getBoundingClientRect(), style = getComputedStyle(el);
+              const borderTop = parseFloat(style.borderTopWidth), borderLeft = parseFloat(style.borderLeftWidth);
+              const tagTargetY = h.bottom - r.top - borderTop + 12;
+              // Wide cards retain their columns; stacked cards keep full-width
+              // media below the tags. Only description/action space is removed.
+              const mediaTargetY = m.left >= h.right - .5 ? parseFloat(style.paddingTop) : tagTargetY + t.height + 20;
+              projectSummary = { tags, tagX: t.left - r.left - borderLeft, tagY: t.top - r.top - borderTop, tagW: t.width, tagTargetY, mediaTargetY };
+              compactHeight = borderTop + Math.max(mediaTargetY + m.height, tagTargetY + t.height) + parseFloat(style.paddingBottom) + parseFloat(style.borderBottomWidth);
+              remember(tags);
+            }
+          }
           [el, title, media, actions, brand, logo, role, copy, ...details, el.querySelector<HTMLElement>(".project-building")].forEach(node => { if (node) remember(node); });
           const headingRect = title.getBoundingClientRect();
           // Reserve upstream mobile footprints so a global transition cannot
           // steal native touch momentum. Their visual summary still changes.
           const frozen = !decorative() && r.top <= 150 || (r.top < 80 && headingRect.bottom < 80 && r.bottom > innerHeight - 64);
-          return { el, height: r.height, width: r.width, title, media: media || undefined, actions: actions || undefined, mediaX: m ? m.left - r.left - parseFloat(getComputedStyle(el).borderLeftWidth) : 0, mediaY: m ? m.top - r.top - parseFloat(getComputedStyle(el).borderTopWidth) : 0, mediaW: m?.width || 0, mediaH: m?.height || 0, actionsY: a ? a.top - r.top - 2 : 0, details, kind, titleSize, compactHeight, brand: brand || undefined, logo: logo || undefined, role: role || undefined, roleX: roleRect ? roleRect.left - r.left : 0, roleY: roleRect ? roleRect.top - r.top : 0, roleSize: role ? parseFloat(getComputedStyle(role).fontSize) : 16, summaryTitleSize, summaryTitleHeight, summaryMediaW, summaryMediaH, copy: copy || undefined, copyW: copyRect?.width || 0, copyTargetW, lift: brand ? brand.getBoundingClientRect().top - r.top - parseFloat(getComputedStyle(el).paddingTop) : 0, frozen, badge: el.querySelector<HTMLElement>(".project-building") || undefined, ribbon: el.querySelector<HTMLElement>(".achievement-ribbon") || undefined, toggle: el.querySelector<HTMLElement>("[data-scan-toggle]") || undefined };
+          return { el, height: r.height, width: r.width, title, media: media || undefined, actions: actions || undefined, mediaX: m ? m.left - r.left - parseFloat(getComputedStyle(el).borderLeftWidth) : 0, mediaY: m ? m.top - r.top - parseFloat(getComputedStyle(el).borderTopWidth) : 0, mediaW: m?.width || 0, mediaH: m?.height || 0, actionsY: a ? a.top - r.top - 2 : 0, details, kind, titleSize, compactHeight, projectSummary, brand: brand || undefined, logo: logo || undefined, role: role || undefined, roleX: roleRect ? roleRect.left - r.left : 0, roleY: roleRect ? roleRect.top - r.top : 0, roleSize: role ? parseFloat(getComputedStyle(role).fontSize) : 16, summaryTitleSize, summaryTitleHeight, summaryMediaW, summaryMediaH, copy: copy || undefined, copyW: copyRect?.width || 0, copyTargetW, lift: brand ? brand.getBoundingClientRect().top - r.top - parseFloat(getComputedStyle(el).paddingTop) : 0, frozen, badge: el.querySelector<HTMLElement>(".project-building") || undefined, ribbon: el.querySelector<HTMLElement>(".achievement-ribbon") || undefined, toggle: el.querySelector<HTMLElement>("[data-scan-toggle]") || undefined };
         });
       });
     };
@@ -127,18 +143,18 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
         // Visible mobile rows retain their footprint during native momentum,
         // while their logo/photo summary can still grow inside that reservation.
         b.el.style.height = `${b.frozen ? b.height : b.height + (b.compactHeight - b.height) * progress}px`;
-        b.el.style.overflow = "hidden";
+        b.el.style.overflow = project ? "visible" : "hidden";
         if (project) {
-          b.title.style.fontSize = `${20 - 5 * progress}px`; b.title.style.lineHeight = `${28 - 8 * progress}px`;
-          b.title.style.maxWidth = `${b.width - 44 - 105 * progress}px`;
-          b.title.style.transform = `translate(${-6 * progress}px,${-4 * progress}px)`;
-          const media = b.media!, scale = 96 / b.mediaW;
+          const media = b.media!, summary = b.projectSummary;
           media.style.position = "absolute"; media.style.left = `${b.mediaX}px`; media.style.top = `${b.mediaY}px`;
           media.style.width = `${b.mediaW}px`; media.style.height = `${b.mediaH}px`; media.style.marginTop = "0";
-          media.style.transformOrigin = "0 0";
-          media.style.transform = `translate(${(b.width - 114 - b.mediaX) * progress}px,${(26 - b.mediaY) * progress}px) scale(${1 + (scale - 1) * progress})`;
+          media.style.transform = `translateY(${((summary?.mediaTargetY ?? b.mediaY) - b.mediaY) * progress}px)`;
+          if (summary) {
+            const tags = summary.tags;
+            tags.style.position = "absolute"; tags.style.left = `${summary.tagX}px`; tags.style.width = `${summary.tagW}px`;
+            tags.style.top = `${summary.tagY + (summary.tagTargetY - summary.tagY) * progress}px`; tags.style.marginTop = "0";
+          }
           if (b.actions) { b.actions.style.position = "absolute"; b.actions.style.top = `${b.actionsY}px`; b.actions.style.left = "20px"; b.actions.style.width = `${b.width - 44}px`; b.actions.style.marginTop = "0"; }
-          if (b.badge) b.badge.style.top = `${-10 + 96 * progress}px`;
         } else if (b.kind === "skill") { b.title.style.transform = `translateX(${16 * progress}px)`; b.title.style.width = `calc(100% - ${16 * progress}px)`; }
         else {
           b.title.style.fontSize = `${b.titleSize + (b.summaryTitleSize - b.titleSize) * progress}px`;
