@@ -1,14 +1,15 @@
 import {createRequire} from 'node:module';import {mkdir,readFile,readdir,writeFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const before=process.argv.includes('--before'),negative=process.argv.includes('--negative-control'),out='output/playwright/reference-v2-motion-'+(before?'before':negative?'negative':'after');await mkdir(out,{recursive:true});
+const url=process.env.PORTFOLIO_URL||'http://127.0.0.1:8080/Clean_Portofoio/';
 async function fingerprint(){const files=[];async function walk(d){for(const f of await readdir(d,{withFileTypes:true})){const p=d+'/'+f.name;f.isDirectory()?await walk(p):files.push(p)}}await walk('src');const h=createHash('sha256');for(const p of files.sort())h.update(p).update(await readFile(p));return h.digest('hex')}
 const report={sourceBefore:await fingerprint(),checks:[],journeys:[],errors:[]},check=(name,passed,evidence)=>{report.checks.push({name,passed:!!passed,evidence});console.log(passed?'PASS':'FAIL',name)};
 const browser=await chromium.launch({channel:'msedge',headless:true});
 try{
- for(const section of ['education','projects','skills','contact']){
+ for(const section of ['experience','education','projects','contact']){
   const context=await browser.newContext({viewport:{width:1440,height:900},recordVideo:{dir:out}}),page=await context.newPage();page.on('pageerror',e=>report.errors.push(e.message));
   try{
-   await page.goto('http://127.0.0.1:8080/Clean_Portofoio/',{waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(6000);await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});
+   await page.goto(url,{waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);await page.waitForTimeout(6000);await page.addStyleTag({content:'html{scroll-behavior:auto!important}'});
    if(negative)await page.addStyleTag({content:'[data-agent][data-scene-phase="approach"]{transform:translate3d(0,0,0)!important}'});
    await page.evaluate(()=>{window.__motion=[];window.__motionClock=setInterval(()=>{const pose=e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height}};window.__motion.push({at:performance.now(),scrollY,pointers:[...document.querySelectorAll('[data-agent]')].map((e,i)=>({i,phase:e.dataset.scenePhase,op:e.dataset.sceneOperation,target:e.dataset.sceneTarget,...pose(e),opacity:+getComputedStyle(e).opacity})).filter(e=>e.op&&e.opacity>.1),guides:[...document.querySelectorAll('[data-scene-guide]')].filter(e=>+e.getAttribute('opacity')>.1).map(e=>({target:e.dataset.sceneTarget,...pose(e.querySelector('rect'))}))})},20)});
    await page.locator('#'+section).evaluate(el=>scrollTo({top:scrollY+el.getBoundingClientRect().top-innerHeight*.78,behavior:'instant'}));

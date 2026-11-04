@@ -7,7 +7,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/A-plus/.cache/
 const negative=process.argv.includes('--negative-control');
 const out=process.env.PROVE_IT_OUTPUT_DIR||'output/playwright/hero-agents/'+(negative?'negative':'acceptance');
 await mkdir(out,{recursive:true});
-const sources=['src/components/HeroSection.tsx','src/components/HeroAgentsOverlay.tsx','src/components/AgentConstruction.tsx','src/components/AgentPointer.tsx','src/lib/heroAgents.ts','src/lib/heroOverlayWork.ts','src/lib/agentConfig.ts','src/lib/palette.ts','src/lib/constructionDirector.ts','src/styles/hero-agents.css','src/styles/construction.css','src/hooks/useScrollConstruction.ts','src/lib/nameConstruction.ts','scripts/verify-hero-agents.mjs'];
+const sources=['src/components/HeroSection.tsx','src/components/HeroAgentsOverlay.tsx','src/components/AgentConstruction.tsx','src/components/AgentPointer.tsx','src/lib/heroAgents.ts','src/lib/heroOverlayWork.ts','src/lib/agentConfig.ts','src/lib/agentOrientation.ts','src/lib/palette.ts','src/lib/constructionDirector.ts','src/lib/constructionScene.ts','src/styles/hero-agents.css','src/styles/construction.css','src/hooks/useScrollConstruction.ts','src/lib/nameConstruction.ts','scripts/verify-hero-agents.mjs'];
 const hash=async()=>{const h=createHash('sha256');for(const file of sources){h.update(file);h.update(await readFile(file));}return h.digest('hex')};
 const report={mode:'live',negative,sourceBefore:await hash(),checks:[],errors:[],journeys:[],passed:false};
 const check=(id,passed,evidence)=>{report.checks.push({id,passed:!!passed,evidence});console.log((passed?'PASS ':'FAIL ')+id)};
@@ -18,12 +18,14 @@ const percentile=(values,p)=>values.length?[...values].sort((a,b)=>a-b)[Math.flo
 const browser=await chromium.launch({channel:'msedge',headless:true});
 const url=process.env.PORTFOLIO_URL||'http://127.0.0.1:8080/Clean_Portofoio/';
 try{
- await Promise.all((negative?[1440]:[1440,390]).map(async width=>{
+ for (const width of negative ? [1440] : [1440,390]) {
   const context=await browser.newContext({viewport:{width,height:900},hasTouch:width===390,isMobile:width===390,recordVideo:{dir:out}});
   try{
    const page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));
    await page.addInitScript(()=>{
     window.__heroAgentFrames=[];
+    window.__heroTravel=[];
+    window.__heroClock={};
     const screenPoint=(node,x=0,y=0)=>{const m=node.getScreenCTM();if(!m)return null;const p=new DOMPoint(x,y).matrixTransform(m);return{x:p.x,y:p.y}};
     const opacity=node=>{let value=1;for(let at=node;at instanceof Element;at=at.parentElement){const s=getComputedStyle(at);if(s.display==='none'||s.visibility==='hidden')return 0;value*=Number(s.opacity)}return value};
     const bounds=node=>{const r=node.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}};
@@ -41,13 +43,26 @@ try{
     };
     const sample=()=>{
      const svg=document.querySelector('[data-hero-agents]'),cable=svg?.querySelector('[data-agent-cable]');
+     const clock=window.__heroClock, at=performance.now();
+     const name=document.querySelector('#hero h1'), workshop=document.querySelector('[data-name-assembly]');
+     if (+workshop?.dataset.nameProgress > 0) clock.nameStart ??= at;
+     if (name?.dataset.constructed === 'true') clock.nameEnd ??= at;
+     if (svg?.dataset.state === 'building') clock.artStart ??= at;
+     if (svg?.dataset.state === 'settled') clock.artEnd ??= at;
+     if (!clock.artEnd) {
+      for (const node of document.querySelectorAll('[data-hero-job][data-hero-phase]')) {
+       if (Number(node.style.opacity) < .5) continue;
+       const point=screenPoint(node.querySelector('svg'),16,1);
+       window.__heroTravel.push({at,key:node.dataset.heroJob,agent:node.dataset.agent,phase:node.dataset.heroPhase,point,angle:parseFloat(node.style.getPropertyValue('--agent-heading'))});
+      }
+     }
      if(cable&&svg.dataset.state==='building'&&window.__heroAgentFrames.length<3000){
       const draw=Number(svg.dataset.drawProgress),p=cable.getPointAtLength(cable.getTotalLength()*draw);
       const pool=[...document.querySelectorAll('[data-agent-layer] .virtual-agent')];
       const activeCreatorCount=pool.filter(node=>{const r=node.querySelector('svg')?.getBoundingClientRect();return opacity(node)>.5&&r&&r.right>0&&r.left<innerWidth&&r.bottom>0&&r.top<innerHeight}).length;
-      const creators=pool.filter(node=>node.hasAttribute('data-overlay-job')).map(node=>{
-       const r=node.querySelector('svg')?.getBoundingClientRect();
-       return{job:node.dataset.overlayJob,agent:node.dataset.agent,opacity:opacity(node),tip:r?{x:r.x+r.width*.5,y:r.y+r.height/32}:null};
+      const creators=pool.filter(node=>node.hasAttribute('data-overlay-job')&&node.dataset.heroPhase!=='approach').map(node=>{
+       const arrow=node.querySelector('svg');
+       return{job:node.dataset.overlayJob,agent:node.dataset.agent,opacity:opacity(node),tip:arrow?screenPoint(arrow,16,1):null};
       });
       window.__heroAgentFrames.push({elapsed:Number(svg.dataset.elapsed),phase:svg.dataset.phase,draw,tip:screenPoint(cable,p.x,p.y),activeCreatorCount,creators,actors:[...svg.querySelectorAll('[data-hero-agent]')].map(sampleObject),tools:[...svg.querySelectorAll('[data-hero-tool]')].map(sampleObject),headingReady:document.querySelector('#hero h1')?.dataset.constructed==='true'});
      }
@@ -64,7 +79,22 @@ try{
    await page.screenshot({path:path.join(out,width+'-drawing.png')});
    await page.waitForFunction(()=>document.querySelector('[data-hero-agents]')?.dataset.state==='settled',null,{timeout:20000});
    const frames=await page.evaluate(()=>window.__heroAgentFrames);
+   const {travel,clock}=await page.evaluate(()=>({travel:window.__heroTravel,clock:window.__heroClock}));
    await writeFile(path.join(out,width+'-frames.json'),JSON.stringify(frames));
+   await writeFile(path.join(out,width+'-travel.json'),JSON.stringify({travel,clock}));
+   for (const key of ['name-drag','draw-teal','place-code','draw-cable']) {
+    const route=travel.filter(sample=>sample.key===key);
+    const approach=route.filter(sample=>sample.phase==='approach');
+    const firstWork=route.find(sample=>sample.phase==='work');
+    const transit=distance(approach[0]?.point,approach.at(-1)?.point);
+    const millis=firstWork?.at-approach[0]?.at;
+    // The first trip overlaps browser startup. Two distinct pre-contact
+    // positions and the dock still prove real travel under video sampling.
+    const opening=key==='name-drag', distanceToDock=distance(approach.at(-1)?.point,firstWork?.point);
+    check(width+':'+key+'ApproachesAndDocks',approach.length>=(opening?2:3)&&transit>8&&millis>=55&&millis<=(opening?330:240)&&Number.isFinite(distanceToDock)&&approach.some(sample=>Math.abs(sample.angle)>15),{samples:approach.length,transit,millis,distanceToDock});
+   }
+   check(width+':supportingHeroContentAlsoApproaches',travel.some(sample=>sample.key.startsWith('hero-content-')&&sample.phase==='approach')&&travel.some(sample=>sample.key.startsWith('hero-content-')&&sample.phase==='work'));
+   check(width+':openingMovesAtEditorPace',clock.nameEnd-clock.nameStart<3300&&clock.artEnd-clock.artStart<4550&&clock.artEnd-clock.nameStart<7600,clock);
    const creator=(f,job)=>f.creators.find(c=>c.job===job&&c.opacity>.5&&c.tip);
    const growing=frames.filter(f=>f.draw>.05&&f.draw<.95);
    const drawing=growing.filter(f=>creator(f,'draw-cable'));
@@ -121,30 +151,31 @@ try{
    check(width+':originalLayoutAndTypeUnchanged',comparison.every(key=>JSON.stringify(final[key])===JSON.stringify(before[key])),{differences:comparison.filter(key=>JSON.stringify(final[key])!==JSON.stringify(before[key]))});
    check(width+':nativeSvgMatchesApprovedIngredients',final.actors===3&&final.tools===2&&final.raster===0&&final.allPlaced&&final.overlayPointers===0,final);
    check(width+':overlayDoesNotBlockControls',final.pointerEvents==='none'&&final.cvClickable&&!final.overflow,final);
-   check(width+':readable5600msConstruction',final.state==='settled'&&final.elapsed===5600,{state:final.state,elapsed:final.elapsed});
+   check(width+':shorterButGradualConstruction',final.state==='settled'&&final.elapsed>=3200&&final.elapsed<=3600,{state:final.state,elapsed:final.elapsed});
    const palette=['#2bbaa5','#93d3ae','#faecb6','#f9a822','#f96635'];
    check(width+':tenExistingCreatorsUseOriginalPalette',final.pointerCount===10&&final.pointerColors.every(c=>palette.includes(c.palette)&&palette.includes(c.paint)),{count:final.pointerCount,colors:final.pointerColors});
    const accent=final.rightAccent;
    check(width+':rightAmberAccentPointsOutward',accent.rayDx.length>=2&&accent.rayDx.every(dx=>dx>0)&&accent.horizontalDx.length>=1&&accent.horizontalDx.every(dx=>dx>0)&&accent.periodRight!==null&&accent.left>=accent.periodRight-.5&&accent.color==='#f9a822',accent);
    await page.screenshot({path:path.join(out,width+'-settled.png')});
    if(!negative){
-    await page.mouse.wheel(0,1100);await page.waitForTimeout(500);
+    await page.keyboard.press('End');
+    await page.waitForFunction(()=>document.querySelector('#hero').getBoundingClientRect().bottom<0);
     const leaving=await page.locator('[data-hero-agents]').getAttribute('data-elapsed');
     await page.keyboard.press('Control+Home');await page.waitForTimeout(700);
     check(width+':returnDoesNotReplay',await page.locator('[data-hero-agents]').getAttribute('data-state')==='settled'&&await page.locator('[data-hero-agents]').getAttribute('data-elapsed')===leaving);
     await page.setViewportSize({width:width===390?768:1920,height:900});await page.waitForTimeout(350);
-    check(width+':resizeKeepsAnchorsAndProgress',await page.locator('[data-hero-agents]').evaluate(svg=>svg.dataset.state==='settled'&&+svg.dataset.elapsed===5600&&Math.abs(+svg.getAttribute('viewBox').split(' ')[2]-svg.parentElement.getBoundingClientRect().width)<.1&&document.documentElement.scrollWidth<=innerWidth+1));
+    check(width+':resizeKeepsAnchorsAndProgress',await page.locator('[data-hero-agents]').evaluate((svg,elapsed)=>svg.dataset.state==='settled'&&+svg.dataset.elapsed===elapsed&&Math.abs(+svg.getAttribute('viewBox').split(' ')[2]-svg.parentElement.getBoundingClientRect().width)<.1&&document.documentElement.scrollWidth<=innerWidth+1,final.elapsed));
     await page.screenshot({path:path.join(out,width+'-resized.png')});
    }
    report.journeys.push({width,frames:frames.length,state:final.state});
   }finally{await context.close()}
- }));
+ }
  if(!negative){
   const context=await browser.newContext({viewport:{width:390,height:900},reducedMotion:'reduce'});
   try{
    const page=await context.newPage();page.setDefaultTimeout(15000);page.on('pageerror',e=>report.errors.push(e.message));await page.goto(url,{timeout:30000});await page.evaluate(()=>document.fonts.ready);
    await page.waitForFunction(()=>document.querySelector('[data-hero-agents]')?.dataset.state==='settled');
-   check('reducedMotionImmediateFinalIllustration',await page.locator('[data-hero-agents]').evaluate(svg=>+svg.dataset.elapsed===5600&&getComputedStyle(svg).opacity==='1'&&[...svg.querySelectorAll('[data-hero-agent],[data-hero-tool]')].every(e=>e.dataset.placed==='true'&&+e.dataset.buildProgress===1)&&[...svg.querySelectorAll('.hero-mascot-eyes')].every(e=>getComputedStyle(e).animationName==='none')));
+   check('reducedMotionImmediateFinalIllustration',await page.locator('[data-hero-agents]').evaluate(svg=>getComputedStyle(svg).opacity==='1'&&[...svg.querySelectorAll('[data-hero-agent],[data-hero-tool]')].every(e=>e.dataset.placed==='true'&&+e.dataset.buildProgress===1)&&[...svg.querySelectorAll('.hero-mascot-eyes')].every(e=>getComputedStyle(e).animationName==='none')&&!document.querySelector('[data-hero-job]')));
    await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForTimeout(250);
    check('preferenceChangeDoesNotRestart',await page.locator('[data-hero-agents]').getAttribute('data-state')==='settled');
    await page.screenshot({path:path.join(out,'390-reduced.png')});

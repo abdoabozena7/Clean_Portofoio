@@ -1,3 +1,6 @@
+import { publishHeroOverlayWork, releaseHeroOverlayWork, type HeroOverlayJob } from "./heroOverlayWork";
+import { editorApproachMs, editorTravel } from "./constructionScene";
+
 type Point = { x: number; y: number };
 type Glyph = Point & { width: number; height: number };
 type Layout = { scale: number; perches: Point[]; code: Point; terminal: Point; left: number; right: number; lineY: number };
@@ -5,10 +8,9 @@ type Layout = { scale: number; perches: Point[]; code: Point; terminal: Point; l
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 const ease = (n: number) => { const p = clamp(n); return p * p * (3 - 2 * p); };
 const phase = (time: number, start: number, end: number) => ease((time - start) / (end - start));
-const mix = (a: Point, b: Point, p: number): Point => ({ x: a.x + (b.x - a.x) * p, y: a.y + (b.y - a.y) * p });
-const travel = (a: Point, b: Point, p: number, arc: number): Point => {
-  const at = mix(a, b, p); at.y -= Math.sin(p * Math.PI) * arc; return at;
-};
+const duration = 3400;
+const timelineLength = 7;
+const approachLength = editorApproachMs * timelineLength / duration;
 
 /** One visibility-aware clock. All carried props and the drawing nib share the
  * same measured coordinates as the real text; resizing never restarts the story. */
@@ -27,7 +29,6 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
   const context = canvas.getContext("2d")!;
   let layout: Layout | null = null, layoutDirty = true, accentLengths: number[] = [], length = 0, frame = 0, elapsed = 0, last = 0;
   let visible = false, fontsReady = false, stopped = false, started = false;
-  const duration = 5600;
   let layoutPaused = false;
   const objects = [...actors, code, terminal];
   const readVectors = () => new Map(objects.map(group => {
@@ -145,31 +146,33 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     if (!layout) return;
     vectors ??= readVectors();
     if (reduced.matches) elapsed = duration;
-    // Keep every construction beat readable, with a modest pause for each handoff.
-    const t = elapsed / 1000 * (7000 / duration), done = elapsed >= duration, s = layout.scale;
+    const t = elapsed * timelineLength / duration, done = elapsed >= duration, s = layout.scale;
     const helpers = innerWidth >= 768 && !coarse.matches;
     const projecting = active() && !done && !reduced.matches;
     const writes: (() => void)[] = [];
     const reads: (() => void)[] = [];
     const jobs: HeroOverlayJob[] = [];
     const boxes = new Map<SVGGElement, DOMRect>();
-    const addJob = (index: number, kind: string, operation: string, resolvePoint: () => Point, object?: SVGGElement) => {
+    const addJob = (index: number, kind: string, operation: string, resolvePoint: () => Point, object?: SVGGElement, motion: Pick<HeroOverlayJob, "approach" | "click" | "opacity"> = {}) => {
       if (!projecting) return;
       reads.push(() => {
         const point = resolvePoint();
         let box = object && boxes.get(object);
-        if (object && !box) { box = object.getBoundingClientRect(); boxes.set(object, box); }
-        jobs.push({ index, kind, operation, x: point.x, y: point.y, ...(box ? { box: { left: box.left, top: box.top, width: box.width, height: box.height } } : {}) });
+        if (object && motion.approach === undefined && !box) { box = object.getBoundingClientRect(); boxes.set(object, box); }
+        jobs.push({ index, kind, operation, x: point.x, y: point.y, ...motion, ...(box ? { box: { left: box.left, top: box.top, width: box.width, height: box.height } } : {}) });
       });
     };
-    const buildAndPlace = (group:SVGGElement,index:number,name:string,destination:Point,staging:Point,from:number,drawUntil:number,carryFrom:number,placedAt:number) => {
-      const build=phase(t,from,drawUntil),carry=phase(t,carryFrom,placedAt);
-      const position=travel(staging,destination,carry,26*s);
+    const approach = (start: number, contact: number) => t < contact ? clamp((t - start) / (contact - start)) : undefined;
+    const buildAndPlace = (group: SVGGElement, index: number, name: string, destination: Point, staging: Point, from: number, drawUntil: number, placedAt: number) => {
+      const drawFrom = from + approachLength, carryFrom = drawUntil + approachLength;
+      const landing = placedAt - .13;
+      const build = phase(t, drawFrom, drawUntil), carry = clamp((t - carryFrom) / (landing - carryFrom));
+      const position = editorTravel(staging, destination, carry, index);
       setPose(group,position,s);
       writes.push(() => {
         group.style.opacity = "1";
         const placed = String(t >= placedAt);
-        const action = t < from ? "waiting" : t < drawUntil ? "create" : t < carryFrom ? "grip" : t < placedAt ? "carry" : "perched";
+        const action = t < drawFrom ? "waiting" : t < drawUntil ? "create" : t < carryFrom ? "grip" : t < placedAt ? "carry" : "perched";
         if (group.dataset.placed !== placed) group.dataset.placed = placed;
         if (group.dataset.action !== action) group.dataset.action = action;
         paintVector(group, build);
@@ -177,30 +180,37 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
       const helperIndex=({0:1,2:3,5:7} as Record<number,number>)[index];
       if (t>=from && t<drawUntil) {
         const step=build<.45?"outline":build<.6?"add eyes":build<.75?"draw sparks":"draw hands";
-        addJob(index,`draw-${name}`,`${step} · ${name}`,() => vectorTip(group, build),group);
-        if(helpers)addJob(helperIndex,`pin-${name}`,"pin drawing",() => viewportPoint(group,{x:-19,y:-35}),group);
+        const arrival = approach(from, drawFrom);
+        addJob(index, `draw-${name}`, `${step} · ${name}`, () => vectorTip(group, build), group, { approach: arrival });
+        if (helpers) addJob(helperIndex, `pin-${name}`, "pin drawing", () => viewportPoint(group, { x: -19, y: -35 }), group, { approach: arrival });
       } else if (t>=drawUntil && t<placedAt) {
-        addJob(index,`place-${name}`,carry>.8?"align → snap":`carry ${name}`,() => viewportPoint(group,{x:18,y:-7}),group);
-        if(helpers)addJob(helperIndex,`pin-${name}`,"hold corner",() => viewportPoint(group,{x:-18,y:-7}),group);
+        const arrival = approach(drawUntil, carryFrom);
+        const snap = carry >= 1;
+        addJob(index, `place-${name}`, snap ? "align → snap" : `drag ${name}`, () => viewportPoint(group, { x: 18, y: -7 }), group,
+          { approach: arrival, click: snap, opacity: 1 - .3 * phase(t, landing, placedAt) });
+        if (helpers) addJob(helperIndex, `hold-${name}`, "hold corner", () => viewportPoint(group, { x: -18, y: -7 }), group, { approach: arrival });
       } else if(helpers&&t>=placedAt&&t<placedAt+.25) {
-        const p=phase(t,placedAt,placedAt+.25);
-        addJob(helperIndex,`align-${name}`,"align edges",() => viewportPoint(group,{x:-18+36*p,y:-35}),group);
+        const p = phase(t, placedAt + .12, placedAt + .25);
+        addJob(helperIndex, `align-${name}`, "align edges", () => viewportPoint(group, { x: -18 + 36 * p, y: -35 }), group, { approach: approach(placedAt, placedAt + .12), opacity: .85 });
       }
-      if(helpers&&t>=placedAt+.3&&t<placedAt+.52) {
-        const p=phase(t,placedAt+.3,placedAt+.52);
-        addJob(9,`inspect-${name}`,"check placement",() => viewportPoint(group,{x:-18+36*p,y:2}),group);
+      if(helpers&&t>=placedAt+.3&&t<placedAt+.60) {
+        const p = phase(t, placedAt + .4, placedAt + .60);
+        addJob(9, `inspect-${name}`, "check placement", () => viewportPoint(group, { x: -18 + 36 * p, y: 2 }), group, { approach: approach(placedAt + .3, placedAt + .4), opacity: .85 });
       }
     };
     const offsets=[[-30,52],[28,62],[-30,50]];
     actors.forEach((actor,i)=>{
       const destination=layout!.perches[i], from=i*.3;
       buildAndPlace(actor,[0,2,5][i],["teal","amber","coral"][i],destination,
-        {x:destination.x+offsets[i][0]*s,y:destination.y+offsets[i][1]*s},from,from+1.25,from+1.3,from+2.4);
+        {x:destination.x+offsets[i][0]*s,y:destination.y+offsets[i][1]*s},from,from+1.25,from+2.42);
     });
-    const draw = phase(t, 3.2, 5.65);
-    if(t>=3.2 && t<5.65) addJob(0,"draw-cable","draw cable",() => viewportPoint(cable,cable.getPointAtLength(length*draw)));
-    buildAndPlace(code,2,"code",layout.code,{x:layout.code.x-50*s,y:layout.lineY+57*s},3.2,4.1,4.15,5.25);
-    buildAndPlace(terminal,5,"terminal",layout.terminal,{x:layout.right-14*s,y:layout.lineY+61*s},3.75,4.65,4.7,5.8);
+    const draw = clamp((t - 3.2) / (5.65 - 3.2));
+    const cableStart = 3.2 - approachLength;
+    if (t >= cableStart && t < 5.65) {
+      addJob(0, "draw-cable", "trace cable", () => viewportPoint(cable, cable.getPointAtLength(length * draw)), undefined, { approach: approach(cableStart, 3.2) });
+    }
+    buildAndPlace(code, 2, "code", layout.code, { x: layout.code.x - 50 * s, y: layout.lineY + 57 * s }, 3.2, 4.43, 5.47);
+    buildAndPlace(terminal, 5, "terminal", layout.terminal, { x: layout.right - 14 * s, y: layout.lineY + 61 * s }, 3.68, 4.91, 5.95);
     junctions.forEach((node,i)=>{
       const at=[.16,.49,.82][i];
       writes.push(() => { node.style.opacity=String(helpers?phase(draw,at+.025,at+.09):clamp((draw-at)*40)); });
@@ -213,7 +223,8 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
       writes.push(() => {
         node.style.strokeDasharray=String(l);node.style.strokeDashoffset=String(l*(1-progress));node.style.opacity=progress>0?"1":"0";
       });
-      if(progress>0&&progress<1)addJob(i===0?2:5,"details","draw details",() => viewportPoint(node,node.getPointAtLength(l*progress)));
+      const start = 6 + i * .3;
+      if (t >= start - .2 && progress < 1) addJob(i === 0 ? 2 : 5, "details", "draw details", () => viewportPoint(node, node.getPointAtLength(l * progress)), undefined, { approach: approach(start - .2, start) });
     });
 
     // Pose all groups together, read native SVG geometry, then paint strokes.
@@ -284,5 +295,4 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     releaseHeroOverlayWork(svg);
   };
 }
-import { publishHeroOverlayWork, releaseHeroOverlayWork, type HeroOverlayJob } from "./heroOverlayWork";
 

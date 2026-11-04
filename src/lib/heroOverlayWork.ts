@@ -4,6 +4,9 @@ export type HeroOverlayJob = {
   y: number;
   kind: string;
   operation: string;
+  approach?: number;
+  click?: boolean;
+  opacity?: number;
   box?: { left: number; top: number; width: number; height: number };
 };
 

@@ -14,10 +14,11 @@ export type ConstructionJob = {
 export type ConstructionScene = { id: string; root: HTMLElement; jobs: ConstructionJob[]; state: "unstarted" | "building" | "complete" };
 const smooth = (p: number) => p * p * (3 - 2 * p);
 const mix = (a: number, b: number, p: number) => a + (b - a) * p;
+export const editorApproachMs = 160;
 
 /** Approach is part of the existing local job budget, never a scroll queue. */
 export function operationTiming(operation: ConstructionOperation, progress: number, durationMs: number) {
-  const lead = operation === "commit" ? 0 : Math.min(160, durationMs * .28) / Math.max(1, durationMs);
+  const lead = operation === "commit" ? 0 : Math.min(editorApproachMs, durationMs * .28) / Math.max(1, durationMs);
   const work = clamp01((progress - lead) / Math.max(.01, 1 - lead));
   return { approach: lead ? clamp01(progress / lead) : 1, work,
     phase: progress < lead ? "approach" : work > .94 ? "release" : "work" };

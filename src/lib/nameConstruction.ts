@@ -1,5 +1,6 @@
 import { clamp01 } from "./construction";
 import { constructionAgents } from "./agentConfig";
+import { editorApproachMs } from "./constructionScene";
 import "@/styles/name-construction.css";
 
 type Piece = { node: HTMLSpanElement; x: number; y: number; width: number; height: number; offsetX: number; offsetY: number; color: string; size: number };
@@ -8,6 +9,8 @@ const smooth = (value: number) => { const t = clamp01(value); return t * t * (3 
 const between = (p: number, from: number, to: number) => smooth((p - from) / (to - from));
 const mix = (from: number, to: number, t: number) => from + (to - from) * t;
 const ns = "http://www.w3.org/2000/svg";
+export const nameConstructionMs = 2600;
+const approachLength = editorApproachMs / nameConstructionMs;
 
 /** A directed word workshop: carry, pin + resize, duplicate, replace, punctuate, align.
  * The real h1 is never split or changed. Every destination is a native text Range. */
@@ -119,13 +122,14 @@ export function createNameConstruction(heading: HTMLElement, layer: HTMLElement)
   };
   const point = (p: number, agent: number, offset: number) => {
     const s = scene(p, offset); if (!s) return null;
-    // The actual SVG arrow tip is at(10,.625) in the20px pointer box.
-    const grip = (box: Box, side: "start" | "end") => ({ x: (side === "start" ? box.x - 4 : box.x + box.width + 4) - 10, y: (side === "start" ? box.y - 3 : box.y + box.height + 3) - .625 });
-    if (agent === 0 && p >= .025 && p <= .60) return { ...grip(s.carry, "start"), letter: 0, operation: p < .32 ? "drag word" : "pin corner", moving: p < .32 };
-    if (agent === 2 && p >= .30 && p <= .60) return { ...grip(s.carry, "end"), letter: 0, operation: p < .35 ? "grab handle" : "resize", moving: p >= .35 && p <= .56 };
-    if (agent === 5 && p >= .54 && p <= .81) return { ...grip(s.second, "end"), letter: 1, operation: p < .705 ? "duplicate" : p < .78 ? "replace" : "place", moving: p <= .78 };
-    if (agent === (mobile ? 2 : 7) && p >= .80 && p <= .89) return { ...grip(s.period, "end"), letter: 2, operation: "place period", moving: p <= .89 };
-    if (agent === (mobile ? 0 : 6) && p >= .9 && p <= .97) return { x: mix(s.second.x, s.period.x + s.period.width, between(p, .9, .96)) - 10, y: s.second.y + s.second.height - .625, letter: 1, operation: "align baseline", moving: p <= .96 };
+    const grip = (box: Box, side: "start" | "end") => ({ x: side === "start" ? box.x - 4 : box.x + box.width + 4, y: side === "start" ? box.y - 3 : box.y + box.height + 3 });
+    const arriving = (contact: number) => p >= contact - approachLength;
+    const approach = (contact: number) => p < contact ? clamp01(1 - (contact - p) / approachLength) : undefined;
+    if (agent === 0 && arriving(.065) && p <= .60) return { ...grip(s.carry, "start"), kind: "name-drag", letter: 0, operation: p < .32 ? "drag word" : "pin corner", approach: approach(.065), click: p >= .12 && p < .32 };
+    if (agent === 2 && arriving(.30) && p <= .60) return { ...grip(s.carry, "end"), kind: "name-resize", letter: 0, operation: p < .35 ? "grab handle" : "resize", approach: approach(.30), click: p >= .35 && p <= .56 };
+    if (agent === 5 && arriving(.54) && p <= .81) return { ...grip(s.second, "end"), kind: "name-copy", letter: 1, operation: p < .705 ? "duplicate" : p < .78 ? "replace" : "place", approach: approach(.54), click: p >= .54 && p < .59 };
+    if (agent === (mobile ? 2 : 7) && arriving(.80) && p <= .89) return { ...grip(s.period, "end"), kind: "name-period", letter: 2, operation: "place period", approach: approach(.80), click: p >= .86 };
+    if (agent === (mobile ? 0 : 6) && arriving(.90) && p <= .97) return { x: mix(s.second.x, s.period.x + s.period.width, between(p, .9, .96)), y: s.second.y + s.second.height, kind: "name-align", letter: 1, operation: "align baseline", approach: approach(.90), click: p > .94 };
     return null;
   };
   return { measure, paint, point, hide: () => { root.style.opacity = "0"; }, dispose: () => root.remove() };

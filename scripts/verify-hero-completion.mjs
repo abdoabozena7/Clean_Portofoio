@@ -5,6 +5,7 @@ const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'C:/Users/A-plus/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
 const baseline=process.argv.includes('--baseline'),negative=process.argv.includes('--negative-control');
 const out=`output/playwright/hero-completion${baseline?'-before':negative?'-negative':''}`;await mkdir(out,{recursive:true});
+const url=process.env.PORTFOLIO_URL||'http://127.0.0.1:8080/Clean_Portofoio/';
 const fingerprint=async()=>{const h=createHash('sha256');for(const p of ['src/hooks/useScrollConstruction.ts','scripts/verify-hero-completion.mjs']){h.update(p);h.update(await readFile(p));}return h.digest('hex');};
 const report={sourceBefore:await fingerprint(),instrumentation:'Non-behavioral trace hooks inserted into the real Vite module response; negative control additionally reinstates the old hero deadline.',checks:[],journeys:[],errors:[],passed:false};
 const check=(name,passed,evidence)=>{report.checks.push({name,passed:!!passed,evidence});console.log(`${passed?'PASS':'FAIL'} ${name}`);};
@@ -20,7 +21,7 @@ try{
    code=code.replace(/const paint = \(t\)\s*=>\s*\{/,`const paint = (t) => { if(t.section.id==='hero'){window.__heroPaints??=new Map();window.__heroPaints.set(t.el,{at:performance.now(),progress:t.progress});}`);
    await route.fulfill({response,body:code});
   });
-  await page.goto('http://127.0.0.1:8080/Clean_Portofoio/',{waitUntil:'networkidle'});await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll('#hero a')].map(el=>document.fonts.load(getComputedStyle(el).font,el.textContent||'CV')));});await page.reload({waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);
+  await page.goto(url,{waitUntil:'networkidle'});await page.evaluate(async()=>{await document.fonts.ready;await Promise.all([...document.querySelectorAll('#hero a')].map(el=>document.fonts.load(getComputedStyle(el).font,el.textContent||'CV')));});await page.reload({waitUntil:'domcontentloaded'});await page.evaluate(()=>document.fonts.ready);
   const rects=()=>page.locator('#hero h1,#hero [data-microsoft-headline],#hero .palette-tag,#hero a').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height};}));
   await page.waitForFunction(()=>+document.querySelector('[data-name-assembly]')?.dataset.nameProgress>.025&&document.fonts.status==='loaded');
   // Routing the controller intentionally disables browser cache. The warm-up

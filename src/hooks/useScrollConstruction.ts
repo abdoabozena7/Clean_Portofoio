@@ -1,18 +1,21 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
-import { constructionScene, type SceneBox } from "@/lib/constructionScene";
+import { constructionScene, editorApproachMs, editorTravel, type SceneBox } from "@/lib/constructionScene";
 import type { createConstructionDirector } from "@/lib/constructionDirector";
 import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
-import { createNameConstruction } from "@/lib/nameConstruction";
+import { createNameConstruction, nameConstructionMs } from "@/lib/nameConstruction";
 import { getHeroOverlayWork, type HeroOverlayJob } from "@/lib/heroOverlayWork";
+import { agentHeading, rendezvousPoint } from "@/lib/agentOrientation";
 
 type Kind = "text" | "asset" | "structure";
 type Target = {
   el: HTMLElement; section: HTMLElement; kind: Kind; top: number; left: number; width: number; height: number;
-  lines: TextLine[]; count: number; progress: number; elapsed: number; active: number; visibleSince: number | null;
-  duration: number; delay: number; order: number; cinematic: boolean; weeks?: SVGGElement[];
+  lines: TextLine[]; count: number; progress: number; elapsed: number; visibleSince: number | null;
+  duration: number; order: number; cinematic: boolean; weeks?: SVGGElement[];
 };
-type Position = { x: number; y: number; angle: number; initialized: boolean; target: Target | null };
+type EditorAssignment = { target: Target | null; travelMs: number };
+type Point = { x: number; y: number };
+type HeroMotion = { job: string; from: Point; last: Point; angle?: number; at: number };
 
 function measureLines(el: HTMLElement, origin: DOMRect): TextLine[] {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -55,7 +58,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const carets = Array.from(layer.querySelectorAll<HTMLElement>("[data-caret]"));
     const props = Array.from(layer.querySelectorAll<HTMLElement>("[data-prop]"));
     const sources: (HTMLElement | null)[] = cursors.map(() => null);
-    const positions: Position[] = cursors.map(() => ({ x: 0, y: 0, angle: 0, initialized: false, target: null }));
+    const assignments: EditorAssignment[] = cursors.map(() => ({ target: null, travelMs: 0 }));
+    const heroMotions: (HeroMotion | undefined)[] = cursors.map(() => undefined);
     let frame = 0, dirty = true, stopped = false, jump = !!location.hash;
     const initialHash = location.hash;
     let initialNavigationTouched = false;
@@ -77,7 +81,6 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       return box;
     };
     const colors = cursors.map(cursor => cursor.style.getPropertyValue("--agent-color"));
-    const pointerShapes = cursors.map(cursor => cursor.querySelector<SVGElement>("svg")!);
     const actions = cursors.map(cursor => cursor.querySelector<HTMLElement>(".agent-action")!);
     let director: ReturnType<typeof createConstructionDirector> | undefined;
     let loadingDirector = false, directorJump = jump;
@@ -104,10 +107,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (!["text", "asset", "structure"].includes(kind)) continue;
         const count = el.textContent?.trim().length || 1;
         const cinematic = el.dataset.constructionScene !== "activity" && ((kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction")));
+        const duration = el === nameHeading ? nameConstructionMs : kind === "structure" ? 580 :
+          kind === "asset" ? 680 + (order % 4) * 65 : Math.max(400, Math.min(1050, count * 8));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
-          progress: completed.has(el) ? 1 : 0, elapsed: 0, active: 0, visibleSince: null, order: order++, cinematic,
-          duration: el.dataset.constructionScene === "letters" ? 5500 : el.dataset.constructionScene === "activity" ? 1300 : section.id === "hero" && kind === "asset" ? 1050 + (order % 4) * 85 : cinematic ? 1900 : kind === "structure" ? 900 : Math.max(1400, Math.min(3200, count * 20)),
-          delay: kind === "structure" ? 0 : kind === "text" ? 450 : 220 });
+          progress: completed.has(el) ? 1 : 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
+          duration });
         byElement.set(el, targets[targets.length - 1]);
       }
     };
@@ -248,16 +252,38 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       }
       return { rect, x: Math.max(10, Math.min(viewWidth - 20, x)), y: Math.max(78, Math.min(viewHeight - 42, y)) };
     };
-    const renderOverlayBuilder = (job: HeroOverlayJob) => {
-      const index=job.index, cursor=cursors[index], position=positions[index];
-      if(!cursor)return;
-      position.x=job.x-10; position.y=job.y-.625; position.target=null; position.initialized=true;
-      cursor.style.opacity="1"; cursor.style.transform=`translate3d(${position.x}px,${position.y}px,0)`;
-      cursor.dataset.overlayJob=job.kind; cursor.dataset.click="true";
-      cursor.dataset.edge=position.x>viewWidth-135?"right":"left";
-      pointerShapes[index].style.transform="none";
-      const action=actions[index];
-      action.textContent=` · ${job.operation}`;action.style.display="inline";
+    const renderHeroEditor = (job: HeroOverlayJob, now: number, offsetX: number, offsetY: number, source: "overlay" | "name" | "content" = "overlay", letter?: number) => {
+      const index = job.index, cursor = cursors[index];
+      if (!cursor) return;
+      const contact = { x: job.x + offsetX, y: job.y + offsetY };
+      let motion = heroMotions[index];
+      if (motion?.job !== job.kind) {
+        const home = rendezvousPoint(index, 0, viewWidth || innerWidth, viewHeight || innerHeight);
+        const from = motion && now - motion.at < 350 ? motion.last : { x: home.x + offsetX, y: home.y + offsetY };
+        motion = { job: job.kind, from, last: from, angle: motion?.angle, at: now };
+        heroMotions[index] = motion;
+      }
+      const approach = job.approach;
+      const point = approach === undefined ? contact : editorTravel(motion.from, contact, approach, index);
+      const approaching = approach !== undefined;
+      const angle = agentHeading(motion.angle, point.x - motion.last.x, point.y - motion.last.y, now - motion.at);
+      motion.last = point; motion.angle = angle; motion.at = now;
+      const x = point.x - offsetX, y = point.y - offsetY;
+      if (source !== "content") assignments[index].target = null;
+      cursor.classList.add("hero-work-pointer");
+      cursor.style.setProperty("--agent-heading", `${angle.toFixed(1)}deg`);
+      cursor.style.opacity = String(job.opacity ?? 1);
+      cursor.style.transform = `translate3d(${x}px,${y}px,0)`;
+      cursor.dataset.heroJob = job.kind;
+      cursor.dataset.heroPhase = approaching ? "approach" : "work";
+      cursor.dataset.click = String(!approaching && !!job.click);
+      cursor.dataset.edge = x > viewWidth - 135 ? "right" : "left";
+      if (source === "overlay") cursor.dataset.overlayJob = job.kind;
+      else if (source === "name" && !approaching) cursor.dataset.letter = String(letter);
+      const action = actions[index], label = ` · ${job.operation}`;
+      if (action.textContent !== label) action.textContent = label;
+      action.style.display = "inline";
+      if (source === "content") return;
       props[index].style.opacity="0";carets[index].style.opacity="0";
       if(job.box){
         const guide=guides[index],box=job.box;
@@ -306,7 +332,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (t.progress < 1 && top < viewHeight * .98 && top + t.height > 76) boxFor(t.el);
       }
       for (const source of sources) if (source) boxFor(source);
-      if (repaint) positions.forEach((p, i) => { if (p.target && p.target.progress < 1) bindProp(p.target, i); });
+      if (repaint) assignments.forEach(({ target }, index) => { if (target && target.progress < 1) bindProp(target, index); });
       const work: Target[] = [];
       for (const t of targets) {
         if (t.progress === 1) continue;
@@ -336,36 +362,32 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           const target = byElement.get(parent); if (target) finish(target);
         }
         // Advance one shared clock once, then let every pointer manipulate its own glyph.
-        assembling.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
-        assembling.progress = autonomousProgress(assembling.progress, assembling.elapsed, assembling.delay, assembling.duration);
+        assembling.elapsed += dt * (1 + urgency * 6);
+        assembling.progress = autonomousProgress(assembling.progress, assembling.elapsed, 0, assembling.duration);
         if (assembling.progress >= 1) finish(assembling); else paint(assembling);
       }
       const used = new Set<Target>();
+      const offsetX = scrollX;
       for (let index = 0; index < cursors.length; index++) {
         if (simplified && ![0, 2, 5].includes(index)) continue;
-        const action = actions[index];
-        action.style.removeProperty("display"); delete cursors[index].dataset.letter;
-        delete cursors[index].dataset.overlayJob;
+        const cursor = cursors[index];
+        delete cursor.dataset.letter;
+        delete cursor.dataset.overlayJob;
         if (assembling && assembling.progress < 1 && nameScene) {
-          const at = nameScene.point(assembling.progress, index, viewY), c = cursors[index], p = positions[index];
+          const at = nameScene.point(assembling.progress, index, viewY);
           if (at) {
-            p.x = at.x; p.y = at.y; p.initialized = true; p.target = null;
-            c.style.opacity = "1"; c.style.transform = `translate3d(${p.x}px,${p.y}px,0)`;
-            c.dataset.letter = String(at.letter); c.dataset.edge = p.x > viewWidth - 135 ? "right" : "left";
-            c.dataset.click = String(at.moving);
-            pointerShapes[index].style.transform = "none";
-            action.textContent = ` · ${at.operation}`; action.style.display = "inline";
+            renderHeroEditor({ index, ...at }, now, offsetX, viewY, "name", at.letter);
             continue;
           }
         }
         const overlayJob=overlayWork.jobs.find(job=>job.index===index);
-        if(overlayJob){renderOverlayBuilder(overlayJob);continue;}
-        const cursor = cursors[index], position = positions[index];
+        if (overlayJob) { renderHeroEditor(overlayJob, now, offsetX, viewY); continue; }
+        const assignment = assignments[index];
         const role = cursor.dataset.role;
-        const previous = position.target;
+        const previous = assignment.target;
         const available = work.filter(t => {
           if (t.progress === 1 || used.has(t) || t.el === nameHeading) return false;
-          if (assembling && assembling.progress < .86 && t.section === assembling.section && !t.el.closest("[data-microsoft-headline]")) return false;
+          if (assembling && assembling.progress < .28 && !t.el.closest("[data-microsoft-headline],a[download]")) return false;
           if (t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500) return false;
           // Build a hero surface before working on its text/logo. Otherwise a
           // completed child remains invisible, then appears with its parent.
@@ -375,41 +397,37 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
           return true;
         });
         const target = previous && available.includes(previous) ? previous : available.sort((a, b) => {
-          const rank = (t: Target) => (t.el === nameHeading ? -2000 : 0) + (t.kind === role ? 0 : 1000) + (t.el.matches("img,.project-media,.certificate-image-trigger,.company-logo") ? -300 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - viewY - viewHeight * .45) * .08 + t.order * .1;
+          const rank = (t: Target) => (t.kind === role ? 0 : 1000) + (t.el.matches("a[download]") ? -400 : 0) + (t.elapsed > 0 ? -100 : 0) + Math.abs(t.top - viewY - viewHeight * .45) * .08 + t.order * .1;
           return rank(a) - rank(b);
         })[0];
-        if (!target) continue;
+        if (!target) {
+          assignment.target = null;
+          cursor.classList.remove("hero-work-pointer");
+          actions[index].style.removeProperty("display");
+          delete cursor.dataset.heroJob; delete cursor.dataset.heroPhase;
+          continue;
+        }
         used.add(target);
-        target.active += dt;
-        if (position.target !== target) bindProp(target, index);
-        position.target = target;
-        const aim = point(target, index);
-        if (!position.initialized) {
-          position.x = Math.max(10, Math.min(viewWidth - 112, aim.rect.left + Math.min(100, aim.rect.width * .4) + index * 5));
-          position.y = Math.max(78, aim.rect.top - 66 - index * 5); position.initialized = true;
+        if (assignment.target !== target) {
+          bindProp(target, index);
+          assignment.target = target;
+          assignment.travelMs = 0;
+          const lastMotion = heroMotions[index];
+          if (lastMotion) lastMotion.job = "";
         }
-        const dx = aim.x - position.x, dy = aim.y - position.y;
-        const distance = Math.hypot(dx, dy);
-        const step = Math.min(distance, (420 + urgency * 1480) * dt / 1000);
-        if (distance > .2) {
-          position.x += dx / distance * step; position.y += dy / distance * step;
-          const angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
-          position.angle += ((angle - position.angle + 540) % 360 - 180) * Math.min(1, dt / 160);
-        }
-        // Text waits for its editor to arrive, including a deliberate move to a new line.
-        if (target.el === nameHeading || simplified || urgency > .25 || (!target.cinematic && target.kind !== "text") || distance < 48 || target.elapsed < target.delay || (target.section.id === "hero" && target.active > target.delay + target.duration * 2)) {
+        const arrival = assignment.travelMs < editorApproachMs ? assignment.travelMs / editorApproachMs : undefined;
+        assignment.travelMs += dt;
+        if (arrival === undefined) {
           target.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
-          target.progress = autonomousProgress(target.progress, target.elapsed, target.delay, target.duration);
+          target.progress = autonomousProgress(target.progress, target.elapsed, 0, target.duration);
           if (target.progress >= 1) { finish(target); continue; } else paint(target);
         }
+        const aim = point(target, index);
+        const operation = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
+        const click = target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0;
+        renderHeroEditor({ index, kind: `hero-content-${target.order}`, operation, x: aim.x, y: aim.y, approach: arrival, click }, now, offsetX, viewY, "content");
+        if (arrival !== undefined) continue;
         {
-          cursor.style.opacity = "1";
-          cursor.style.transform = `translate3d(${position.x}px,${position.y}px,0)`;
-          cursor.dataset.edge = position.x > viewWidth - 135 ? "right" : "left";
-          pointerShapes[index].style.transform = `rotate(${position.angle}deg)`;
-          cursor.dataset.click = String(target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0);
-          const label = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
-          if (action.textContent !== label) action.textContent = label;
           let guideRect: SceneBox = aim.rect;
           if (target.cinematic) {
             const prop = props[index], scene = sceneFor(target, index, aim.rect);
@@ -479,11 +497,15 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       if(stopped||document.hidden||reflowing||reduced.matches)return;
       const current=getHeroOverlayWork();
       cursors.forEach((cursor,index)=>{
-        if(cursor.dataset.overlayJob&&!current.jobs.some(job=>job.index===index)){
-          cursor.style.opacity="0";delete cursor.dataset.overlayJob;guides[index].setAttribute("opacity","0");
+        if (cursor.dataset.overlayJob && !current.jobs.some(job => job.index === index)) {
+          cursor.style.opacity = "0";
+          cursor.classList.remove("hero-work-pointer");
+          delete cursor.dataset.overlayJob; delete cursor.dataset.heroJob; delete cursor.dataset.heroPhase;
+          guides[index].setAttribute("opacity", "0");
         }
       });
-      current.jobs.forEach(renderOverlayBuilder);
+      const now = performance.now(), offsetX = scrollX, offsetY = scrollY;
+      current.jobs.forEach(job => renderHeroEditor(job, now, offsetX, offsetY));
       schedule();
     };
     const onMeasure = () => { refreshMode(); syncDirector(); if (reflowing) return; director?.invalidate(); dirty = true; schedule(); };

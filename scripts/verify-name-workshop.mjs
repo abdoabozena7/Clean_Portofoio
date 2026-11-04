@@ -24,7 +24,10 @@ try{
      if(document.fonts.status==='loaded'&&p>.025)before??={text:h.textContent,rect:measure(h)};
      const pieces=[...root.querySelectorAll('[data-name-piece]')].map(el=>{const range=document.createRange();range.selectNodeContents(el);const matrix=new DOMMatrix(getComputedStyle(el).transform);return{kind:el.dataset.namePiece,text:el.textContent,rect:measure(range),sx:matrix.a,sy:matrix.d,opacity:+el.style.opacity,color:getComputedStyle(el).color};});
      const frame=root.querySelector('[data-name-frame="0"] rect'),f=frame?measure(frame):null;
-     const agents=[...document.querySelectorAll('[data-agent][data-letter]')].filter(el=>+getComputedStyle(el).opacity>.9).map(el=>{const svg=el.querySelector('svg'),r=svg.getBoundingClientRect();return{agent:el.dataset.agent,job:el.dataset.letter,operation:el.querySelector('.agent-action').textContent,tip:{x:r.x+r.width*.5,y:r.y+r.height/32}};});
+     const agents=[...document.querySelectorAll('[data-agent][data-letter]')].filter(el=>+getComputedStyle(el).opacity>.9).map(el=>{
+      const {x,y}=new DOMPoint(16,1).matrixTransform(el.querySelector('svg').getScreenCTM());
+      return{agent:el.dataset.agent,job:el.dataset.letter,operation:el.querySelector('.agent-action').textContent,tip:{x,y}};
+     });
      const actual=[],walker=document.createTreeWalker(h,NodeFilter.SHOW_TEXT);
      while(walker.nextNode()){const text=walker.currentNode,s=text.textContent,from=s.search(/\S/);if(from<0)continue;const end=s.trimEnd().length,dot=s[end-1]==='.';const range=document.createRange();range.setStart(text,from);range.setEnd(text,dot?end-1:end);actual.push(measure(range));if(dot){range.setStart(text,end-1);range.setEnd(text,end);actual.push(measure(range));}}
      window.workshopSamples.push({p,shot:root.dataset.nameShot,opacity:+root.style.opacity,pieces,agents,frame:f,actual,before});
