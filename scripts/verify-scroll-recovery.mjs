@@ -36,9 +36,11 @@ try {
   const mobile=await browser.newContext({viewport:{width:390,height:844},hasTouch:true,isMobile:true}),m=await mobile.newPage(),requests=[];
   m.on('request',r=>{if(r.resourceType()==='image')requests.push(r.url());});m.on('pageerror',e=>report.errors.push(e.message));
   await m.goto(url,{waitUntil:'domcontentloaded'});await m.waitForTimeout(1800);
-  const media=await m.locator('section:not(#hero) img').evaluateAll(es=>es.map(e=>({src:e.src,loading:e.loading,priority:e.fetchPriority,warmCandidate:e.matches('.company-logo img,.certificate-thumb,.project-media img')})));
-  check('Mobile starts requests for every below-fold inline image while still at the hero',await m.evaluate(()=>scrollY===0)&&media.every(i=>requests.includes(i.src)),{media,requests});
-  check('Prewarming uses eager low-priority requests without changing the mobile agent policy',media.every(i=>i.loading==='eager')&&media.filter(i=>i.warmCandidate).every(i=>i.priority==='low')&&await m.locator('section:not(#hero) [data-building]').count()===0);
+  check('Mobile keeps far project images deferred at the hero',await m.evaluate(()=>scrollY===0)&&!requests.some(src=>src.includes('/images/projects/')),{requests:[...requests]});
+  await m.locator('#project-hivo .project-media').evaluate(el=>el.scrollIntoView({block:'center',behavior:'instant'}));
+  const media=await m.locator('#project-hivo .project-image-trigger img').evaluate(async image=>{await image.decode();return {src:image.currentSrc,priority:image.fetchPriority,naturalWidth:image.naturalWidth};});
+  check('Reaching a project promotes and decodes its actual thumbnail',media.naturalWidth>0&&media.priority==='high'&&requests.includes(media.src),{media});
+  check('Media preparation keeps the mobile agent policy',await m.locator('section:not(#hero) [data-building]').count()===0);
   await m.screenshot({path:out+'/mobile-prewarm.png'});await mobile.close();
   check('Recovery and prewarming introduce no uncaught errors',report.errors.length===0,report.errors);
   report.sourceAfter=await source();check('Recovery evidence is source coherent',report.sourceAfter===report.sourceBefore);report.passed=report.checks.every(c=>c.passed);

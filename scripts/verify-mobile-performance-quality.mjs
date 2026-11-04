@@ -180,8 +180,15 @@ async function mediaRecoveryAndExposure() {
     release();
     await page.waitForFunction(() => {
       const image = document.querySelector('#project-hivo .project-image-trigger img');
-      return image?.complete && image.naturalWidth === 1920 && image.currentSrc.endsWith('/hivo.png');
+      return image?.complete && image.naturalWidth > 0 && image.currentSrc.endsWith('/hivo.png');
     });
+    const originalPixels = await media.locator('img').evaluate(async image => {
+      const bitmap = await createImageBitmap(image);
+      const size = [bitmap.width, bitmap.height];
+      bitmap.close();
+      return size;
+    });
+    assert.deepEqual(originalPixels, [1920, 1020]);
     const afterBox = await media.boundingBox();
     for (const key of ['width', 'height']) assert(Math.abs(beforeBox[key] - afterBox[key]) <= 1);
     const story = page.locator('[data-attention-id="experience-microsoft"]');
@@ -192,7 +199,7 @@ async function mediaRecoveryAndExposure() {
       return Number(story?.dataset.quality) > initial;
     }, initial, { timeout: 10000 });
     assert.deepEqual(errors, []);
-    return { beforeBox, afterBox, recoveredOriginal: true, exposure: [initial, Number(await story.getAttribute('data-quality'))] };
+    return { beforeBox, afterBox, recoveredOriginal: originalPixels, exposure: [initial, Number(await story.getAttribute('data-quality'))] };
   } finally { await context.close(); }
 }
 
