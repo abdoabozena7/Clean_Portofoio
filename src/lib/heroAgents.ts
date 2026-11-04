@@ -3,7 +3,8 @@ import { editorApproachMs, editorTravel } from "./constructionScene";
 
 type Point = { x: number; y: number };
 type Glyph = Point & { width: number; height: number };
-type Layout = { scale: number; perches: Point[]; code: Point; terminal: Point; left: number; right: number; lineY: number };
+type Perch = Point & { scale: number };
+type Layout = { scale: number; perches: Perch[]; code: Point; terminal: Point; left: number; right: number; lineY: number };
 
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 const ease = (n: number) => { const p = clamp(n); return p * p * (3 - 2 * p); };
@@ -18,6 +19,7 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
   const container = svg.parentElement!;
   const cable = svg.querySelector<SVGPathElement>("[data-agent-cable]")!;
   const actors = [...svg.querySelectorAll<SVGGElement>("[data-hero-agent]")];
+  const hands = actors.map(actor => actor.querySelector<SVGGElement>(".hero-mascot-hands")!);
   const code = svg.querySelector<SVGGElement>('[data-hero-tool="code"]')!;
   const terminal = svg.querySelector<SVGGElement>('[data-hero-tool="terminal"]')!;
   const junctions = [...svg.querySelectorAll<SVGCircleElement>("[data-cable-junction]")];
@@ -66,7 +68,7 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     const first = glyph(0), surname = glyph(1), scale = Math.max(.58, Math.min(1, size / 130));
     // A character's logical box includes empty space: h's upper stem sits well
     // left of its box centre. Find its actual top ink run without altering text.
-    const perch = (index: number): Point => {
+    const perch = (index: number, grip?: SVGGElement): Perch => {
       const g = glyph(0, index, index + 1), char = words[0].text.textContent!.trim()[index];
       canvas.width = Math.ceil(size * 2); canvas.height = Math.ceil(size * 2);
       context.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
@@ -83,9 +85,12 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
         if (ink && start < 0) start=x;
         if (!ink && start >= 0) { if (x-start > bestWidth) { bestStart=start; bestWidth=x-start; } start=-1; }
       }
-      return {x:g.x + (bestWidth ? bestStart+bestWidth/2-size*.25 : g.width/2),y:g.y+1};
+      const gripWidth = grip && grip.getBBox().width + parseFloat(getComputedStyle(grip).strokeWidth);
+      // Fit both hands, including the stroke, inside the letter's ink.
+      const fittedScale = gripWidth && bestWidth ? Math.min(scale, bestWidth * .9 / gripWidth) : scale;
+      return { x: g.x + (bestWidth ? bestStart + bestWidth / 2 - size * .25 : g.width / 2), y: g.y + 1, scale: fittedScale };
     };
-    const perches = [0,7,10].map(perch);
+    const perches = [perch(0), perch(7, hands[1]), perch(10, hands[2])];
     const left = first.x + size * .16, right = first.x + first.width - size * .13;
     const lineY = (first.y + first.height + surname.y) / 2;
     const codePoint = { x: first.x + first.width * .30, y: lineY + 2 * scale };
@@ -163,12 +168,12 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
       });
     };
     const approach = (start: number, contact: number) => t < contact ? clamp((t - start) / (contact - start)) : undefined;
-    const buildAndPlace = (group: SVGGElement, index: number, name: string, destination: Point, staging: Point, from: number, drawUntil: number, placedAt: number) => {
+    const buildAndPlace = (group: SVGGElement, index: number, name: string, destination: Point, staging: Point, from: number, drawUntil: number, placedAt: number, scale = s) => {
       const drawFrom = from + approachLength, carryFrom = drawUntil + approachLength;
       const landing = placedAt - .13;
       const build = phase(t, drawFrom, drawUntil), carry = clamp((t - carryFrom) / (landing - carryFrom));
       const position = editorTravel(staging, destination, carry, index);
-      setPose(group,position,s);
+      setPose(group, position, scale);
       writes.push(() => {
         group.style.opacity = "1";
         const placed = String(t >= placedAt);
@@ -202,7 +207,7 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     actors.forEach((actor,i)=>{
       const destination=layout!.perches[i], from=i*.3;
       buildAndPlace(actor,[0,2,5][i],["teal","amber","coral"][i],destination,
-        {x:destination.x+offsets[i][0]*s,y:destination.y+offsets[i][1]*s},from,from+1.25,from+2.42);
+        {x:destination.x+offsets[i][0]*s,y:destination.y+offsets[i][1]*s},from,from+1.25,from+2.42,destination.scale);
     });
     const draw = clamp((t - 3.2) / (5.65 - 3.2));
     const cableStart = 3.2 - approachLength;
