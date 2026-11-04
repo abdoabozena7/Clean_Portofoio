@@ -90,7 +90,8 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
       const fittedScale = gripWidth && bestWidth ? Math.min(scale, bestWidth * .9 / gripWidth) : scale;
       return { x: g.x + (bestWidth ? bestStart + bestWidth / 2 - size * .25 : g.width / 2), y: g.y + 1, scale: fittedScale };
     };
-    const perches = [perch(0), perch(7, hands[1]), perch(10, hands[2])];
+    const mobile = innerWidth < 768 || coarse.matches;
+    const perches = [perch(0, mobile ? hands[0] : undefined), perch(7, hands[1]), perch(10, hands[2])];
     const left = first.x + size * .16, right = first.x + first.width - size * .13;
     const lineY = (first.y + first.height + surname.y) / 2;
     const codePoint = { x: first.x + first.width * .30, y: lineY + 2 * scale };
