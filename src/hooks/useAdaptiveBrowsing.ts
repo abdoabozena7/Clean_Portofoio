@@ -11,11 +11,12 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
     const groups = [...document.querySelectorAll<HTMLElement>("[data-scan-group]")];
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const coarse = matchMedia("(pointer: coarse)");
+    const narrow = matchMedia("(max-width: 767px)");
     const editors = [...(editorRef.current?.querySelectorAll<HTMLElement>("[data-scan-editor]") || [])];
     const trails = [...(editorRef.current?.querySelectorAll<SVGPathElement>("[data-scan-trail]") || [])];
     const original = new Map<HTMLElement, string | null>();
     let boxes: (Box & { projectSummary?: ProjectSummary })[] = [], anchor: Anchor | null = null, progress = 0, goal = 0, frame = 0, tickAt = 0;
-    let pointerHeld = false, touching = false, overflowAnchor = "", cachedWidth = innerWidth;
+    let pointerHeld = false, touching = false, overflowAnchor = "", cachedWidth: number | undefined;
     let activationTarget: HTMLElement | null = null, activationTimer: ReturnType<typeof setTimeout> | undefined;
     let activationX = 0, activationY = 0;
     let activeGroup: HTMLElement | null = null;
@@ -31,7 +32,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       }
       return lines * fontSize * 1.2;
     };
-    const decorative = () => !coarse.matches && innerWidth >= 768;
+    const decorative = () => !coarse.matches && !narrow.matches;
     const mobileMoving = () => { const intent = getScrollIntent(); return !decorative() && intent.active && intent.userDriven; };
     const remember = (el: HTMLElement) => { if (!original.has(el)) original.set(el, el.getAttribute("style")); };
     const currentGroup = () => groups.find(g => { const r = g.getBoundingClientRect(); return r.top <= 150 && r.bottom > 150; }) || groups.find(g => { const r = g.getBoundingClientRect(); return r.top < innerHeight * .8 && r.bottom > 110; }) || null;
@@ -52,6 +53,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       return material ? { el: material, edge: "top", y: material.getBoundingClientRect().top, lastScroll: scrollY } : null;
     };
     const capture = () => {
+      cachedWidth = innerWidth;
       activeGroup = currentGroup(); paintedProgress = -1;
       const active = groups.map(group => group.dataset.scanGroup);
       window.dispatchEvent(new CustomEvent("portfolio:regroup", { detail: active }));
@@ -134,12 +136,39 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
       }
       anchor.lastScroll = scrollY;
     };
+    const rowHeight = (box: Box, at: number) => box.frozen ? box.height : box.height + (box.compactHeight - box.height) * at;
+    const pinProjectRowsBeforePaint = () => {
+      if (!anchor?.el.isConnected || !narrow.matches || paintedProgress < 0 || goal !== 0 ||
+          boxes.some(box => box.kind !== "project") || mobileMoving()) return false;
+      let delta = 0;
+      // In the one-column grid, each preceding row contributes only its
+      // height delta. A project title keeps its offset within its own row.
+      for (const box of boxes) {
+        if (box.el === anchor.el) {
+          if (anchor.edge === "bottom") delta += rowHeight(box, progress) - rowHeight(box, paintedProgress);
+        } else if (box.el.contains(anchor.el)) {
+          if (!box.title.contains(anchor.el)) return false;
+        } else if (box.el.compareDocumentPosition(anchor.el) & Node.DOCUMENT_POSITION_FOLLOWING) {
+          delta += rowHeight(box, progress) - rowHeight(box, paintedProgress);
+        }
+      }
+      const correction = anchor.el.getBoundingClientRect()[anchor.edge] + delta - anchor.y;
+      if (Math.abs(correction) <= .1) return true;
+      const target = scrollY + correction;
+      compensateScroll(target);
+      anchor.lastScroll = scrollY;
+      // At a document edge, the old height may prevent the correction.
+      // Keep the real post-layout measurement for that exceptional case.
+      return Math.abs(anchor.lastScroll - target) <= 1;
+    };
     const paint = () => {
       const changed = paintedProgress !== progress;
       if (changed && anchor) { anchor.y -= scrollY - anchor.lastScroll; anchor.lastScroll = scrollY; }
       if (changed) {
+      const pinned = pinProjectRowsBeforePaint();
       for (const group of groups) {
-        group.dataset.scanActive = "true"; group.style.setProperty("--scan", String(progress));
+        if (group.dataset.scanActive !== "true") group.dataset.scanActive = "true";
+        if (group.dataset.scanGroup === "skills") group.style.setProperty("--scan", String(progress));
         // Keep existing gaps: shrinking gaps above the current row steals scroll
         // distance before the user has actually moved through those rows.
       }
@@ -148,7 +177,7 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
         const project = b.kind === "project";
         // Visible mobile rows retain their footprint during native momentum,
         // while their logo/photo summary can still grow inside that reservation.
-        b.el.style.height = `${b.frozen ? b.height : b.height + (b.compactHeight - b.height) * progress}px`;
+        b.el.style.height = `${rowHeight(b, progress)}px`;
         b.el.style.overflow = project ? "visible" : "hidden";
         if (project) {
           const media = b.media!, summary = b.projectSummary;
@@ -192,12 +221,11 @@ export function useAdaptiveBrowsing(editorRef: RefObject<HTMLDivElement>) {
           detail.style.opacity = String(Math.max(0, 1 - progress * 2));
           const hidden = progress > .6;
           if (detail.inert !== hidden) detail.inert = hidden;
-          if (hidden !== detail.hasAttribute("aria-hidden")) {
-            if (hidden) detail.setAttribute("aria-hidden", "true"); else detail.removeAttribute("aria-hidden");
-          }
+          if (hidden && detail.getAttribute("aria-hidden") !== "true") detail.setAttribute("aria-hidden", "true");
+          else if (!hidden && detail.hasAttribute("aria-hidden")) detail.removeAttribute("aria-hidden");
         }
       }
-      compensate();
+      if (!pinned) compensate();
       paintedProgress = progress;
       }
       // Fast summaries have no pretend workers. The real scene director resumes

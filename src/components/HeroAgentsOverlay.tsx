@@ -13,7 +13,7 @@ export default function HeroAgentsOverlay({ headingRef }: Props) {
   }, [headingRef]);
 
   return (
-    <svg ref={root} className="hero-agents-overlay" data-hero-agents data-construction-skip
+    <svg ref={root} className="hero-agents-overlay" data-hero-agents data-construction-skip data-awaiting-name
       aria-hidden="true" focusable="false" fill="none" stroke="#111920" strokeWidth="1.65"
       strokeLinecap="round" strokeLinejoin="round">
       <path data-agent-cable className="hero-agent-cable" />

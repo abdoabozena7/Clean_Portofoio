@@ -9,6 +9,7 @@
   opacity: 0;
 }
 .hero-agents-overlay * { pointer-events: none !important; }
+.hero-agents-overlay[data-awaiting-name] { display: none; }
 .hero-mascot-body { transform-box: fill-box; transform-origin: 50% 100%; }
 .hero-mascot-teal { transform: rotate(-12deg); }
 .hero-mascot-amber { transform: rotate(-4deg); }

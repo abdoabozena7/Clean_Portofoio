@@ -140,6 +140,7 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     if (!fontsReady) return;
     const ready = heading.dataset.constructed === "true";
     if (!ready) { svg.style.opacity = "0"; svg.dataset.state = "waiting"; releaseHeroOverlayWork(svg); return; }
+    if (svg.hasAttribute("data-awaiting-name")) svg.removeAttribute("data-awaiting-name");
     if (layoutDirty) measure();
     if (!layout) return;
     vectors ??= readVectors();
@@ -252,7 +253,20 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
   const mutations = new MutationObserver(wake);
   mutations.observe(heading, { attributes:true, attributeFilter:["data-constructed"] });
   const onMeasure = () => { layoutDirty = true; wake(); };
-  const resize = new ResizeObserver(onMeasure); resize.observe(heading); resize.observe(container);
+  let fontWaitStarted = false;
+  const resize = new ResizeObserver(() => {
+    if (!fontWaitStarted) {
+      fontWaitStarted = true;
+      // Reading FontFaceSet.ready can flush styles. Start waiting after the
+      // browser's first layout, rather than inside React's synchronous commit.
+      void document.fonts.ready.then(() => {
+        if (!stopped) { fontsReady = true; onMeasure(); }
+      });
+    }
+    onMeasure();
+  });
+  resize.observe(heading);
+  resize.observe(container);
   const visibility = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; wake(); }); visibility.observe(heading);
   const onPreference = () => { if (reduced.matches) { elapsed=duration; cancelAnimationFrame(frame); frame=0; } wake(); };
   const onLayoutStart=()=>{layoutPaused=true;wake();};
@@ -262,7 +276,6 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
   window.addEventListener("portfolio:layout-settled", onLayoutSettled);
   document.addEventListener("visibilitychange", wake);
   reduced.addEventListener("change", onPreference);
-  document.fonts.ready.then(() => { if (!stopped) { fontsReady=true; onMeasure(); } });
   return () => {
     stopped=true; cancelAnimationFrame(frame); mutations.disconnect(); resize.disconnect(); visibility.disconnect();
     window.removeEventListener("resize",onMeasure); window.removeEventListener("portfolio:layout-start",onLayoutStart); window.removeEventListener("portfolio:layout-settled",onLayoutSettled);

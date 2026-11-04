@@ -47,6 +47,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     if (!layer) return;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)");
     const coarse = matchMedia("(pointer: coarse)");
+    const narrow = matchMedia("(max-width: 767px)");
     const sections = Array.from(document.querySelectorAll<HTMLElement>("[data-construction-section]"));
     const targets: Target[] = [];
     const cursors = Array.from(layer.querySelectorAll<HTMLElement>("[data-agent]"));
@@ -55,7 +56,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const props = Array.from(layer.querySelectorAll<HTMLElement>("[data-prop]"));
     const sources: (HTMLElement | null)[] = cursors.map(() => null);
     const positions: Position[] = cursors.map(() => ({ x: 0, y: 0, angle: 0, initialized: false, target: null }));
-    let frame = 0, dirty = true, stopped = false, jump = !!location.hash || scrollY > 20;
+    let frame = 0, dirty = true, stopped = false, jump = !!location.hash;
     const initialHash = location.hash;
     let initialNavigationTouched = false;
     const markNavigationTouched = () => { initialNavigationTouched = true; };
@@ -66,8 +67,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     let lastTick = performance.now();
     const byElement = new Map<HTMLElement, Target>();
     const completed = new WeakSet<HTMLElement>();
-    let mobileRegistry = coarse.matches || innerWidth < 768, reflowing = false;
-    let layoutReady = !mobileRegistry;
+    let mobileRegistry = coarse.matches || narrow.matches, reflowing = false;
+    let layoutReady = false;
     const hero = sections.find(section => section.id === "hero");
     const frameBoxes = new Map<HTMLElement, DOMRect>();
     const boxFor = (el: HTMLElement) => {
@@ -80,7 +81,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const actions = cursors.map(cursor => cursor.querySelector<HTMLElement>(".agent-action")!);
     let director: ReturnType<typeof createConstructionDirector> | undefined;
     let loadingDirector = false, directorJump = jump;
-    let viewY = scrollY, viewWidth = innerWidth, viewHeight = innerHeight;
+    let viewY = 0, viewWidth = 0, viewHeight = 0;
     const nameHeading = document.querySelector<HTMLElement>('[data-construction-scene="letters"]');
     const nameScene = nameHeading ? createNameConstruction(nameHeading, layer) : null;
 
@@ -466,7 +467,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       hideAgents(); director?.invalidate(); dirty = true; schedule();
     };
     const refreshMode = () => {
-      const next = coarse.matches || innerWidth < 768;
+      const next = coarse.matches || narrow.matches;
       if (next === mobileRegistry) return;
       mobileRegistry = next; jump = true;
       if (next) {
@@ -499,7 +500,22 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       if (document.hidden) { cancelAnimationFrame(frame); frame = 0; }
       else { lastTick = performance.now(); dirty = true; jump = true; schedule(); }
     };
-    const observer = new ResizeObserver(() => { layoutReady = true; onMeasure(); });
+    let fontWaitStarted = false;
+    const observer = new ResizeObserver(() => {
+      if (!layoutReady && !initialNavigationTouched) {
+        jump ||= scrollY > 20;
+        directorJump ||= jump;
+        resolveInitialHash();
+      }
+      layoutReady = true;
+      if (!fontWaitStarted) {
+        fontWaitStarted = true;
+        void document.fonts.ready.then(() => {
+          if (!stopped) { resolveInitialHash(); onMeasure(); }
+        });
+      }
+      onMeasure();
+    });
     sections.forEach(section => observer.observe(section));
     const entranceObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {
@@ -517,13 +533,11 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     document.addEventListener("focusin", onFocus); document.addEventListener("visibilitychange", onVisibility);
     reduced.addEventListener("change", onMeasure); coarse.addEventListener("change", onMeasure);
     window.addEventListener("wheel", markNavigationTouched, { passive: true }); window.addEventListener("touchstart", markNavigationTouched, { passive: true }); window.addEventListener("keydown", markNavigationTouched);
-    document.fonts.ready.then(() => { if (!stopped) { resolveInitialHash(); onMeasure(); } });
     const onImageLoad = (event: Event) => {
       const image = event.target;
       if (image instanceof HTMLImageElement && (hero?.contains(image) || director && sections.some(section => section.contains(image)))) onMeasure();
     };
     document.addEventListener("load", onImageLoad, true);
-    resolveInitialHash();
     syncDirector();
     if (reduced.matches) targets.forEach(finish);
     else {

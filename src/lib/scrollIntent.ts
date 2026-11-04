@@ -2,7 +2,8 @@
 import { advanceScrollPace, initialScrollPace } from "./scrollPace";
 export type ScrollIntent = { speed: number; direction: number; scan: boolean; active: boolean; hardJump: boolean; leap: boolean; automatic: boolean; userDriven: boolean; inputDriven: boolean };
 const listeners = new Set<() => void>();
-let speed = 0, direction = 1, scan = false, hardJump = false, lastY = 0, lastAt = 0;
+let speed = 0, direction = 1, scan = false, hardJump = false, lastAt = 0;
+let lastY: number | null = null;
 let inputAt = -Infinity, travel = 0, samples = 0;
 let idle: ReturnType<typeof setTimeout> | undefined, frame = 0, stop: (() => void) | undefined;
 let compensatedY: number | null = null, held = false;
@@ -13,10 +14,12 @@ let automaticUntil = 0;
 let commandScan = false;
 let commandIdle: ReturnType<typeof setTimeout> | undefined;
 const publish = () => { listeners.forEach(listener => listener()); };
+let viewportHeight = 0;
+const height = () => viewportHeight || (viewportHeight = innerHeight);
 
 export function getScrollIntent(): ScrollIntent {
-  const elapsed = performance.now() - lastAt;
-  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: (scan || commandScan) && !held, active: elapsed < 220, hardJump, leap: elapsed < 220 && Math.abs(lastDelta) > innerHeight * .95, automatic: performance.now() < automaticUntil, userDriven, inputDriven: performance.now() - inputAt < 900 };
+  const now = performance.now(), elapsed = now - lastAt;
+  return { speed: speed * Math.exp(-Math.max(0, elapsed - 60) / 180), direction, scan: (scan || commandScan) && !held, active: elapsed < 220, hardJump, leap: elapsed < 220 && lastDelta !== 0 && Math.abs(lastDelta) > height() * .95, automatic: now < automaticUntil, userDriven, inputDriven: now - inputAt < 900 };
 }
 
 /** A repeated fast command can use the existing scan layout while it lasts. */
@@ -37,14 +40,16 @@ export function endFastBrowsing() {
 
 /** Our anchor corrections are geometry bookkeeping, never evidence of user speed. */
 export function compensateScroll(top: number) {
-  const y = Math.max(0, Math.min(document.documentElement.scrollHeight - innerHeight, top));
+  window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+  const y = scrollY;
   compensatedY = y; lastY = y;
-  window.scrollTo({ top: y, behavior: "instant" });
 }
 
 export function requestDetailedView() {
+  const changed = commandScan || !held || scan || speed !== 0 || hardJump || userDriven;
   clearTimeout(commandIdle); commandScan = false;
-  held = true; scan = false; pace = initialScrollPace(); speed = 0; hardJump = false; userDriven = false; publish();
+  held = true; scan = false; pace = initialScrollPace(); speed = 0; hardJump = false; userDriven = false;
+  if (changed) publish();
 }
 
 /** Authorized experimental navigation. Automatic movement earns no user-speed
@@ -58,17 +63,20 @@ export function navigateForScrollReturn(top: number) {
 }
 
 function start() {
-  lastY = scrollY; lastAt = performance.now();
+  // The first real input or scroll supplies the offset. Reading scrollY
+  // during the initial React commit can force layout of the entire page.
+  lastY = null; lastDelta = 0; lastAt = performance.now();
   const input = (event: Event) => {
     if (event instanceof KeyboardEvent && !["ArrowDown", "ArrowUp", "PageDown", "PageUp", " ", "Home", "End"].includes(event.key)) return;
     if (event instanceof WheelEvent && event.ctrlKey) return;
+    lastY ??= scrollY;
     keyboardJump = event instanceof KeyboardEvent && ["PageDown", "PageUp", "Home", "End", " "].includes(event.key);
     inputAt = performance.now(); compensatedY = null; held = false;
   };
   const onScroll = () => {
     const now = performance.now(), y = scrollY;
     if (compensatedY !== null && Math.abs(y - compensatedY) < 2) { compensatedY = null; lastY = y; return; }
-    const delta = y - lastY, gap = now - lastAt;
+    const delta = y - (lastY ?? 0), gap = now - lastAt;
     if (Math.abs(delta) < .5) return;
     const gesture = now - inputAt < 650 || (userDriven && gap < 140 && now - inputAt < 2500);
     const newGesture = gesture && !userDriven;
@@ -78,10 +86,10 @@ function start() {
     const sample = delta / Math.max(16, newGesture ? Math.min(120, gap) : gap);
     speed = newGesture || Math.sign(sample) !== Math.sign(speed) || gap > 180 ? sample : speed * .45 + sample * .55;
     direction = Math.sign(delta); lastDelta = delta; lastY = y; lastAt = now; travel += Math.abs(delta); samples++;
-    userDriven = !held && (gesture || (samples >= 3 && gap < 120 && travel > innerHeight * .35));
-    hardJump = keyboardJump || !gesture && Math.abs(delta) > innerHeight * .6;
+    userDriven = !held && (gesture || (samples >= 3 && gap < 120 && travel > height() * .35));
+    hardJump = keyboardJump || !gesture && Math.abs(delta) > height() * .6;
     if (gesture && !held) {
-      pace = advanceScrollPace(pace, Math.abs(speed) * 1000 / innerHeight, now, travel / innerHeight);
+      pace = advanceScrollPace(pace, Math.abs(speed) * 1000 / height(), now, travel / height());
       scan = pace.scanning;
     } else { pace = initialScrollPace(); scan = false; }
     if (!frame) frame = requestAnimationFrame(() => { frame = 0; publish(); });
@@ -89,13 +97,16 @@ function start() {
     idle = setTimeout(() => { speed = 0; scan = false; pace = initialScrollPace(); hardJump = false; userDriven = false; publish(); }, 280);
   };
   const jump = () => { requestDetailedView(); };
+  const resize = () => { viewportHeight = 0; };
   window.addEventListener("scroll", onScroll, { passive: true });
   window.addEventListener("wheel", input, { passive: true }); window.addEventListener("touchmove", input, { passive: true });
   window.addEventListener("keydown", input); window.addEventListener("hashchange", jump); window.addEventListener("popstate", jump);
+  window.addEventListener("resize", resize, { passive: true });
   stop = () => {
     cancelAnimationFrame(frame); clearTimeout(idle); clearTimeout(commandIdle); commandScan = false;
     window.removeEventListener("scroll", onScroll); window.removeEventListener("wheel", input); window.removeEventListener("touchmove", input);
     window.removeEventListener("keydown", input); window.removeEventListener("hashchange", jump); window.removeEventListener("popstate", jump);
+    window.removeEventListener("resize", resize); viewportHeight = 0;
     speed = 0; scan = false; pace = initialScrollPace(); held = false; compensatedY = null; automaticUntil = 0; stop = undefined;
   };
 }

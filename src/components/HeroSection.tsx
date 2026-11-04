@@ -35,7 +35,6 @@ const HeroSection = () => {
       if (drops.length > columns) drops.length = columns;
       while (drops.length < columns) drops.push(1);
     };
-    resize();
     window.addEventListener("resize", resize);
 
     // Rasterize the original font and opacities once; copies land on the
@@ -77,16 +76,25 @@ const HeroSection = () => {
 
     let interval: ReturnType<typeof setInterval> | undefined;
     let visible = true;
+    let sized = false;
     const update = () => {
       if (interval) clearInterval(interval);
-      interval = visible && !document.hidden ? setInterval(draw, 60) : undefined;
+      interval = sized && visible && !document.hidden ? setInterval(draw, 60) : undefined;
     };
+    const initialSize = new ResizeObserver(() => {
+      initialSize.disconnect();
+      resize();
+      sized = true;
+      update();
+    });
+    initialSize.observe(canvas.parentElement ?? canvas);
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); });
     observer.observe(canvas);
     document.addEventListener("visibilitychange", update);
     update();
     return () => {
       clearInterval(interval);
+      initialSize.disconnect();
       observer.disconnect();
       document.removeEventListener("visibilitychange", update);
       window.removeEventListener("resize", resize);

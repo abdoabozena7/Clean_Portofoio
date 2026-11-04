@@ -28,9 +28,16 @@ export default function ScrollToTop() {
       const next = scrollY > 400;
       if (next !== shown) { shown = next; setVisible(shown); }
     };
-    update();
+    const initialLayout = new ResizeObserver(() => {
+      initialLayout.disconnect();
+      update();
+    });
+    initialLayout.observe(document.documentElement);
     window.addEventListener("scroll", update, { passive: true });
-    return () => window.removeEventListener("scroll", update);
+    return () => {
+      initialLayout.disconnect();
+      window.removeEventListener("scroll", update);
+    };
   }, []);
   useEffect(() => {
     if (!open) return;

@@ -21,7 +21,7 @@ const sampleIntervalMs = 100;
 /** In-memory evidence of expanded exposure. No reading claims, storage or telemetry. */
 export function useAttentionJourney() {
   useEffect(() => {
-    let disposed = false, regrouping = false, measureDirty = true, clock = 0, revision = 0;
+    let regrouping = false, measureDirty = true, clock = 0, revision = 0;
     let lastAt = performance.now(), suppressSweepUntil = 0;
     let inspection: { story: Story; started: number } | null = null;
     const visible = new Set<Story>();
@@ -296,16 +296,17 @@ export function useAttentionJourney() {
     const activityReady = () => { const story = records.find(record => record.el.matches('[data-construction-scene="activity"]')); if (story) story.blocks = makeBlocks(story.el, story.heading); invalidate(); };
     const unsubscribe = subscribeScrollIntent(onIntent);
     const resize = new ResizeObserver(invalidate); records.forEach(story => resize.observe(story.el));
-    document.fonts.ready.then(() => { if (!disposed) invalidate(); });
+    document.fonts.addEventListener("loadingdone", invalidate);
     window.addEventListener("keydown", keyboardJump);
     window.addEventListener("resize", invalidate, { passive: true });
     window.addEventListener("portfolio:layout-start", onLayoutStart); window.addEventListener("portfolio:layout-settled", onLayoutSettled); window.addEventListener("portfolio:activity-ready", activityReady);
     document.addEventListener("click", click, true); document.addEventListener("visibilitychange", visibility); window.addEventListener("focus", visibility); window.addEventListener("blur", visibility);
     publish(); startClock();
     return () => {
-      disposed = true; unsubscribe(); observer.disconnect(); resize.disconnect(); stopClock();
+      unsubscribe(); observer.disconnect(); resize.disconnect(); stopClock();
       window.removeEventListener("keydown", keyboardJump); window.removeEventListener("resize", invalidate);
       window.removeEventListener("portfolio:layout-start", onLayoutStart); window.removeEventListener("portfolio:layout-settled", onLayoutSettled); window.removeEventListener("portfolio:activity-ready", activityReady);
+      document.fonts.removeEventListener("loadingdone", invalidate);
       document.removeEventListener("click", click, true); document.removeEventListener("visibilitychange", visibility); window.removeEventListener("focus", visibility); window.removeEventListener("blur", visibility);
       records.forEach(story => { delete story.el.dataset.discoveryId; delete story.el.dataset.quality; delete story.el.dataset.qualityCoverage; delete story.el.dataset.qualityEncountered; delete story.el.dataset.qualityConfidence; delete story.el.dataset.explorationComplete; story.el.style.removeProperty("--exploration-evidence"); }); resetExploration();
     };

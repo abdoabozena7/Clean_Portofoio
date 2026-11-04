@@ -5,6 +5,9 @@
 html [data-construction="structure"], html [data-building] { transition-property: transform, box-shadow, background-color, color, border-color; }
 .agent-construction { position: fixed; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; contain: strict; }
 .agent-construction[data-construction-idle] { visibility: hidden; }
+@media (max-width: 767px), (pointer: coarse) {
+  .agent-construction [data-wide-agent] { display: none; }
+}
 .agent-construction *, .agent-construction *::before, .agent-construction *::after { pointer-events: none !important; }
 [data-decoration-paused] :is(.animate-bounce, .animate-pulse, .animate-marquee, .animate-marquee-reverse, .project-building > span) {
   animation-play-state: paused;
