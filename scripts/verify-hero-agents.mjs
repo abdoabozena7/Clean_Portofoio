@@ -47,6 +47,9 @@ try{
      const name=document.querySelector('#hero h1'), workshop=document.querySelector('[data-name-assembly]');
      if (+workshop?.dataset.nameProgress > 0) clock.nameStart ??= at;
      if (name?.dataset.constructed === 'true') clock.nameEnd ??= at;
+     const role=document.querySelector('#hero .mt-6[data-construction="text"]'),cv=document.querySelector('#hero a[download]');
+     if(role?.dataset.constructed==='true'&&!role.closest('[data-building]'))clock.roleReady??=at;
+     if(cv?.dataset.constructed==='true'&&!cv.closest('[data-building]'))clock.cvReady??=at;
      if (svg?.dataset.state === 'building') clock.artStart ??= at;
      if (svg?.dataset.state === 'settled') clock.artEnd ??= at;
      if (!clock.artEnd) {
@@ -91,9 +94,9 @@ try{
     // The first trip overlaps browser startup. Two distinct pre-contact
     // positions and the dock still prove real travel under video sampling.
     const opening=key==='name-drag', distanceToDock=distance(approach.at(-1)?.point,firstWork?.point);
-    check(width+':'+key+'ApproachesAndDocks',approach.length>=(opening?2:3)&&transit>8&&millis>=55&&millis<=(opening?330:240)&&Number.isFinite(distanceToDock)&&approach.some(sample=>Math.abs(sample.angle)>15),{samples:approach.length,transit,millis,distanceToDock});
+    check(width+':'+key+'ApproachesAndDocks',approach.length>=(opening?2:3)&&transit>8&&transit<=85&&millis>=55&&(opening||millis<=240)&&Number.isFinite(distanceToDock)&&approach.every(sample=>sample.angle===0),{samples:approach.length,transit,millis,distanceToDock});
    }
-   check(width+':supportingHeroContentAlsoApproaches',travel.some(sample=>sample.key.startsWith('hero-content-')&&sample.phase==='approach')&&travel.some(sample=>sample.key.startsWith('hero-content-')&&sample.phase==='work'));
+   check(width+':introductionAppearsWithoutCursorTours',!travel.some(sample=>sample.key.startsWith('hero-content-'))&&clock.roleReady-clock.nameStart<1300&&clock.cvReady-clock.nameStart<2300,clock);
    check(width+':openingMovesAtEditorPace',clock.nameEnd-clock.nameStart<3300&&clock.artEnd-clock.artStart<4550&&clock.artEnd-clock.nameStart<7600,clock);
    const creator=(f,job)=>f.creators.find(c=>c.job===job&&c.opacity>.5&&c.tip);
    const growing=frames.filter(f=>f.draw>.05&&f.draw<.95);
@@ -126,9 +129,7 @@ try{
    check(width+':constructionPhasesObserved',['create-mascots','place-mascots','build-cable','perch'].every(phase=>frames.some(f=>f.phase===phase)),{phases:[...new Set(frames.map(f=>f.phase))]});
    const visibleCreators=frames.map(f=>f.creators.filter(c=>c.opacity>.5&&c.tip&&c.tip.x>=0&&c.tip.x<=width&&c.tip.y>=0&&c.tip.y<=900));
    const helperSamples=visibleCreators.flat().filter(c=>/^(?:pin-(?:teal|amber|coral)|align-.+|inspect-.+|seat-junction)$/.test(c.job));
-   const helperJobs=[...new Set(helperSamples.map(c=>c.job))],helperAgents=[...new Set(helperSamples.map(c=>c.agent))];
-   if(width===1440)check(width+':additionalCreatorsPerformHelperSteps',helperSamples.length>10&&helperJobs.length>=3&&helperAgents.length>=3&&Math.max(...visibleCreators.map(c=>c.length))>3,{samples:helperSamples.length,jobs:helperJobs,agents:helperAgents,maxConcurrent:Math.max(...visibleCreators.map(c=>c.length))});
-   else check(width+':mobileRetainsThreeActiveCreators',frames.length>20&&Math.max(...frames.map(f=>f.activeCreatorCount))<=3&&helperSamples.length===0,{maxConcurrent:Math.max(...frames.map(f=>f.activeCreatorCount)),helperSamples:helperSamples.length});
+   check(width+':atMostThreeCreatorsWithoutHelperTraffic',frames.length>20&&Math.max(...frames.map(f=>f.activeCreatorCount))<=3&&helperSamples.length===0,{maxConcurrent:Math.max(...frames.map(f=>f.activeCreatorCount)),helperSamples:helperSamples.length});
    const final=await page.evaluate(()=>{
     const h=document.querySelector('#hero h1'),svg=document.querySelector('[data-hero-agents]'),s=getComputedStyle(h);
     const rect=e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,width:r.width,height:r.height}};
@@ -151,7 +152,7 @@ try{
    check(width+':originalLayoutAndTypeUnchanged',comparison.every(key=>JSON.stringify(final[key])===JSON.stringify(before[key])),{differences:comparison.filter(key=>JSON.stringify(final[key])!==JSON.stringify(before[key]))});
    check(width+':nativeSvgMatchesApprovedIngredients',final.actors===3&&final.tools===2&&final.raster===0&&final.allPlaced&&final.overlayPointers===0,final);
    check(width+':overlayDoesNotBlockControls',final.pointerEvents==='none'&&final.cvClickable&&!final.overflow,final);
-   check(width+':shorterButGradualConstruction',final.state==='settled'&&final.elapsed>=3200&&final.elapsed<=3600,{state:final.state,elapsed:final.elapsed});
+   check(width+':shorterButGradualConstruction',final.state==='settled'&&final.elapsed>=2400&&final.elapsed<=2800,{state:final.state,elapsed:final.elapsed});
    const palette=['#2bbaa5','#93d3ae','#faecb6','#f9a822','#f96635'];
    check(width+':tenExistingCreatorsUseOriginalPalette',final.pointerCount===10&&final.pointerColors.every(c=>palette.includes(c.palette)&&palette.includes(c.paint)),{count:final.pointerCount,colors:final.pointerColors});
    const accent=final.rightAccent;

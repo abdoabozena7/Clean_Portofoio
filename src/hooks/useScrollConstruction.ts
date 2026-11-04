@@ -1,11 +1,10 @@
 import { useLayoutEffect, type RefObject } from "react";
 import { autonomousProgress, clamp01, textFrame, type TextLine } from "@/lib/construction";
-import { constructionScene, editorApproachMs, editorTravel, type SceneBox } from "@/lib/constructionScene";
+import { constructionScene, editorTravel, type SceneBox } from "@/lib/constructionScene";
 import type { createConstructionDirector } from "@/lib/constructionDirector";
 import { getScrollIntent, subscribeScrollIntent } from "@/lib/scrollIntent";
 import { createNameConstruction, nameConstructionMs } from "@/lib/nameConstruction";
 import { getHeroOverlayWork, type HeroOverlayJob } from "@/lib/heroOverlayWork";
-import { agentHeading, rendezvousPoint } from "@/lib/agentOrientation";
 
 type Kind = "text" | "asset" | "structure";
 type Target = {
@@ -13,9 +12,9 @@ type Target = {
   lines: TextLine[]; count: number; progress: number; elapsed: number; visibleSince: number | null;
   duration: number; order: number; cinematic: boolean; weeks?: SVGGElement[];
 };
-type EditorAssignment = { target: Target | null; travelMs: number };
+type EditorAssignment = { target: Target | null };
 type Point = { x: number; y: number };
-type HeroMotion = { job: string; from: Point; last: Point; angle?: number; at: number };
+type HeroMotion = { job: string; from: Point; last: Point; at: number };
 
 function measureLines(el: HTMLElement, origin: DOMRect): TextLine[] {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
@@ -58,7 +57,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
     const carets = Array.from(layer.querySelectorAll<HTMLElement>("[data-caret]"));
     const props = Array.from(layer.querySelectorAll<HTMLElement>("[data-prop]"));
     const sources: (HTMLElement | null)[] = cursors.map(() => null);
-    const assignments: EditorAssignment[] = cursors.map(() => ({ target: null, travelMs: 0 }));
+    const assignments: EditorAssignment[] = cursors.map(() => ({ target: null }));
     const heroMotions: (HeroMotion | undefined)[] = cursors.map(() => undefined);
     let frame = 0, dirty = true, stopped = false, jump = !!location.hash;
     const initialHash = location.hash;
@@ -107,8 +106,8 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (!["text", "asset", "structure"].includes(kind)) continue;
         const count = el.textContent?.trim().length || 1;
         const cinematic = el.dataset.constructionScene !== "activity" && ((kind === "asset" && !el.hasAttribute("data-construction-skip")) || (kind === "structure" && el.hasAttribute("data-construction")));
-        const duration = el === nameHeading ? nameConstructionMs : kind === "structure" ? 580 :
-          kind === "asset" ? 680 + (order % 4) * 65 : Math.max(400, Math.min(1050, count * 8));
+        const duration = el === nameHeading ? nameConstructionMs : kind === "structure" ? 420 :
+          kind === "asset" ? 500 + (order % 4) * 40 : Math.max(400, Math.min(1050, count * 8));
         targets.push({ el, section, kind: kind as Kind, top: 0, left: 0, width: 0, height: 0, lines: [], count,
           progress: completed.has(el) ? 1 : 0, elapsed: 0, visibleSince: null, order: order++, cinematic,
           duration });
@@ -258,21 +257,23 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
       const contact = { x: job.x + offsetX, y: job.y + offsetY };
       let motion = heroMotions[index];
       if (motion?.job !== job.kind) {
-        const home = rendezvousPoint(index, 0, viewWidth || innerWidth, viewHeight || innerHeight);
-        const from = motion && now - motion.at < 350 ? motion.last : { x: home.x + offsetX, y: home.y + offsetY };
-        motion = { job: job.kind, from, last: from, angle: motion?.angle, at: now };
+        const nearby = motion && now - motion.at < 350 && Math.hypot(contact.x - motion.last.x, contact.y - motion.last.y) <= 80;
+        const from = nearby ? motion.last : { x: contact.x - 24, y: contact.y + 28 };
+        motion = { job: job.kind, from, last: from, at: now };
         heroMotions[index] = motion;
       }
       const approach = job.approach;
       const point = approach === undefined ? contact : editorTravel(motion.from, contact, approach, index);
       const approaching = approach !== undefined;
-      const angle = agentHeading(motion.angle, point.x - motion.last.x, point.y - motion.last.y, now - motion.at);
-      motion.last = point; motion.angle = angle; motion.at = now;
+      // Keep the nib steady while it works. Direction changes within a glyph
+      // should not spin the editor above the text.
+      motion.last = point; motion.at = now;
       const x = point.x - offsetX, y = point.y - offsetY;
       if (source !== "content") assignments[index].target = null;
       cursor.classList.add("hero-work-pointer");
-      cursor.style.setProperty("--agent-heading", `${angle.toFixed(1)}deg`);
-      cursor.style.opacity = String(job.opacity ?? 1);
+      cursor.style.setProperty("--agent-heading", "0deg");
+      const arrivalOpacity = approach === undefined ? 1 : Math.min(1, approach * 2);
+      cursor.style.opacity = source === "content" ? "0" : String((job.opacity ?? 1) * arrivalOpacity);
       cursor.style.transform = `translate3d(${x}px,${y}px,0)`;
       cursor.dataset.heroJob = job.kind;
       cursor.dataset.heroPhase = approaching ? "approach" : "work";
@@ -354,6 +355,14 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (repaint || !t.el.dataset.building) paint(t);
       }
       hideAgents();
+      // Reading the introduction should not wait for a free editor. The same
+      // text reveal runs on its own clock while the name workshop is active.
+      for (const target of work) {
+        if (target.el === nameHeading || target.kind !== "text") continue;
+        target.elapsed += dt;
+        target.progress = autonomousProgress(target.progress, target.elapsed, 0, target.duration);
+        if (target.progress >= 1) finish(target); else paint(target);
+      }
       const assembling = targets.find(t => t.el === nameHeading && t.progress < 1 && work.includes(t));
       if (assembling && nameScene) {
         // The word workshop owns the hero stage; ancestor frame props must not
@@ -386,7 +395,7 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         const role = cursor.dataset.role;
         const previous = assignment.target;
         const available = work.filter(t => {
-          if (t.progress === 1 || used.has(t) || t.el === nameHeading) return false;
+          if (t.progress === 1 || used.has(t) || t.kind === "text") return false;
           if (assembling && assembling.progress < .28 && !t.el.closest("[data-microsoft-headline],a[download]")) return false;
           if (t.el.dataset.constructionScene === "activity" && !t.el.dataset.activityReady && now - (t.visibleSince || now) < 2500) return false;
           // Build a hero surface before working on its text/logo. Otherwise a
@@ -411,22 +420,16 @@ export function useScrollConstruction(layerRef: RefObject<HTMLDivElement>) {
         if (assignment.target !== target) {
           bindProp(target, index);
           assignment.target = target;
-          assignment.travelMs = 0;
           const lastMotion = heroMotions[index];
           if (lastMotion) lastMotion.job = "";
         }
-        const arrival = assignment.travelMs < editorApproachMs ? assignment.travelMs / editorApproachMs : undefined;
-        assignment.travelMs += dt;
-        if (arrival === undefined) {
-          target.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
-          target.progress = autonomousProgress(target.progress, target.elapsed, 0, target.duration);
-          if (target.progress >= 1) { finish(target); continue; } else paint(target);
-        }
+        target.elapsed += dt * (simplified ? 1.8 + urgency * 5 : 1 + urgency * 6);
+        target.progress = autonomousProgress(target.progress, target.elapsed, 0, target.duration);
+        if (target.progress >= 1) { finish(target); continue; } else paint(target);
         const aim = point(target, index);
         const operation = target.kind === "text" ? "type" : target.kind === "asset" ? "place" : "trace";
         const click = target.progress > .05 && Math.floor(target.progress * 16) % 6 === 0;
-        renderHeroEditor({ index, kind: `hero-content-${target.order}`, operation, x: aim.x, y: aim.y, approach: arrival, click }, now, offsetX, viewY, "content");
-        if (arrival !== undefined) continue;
+        renderHeroEditor({ index, kind: `hero-content-${target.order}`, operation, x: aim.x, y: aim.y, click }, now, offsetX, viewY, "content");
         {
           let guideRect: SceneBox = aim.rect;
           if (target.cinematic) {

@@ -9,7 +9,7 @@ type Layout = { scale: number; perches: Perch[]; code: Point; terminal: Point; l
 const clamp = (n: number) => Math.max(0, Math.min(1, n));
 const ease = (n: number) => { const p = clamp(n); return p * p * (3 - 2 * p); };
 const phase = (time: number, start: number, end: number) => ease((time - start) / (end - start));
-const duration = 3400;
+const duration = 2600;
 const timelineLength = 7;
 const approachLength = editorApproachMs * timelineLength / duration;
 
@@ -153,7 +153,6 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     vectors ??= readVectors();
     if (reduced.matches) elapsed = duration;
     const t = elapsed * timelineLength / duration, done = elapsed >= duration, s = layout.scale;
-    const helpers = innerWidth >= 768 && !coarse.matches;
     const projecting = active() && !done && !reduced.matches;
     const writes: (() => void)[] = [];
     const reads: (() => void)[] = [];
@@ -183,25 +182,14 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
         if (group.dataset.action !== action) group.dataset.action = action;
         paintVector(group, build);
       });
-      const helperIndex=({0:1,2:3,5:7} as Record<number,number>)[index];
       if (t>=from && t<drawUntil) {
-        const step=build<.45?"outline":build<.6?"add eyes":build<.75?"draw sparks":"draw hands";
         const arrival = approach(from, drawFrom);
-        addJob(index, `draw-${name}`, `${step} · ${name}`, () => vectorTip(group, build), group, { approach: arrival });
-        if (helpers) addJob(helperIndex, `pin-${name}`, "pin drawing", () => viewportPoint(group, { x: -19, y: -35 }), group, { approach: arrival });
+        addJob(index, `draw-${name}`, "draw", () => vectorTip(group, build), group, { approach: arrival });
       } else if (t>=drawUntil && t<placedAt) {
         const arrival = approach(drawUntil, carryFrom);
         const snap = carry >= 1;
-        addJob(index, `place-${name}`, snap ? "align → snap" : `drag ${name}`, () => viewportPoint(group, { x: 18, y: -7 }), group,
+        addJob(index, `place-${name}`, snap ? "align" : "place", () => viewportPoint(group, { x: 18, y: -7 }), group,
           { approach: arrival, click: snap, opacity: 1 - .3 * phase(t, landing, placedAt) });
-        if (helpers) addJob(helperIndex, `hold-${name}`, "hold corner", () => viewportPoint(group, { x: -18, y: -7 }), group, { approach: arrival });
-      } else if(helpers&&t>=placedAt&&t<placedAt+.25) {
-        const p = phase(t, placedAt + .12, placedAt + .25);
-        addJob(helperIndex, `align-${name}`, "align edges", () => viewportPoint(group, { x: -18 + 36 * p, y: -35 }), group, { approach: approach(placedAt, placedAt + .12), opacity: .85 });
-      }
-      if(helpers&&t>=placedAt+.3&&t<placedAt+.60) {
-        const p = phase(t, placedAt + .4, placedAt + .60);
-        addJob(9, `inspect-${name}`, "check placement", () => viewportPoint(group, { x: -18 + 36 * p, y: 2 }), group, { approach: approach(placedAt + .3, placedAt + .4), opacity: .85 });
       }
     };
     const offsets=[[-30,52],[28,62],[-30,50]];
@@ -219,10 +207,7 @@ export function animateHeroAgents(svg: SVGSVGElement, heading: HTMLHeadingElemen
     buildAndPlace(terminal, 5, "terminal", layout.terminal, { x: layout.right - 14 * s, y: layout.lineY + 61 * s }, 3.68, 4.91, 5.95);
     junctions.forEach((node,i)=>{
       const at=[.16,.49,.82][i];
-      writes.push(() => { node.style.opacity=String(helpers?phase(draw,at+.025,at+.09):clamp((draw-at)*40)); });
-      if(helpers&&draw>at&&draw<at+.1) {
-        addJob(8,"seat-junction","connect node",() => viewportPoint(node,{x:+node.getAttribute("cx")!,y:+node.getAttribute("cy")!}));
-      }
+      writes.push(() => { node.style.opacity = String(clamp((draw - at) * 40)); });
     });
     accents.forEach((node,i)=>{
       const progress=phase(t,6+i*.3,6.4+i*.3),l=accentLengths[i];

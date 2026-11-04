@@ -111,7 +111,7 @@ export function createNameConstruction(heading: HTMLElement, layer: HTMLElement)
     const finishInk = between(p, .86, .94);
     for (const piece of pieces.slice(1)) piece.node.style.color = p >= .94 ? piece.color : `color-mix(in srgb, #111920 ${(1-finishInk)*100}%, ${piece.color} ${finishInk*100}%)`;
     const firstOpacity = p > .03 && p < .60 ? s.guideOpacity : p >= .88 ? s.guideOpacity * .55 : 0;
-    outline(0, s.carry, firstOpacity, p < .32 ? "pick up → place" : p < .56 ? `resize · ${Math.round(s.scale * 100)}%` : "position locked", viewportWidth);
+    outline(0, s.carry, firstOpacity, p < .32 ? "pick up → place" : p < .56 ? "resize" : "position locked", viewportWidth);
     outline(1, s.second, p >= .54 ? s.guideOpacity : 0, p < .705 ? "duplicate → move" : p < .78 ? "replace text" : "", viewportWidth, p < .705);
     outline(2, s.period, p > .80 && p < .93 ? s.guideOpacity : 0, "", viewportWidth);
     if (alignment) {
