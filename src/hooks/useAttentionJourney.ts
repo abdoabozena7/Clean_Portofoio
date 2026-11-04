@@ -207,7 +207,7 @@ export function useAttentionJourney() {
         visible.forEach(story => {
           const heading = frame.rect(story.heading);
           if (heading.bottom > 76 && heading.top < frame.height - 56 && frame.painted(story.heading)) encounter(story);
-          if (story.exposure >= 1 && story.coverage >= 1 && story.confidence === "high" && story.returnAt === null || !expanded(story, frame)) return;
+          if (!rate || story.exposure >= 1 && story.coverage >= 1 && story.confidence === "high" && story.returnAt === null || !expanded(story, frame)) return;
           measureStory(story, frame);
           let observed = false;
           story.blocks.forEach(block => {
@@ -217,10 +217,8 @@ export function useAttentionJourney() {
               const fraction = lineVisibility(block, line, frame);
               if (fraction < .6) return;
               observed = true;
-              if (rate > 0) {
-                line.elapsed = Math.min(block.requiredMs, line.elapsed + dt * rate * fraction);
-                if (line.elapsed >= Math.min(400, block.requiredMs)) line.seen = true;
-              }
+              line.elapsed = Math.min(block.requiredMs, line.elapsed + dt * rate * fraction);
+              if (line.elapsed >= Math.min(400, block.requiredMs)) line.seen = true;
             });
             const width = block.lines.reduce((sum, line) => sum + line.width, 0) || 1;
             block.credit = Math.max(block.credit, block.lines.reduce((sum, line) => sum + earnExposure(0, line.elapsed, block.requiredMs) * line.width, 0) / width);
@@ -234,9 +232,8 @@ export function useAttentionJourney() {
         });
       }
       publish();
-      // Keep the last qualified sample alive until the evidence is actually
-      // saturated; a near-complete99.9% logo must not freeze just before its end.
-      if (![...visible].some(story => story.credit < 1) && !inspection) stopClock();
+      // An action bonus can fill the score before coverage qualifies the mark.
+      if (![...visible].some(story => story.credit < 1 || story.coverage < .95) && !inspection) stopClock();
     };
     const startClock = () => { if (!clock && !document.hidden && document.hasFocus()) { lastAt = performance.now(); clock = window.setInterval(sample, sampleIntervalMs); } };
     const observer = new IntersectionObserver(entries => {

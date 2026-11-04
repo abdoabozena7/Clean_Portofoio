@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
 import { FAST_SCROLL_RETURN_CONFIG as config } from "@/lib/fastScrollReturn";
 import { initialScrollVelocity, sampleScrollVelocity, wheelPixels } from "@/lib/scrollVelocity";
-import { scrollCommand } from "@/lib/scrollCommand";
-import { continueFastBrowsing, endFastBrowsing, navigateForScrollReturn } from "@/lib/scrollIntent";
+import { createScrollBurst, scrollBurstIdleMs, scrollCommand } from "@/lib/scrollCommand";
+import { endScrollReturn, navigateForScrollReturn } from "@/lib/scrollIntent";
 
-const repeatWindowMs = 3000;
-const attemptsToContinue = 3;
+const inputTime = (event: Event) => {
+  const timestamp = event.timeStamp;
+  return timestamp > performance.timeOrigin ? timestamp - performance.timeOrigin : timestamp || performance.now();
+};
 
 /** Interpret eligible commands before page movement. No section/exposure gate. */
 export function useFastScrollReturn() {
-  const [cue, setCue] = useState({ activation: 0, message: 0, visible: false, showMessage: false });
+  const [cue, setCue] = useState({ activation: 0, visible: false });
   useEffect(() => {
     if (!config.enabled) return;
-    let velocity = initialScrollVelocity(), wheelAt: number | null = null;
+    const burst = createScrollBurst();
+    let velocity = initialScrollVelocity();
     let source: "wheel" | "touch" | "none" = "none";
     let timer: ReturnType<typeof setTimeout> | undefined, frame = 0;
-    let touching = false, owned = false, allowed = false;
+    let touching = false, owned = false;
     let x = 0, y = 0, touchAt = 0, releaseVelocity = 0, lastMove = 0;
-    let attempts = 0, lastAttempt = -Infinity, gestureAttempt = false, passFast = false, lastReverse = false;
+    let lastReverse = false;
     let cueVisible = false;
     let touchOrigin: EventTarget | null = null, touchOriginBlocked = false, touchOriginDirty = true;
     let gestureHeight = 1;
@@ -34,26 +37,19 @@ export function useFastScrollReturn() {
       cueVisible = false;
       setCue(previous => ({ ...previous, visible: false }));
     };
-    const fastAttempt = (now: number) => {
-      if (!gestureAttempt) {
-        gestureAttempt = true;
-        attempts = now - lastAttempt <= repeatWindowMs ? attempts + 1 : 1;
-        lastAttempt = now;
-        passFast = attempts >= attemptsToContinue;
-        const showMessage = !passFast;
-        cueVisible = true;
-        setCue(previous => ({ activation: previous.activation + 1, message: previous.message + Number(showMessage), visible: true, showMessage }));
-        clearTimeout(timer); timer = setTimeout(hide, 900);
-      }
-      if (passFast) continueFastBrowsing();
-      return passFast;
+    const announce = () => {
+      cueVisible = true;
+      setCue(previous => ({ activation: previous.activation + 1, visible: true }));
+      clearTimeout(timer); timer = setTimeout(hide, 900);
     };
     const stopInertia = () => { cancelAnimationFrame(frame); frame = 0; };
-    const stopGesture = () => { stopInertia(); velocity = initialScrollVelocity(); source = 'none'; wheelAt = null; touching = false; owned = false; allowed = false; releaseVelocity = 0; gestureAttempt = false; passFast = false; lastReverse = false; };
-    const cancel = () => { stopGesture(); attempts = 0; lastAttempt = -Infinity; endFastBrowsing(); hide(); };
-    const ordinaryInput = () => {
-      if (passFast) { passFast = false; gestureAttempt = false; attempts = 0; endFastBrowsing(); }
-      hide();
+    const setSource = (next: typeof source) => {
+      if (next === source) return;
+      source = next; burst.reset(); velocity = initialScrollVelocity();
+    };
+    const cancel = () => {
+      stopInertia(); setSource('none'); touching = false; owned = false;
+      releaseVelocity = 0; lastReverse = false; endScrollReturn(); hide();
     };
     const blockedByPage = () => document.hidden || !document.hasFocus() ||
       !!document.querySelector('[role="dialog"],[data-exploration-map]') ||
@@ -68,70 +64,74 @@ export function useFastScrollReturn() {
     };
     const blocked = (origin: EventTarget | null) => blockedByPage() || blockedByOrigin(origin);
     const invalidateTouchOrigin = () => { touchOriginDirty = true; };
-    const apply = (delta: number, reverse: boolean, input: "wheel" | "touch" | "momentum") => {
+    const apply = (delta: number, reverse: boolean, input: "wheel" | "touch" | "momentum", entered = false) => {
       const from = scrollY;
-      if (reverse) navigateForScrollReturn(Math.max(0, from + delta));
+      if (reverse) navigateForScrollReturn(Math.max(0, from + delta), entered);
       else window.scrollTo({ top: Math.max(0, from + delta), behavior: 'instant' });
       const to = scrollY;
       window.dispatchEvent(new CustomEvent('portfolio:scroll-command', { detail: { input, reverse, from, to, delta } }));
       return to - from;
     };
+    const readCommand = (delta: number, at: number, viewport: number, gap: number | null, wheel = false) => {
+      const sample = sampleScrollVelocity(velocity, at, delta, viewport); velocity = sample.state;
+      const strong = scrollCommand(delta, gap, viewport, sample.recentSpeed, wheel).reverse;
+      const command = burst.move(delta, at, viewport, gap, strong);
+      if (command.announce) announce();
+      if (!command.reverse) { endScrollReturn(); hide(); }
+      return command;
+    };
     const wheel = (event: WheelEvent) => {
       stopInertia();
-      if (event.defaultPrevented || event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || blocked(event.target)) { velocity = initialScrollVelocity(); wheelAt = null; return; }
-      const now = performance.now(), delta = wheelPixels(event.deltaY, event.deltaMode, innerHeight, event.deltaMode === 1 ? wheelLineHeight() : 20);
-      if (source !== 'wheel') { velocity = initialScrollVelocity(); wheelAt = null; source = 'wheel'; }
-      const gap = wheelAt === null || now - wheelAt > 240 ? null : now - wheelAt;
-      if (gap === null) { gestureAttempt = false; passFast = false; }
-      wheelAt = now;
-      const sample = sampleScrollVelocity(velocity, now, delta, innerHeight); velocity = sample.state;
-      const command = scrollCommand(delta, gap, innerHeight, sample.recentSpeed, true);
-      if (command.reverse && event.cancelable) {
-        if (!fastAttempt(now)) { event.preventDefault(); apply(command.delta, true, 'wheel'); }
-      } else ordinaryInput();
+      if (event.defaultPrevented || !event.cancelable || event.ctrlKey || event.metaKey || Math.abs(event.deltaX) > Math.abs(event.deltaY) || blocked(event.target)) { cancel(); return; }
+      const viewport = innerHeight, at = inputTime(event);
+      const mode = event.deltaMode, delta = wheelPixels(event.deltaY, mode, viewport, mode === 1 ? wheelLineHeight() : 20);
+      if (!delta) return;
+      setSource('wheel');
+      const elapsed = velocity.at === null ? Infinity : at - velocity.at;
+      const gap = elapsed < 0 || elapsed >= scrollBurstIdleMs ? null : elapsed;
+      const command = readCommand(delta, at, viewport, gap, true);
+      if (command.reverse) { event.preventDefault(); apply(-delta, true, 'wheel', command.entered); }
     };
     const touchStart = (event: TouchEvent) => {
-      stopGesture();
-      if (event.touches.length !== 1 || blocked(event.target)) return;
+      stopInertia(); touching = false; owned = false; releaseVelocity = 0; lastReverse = false;
+      if (event.touches.length !== 1 || blocked(event.target)) { cancel(); return; }
       touchOrigin = event.target; touchOriginBlocked = false; touchOriginDirty = false;
       gestureHeight = innerHeight;
-      source = 'touch'; touching = true; allowed = true;
-      x = event.touches[0].clientX; y = event.touches[0].clientY; touchAt = performance.now();
+      setSource('touch'); touching = true;
+      x = event.touches[0].clientX; y = event.touches[0].clientY; touchAt = inputTime(event);
       // A timestamp anchor lets the first movement carry its own command.
       velocity = { ...initialScrollVelocity(), at: touchAt, direction: 1 };
     };
     const touchMove = (event: TouchEvent) => {
-      if (!touching || !allowed) return;
+      if (!touching) return;
       if (event.touches.length !== 1 || blockedByPage()) { cancel(); return; }
       if (touchOriginDirty || event.target !== touchOrigin) {
         touchOrigin = event.target; touchOriginDirty = false;
         touchOriginBlocked = blockedByOrigin(touchOrigin);
       }
       if (touchOriginBlocked) { cancel(); return; }
-      const point = event.touches[0], now = performance.now(), delta = y - point.clientY, dx = point.clientX - x;
+      const point = event.touches[0], at = inputTime(event), delta = y - point.clientY, dx = point.clientX - x;
       if (!owned && Math.abs(delta) < 4 && Math.abs(dx) < 4) return;
       if (!owned && Math.abs(dx) > Math.abs(delta) * 1.2) { cancel(); return; }
       // Cancel the FIRST vertical move, before native momentum takes ownership.
       // Taps, horizontal gestures, nested scrolling and pinch keep native behavior.
       if (!event.cancelable) { cancel(); return; }
       event.preventDefault(); owned = true;
-      const dt = Math.max(1, now - touchAt);
-      const sample = sampleScrollVelocity(velocity, now, delta, gestureHeight); velocity = sample.state;
-      const command = scrollCommand(delta, dt, gestureHeight, sample.recentSpeed);
-      const reverse = command.reverse && !fastAttempt(now);
-      if (!command.reverse) ordinaryInput();
-      const movement = reverse ? command.delta : delta;
-      apply(movement, reverse, 'touch');
-      lastReverse = reverse; releaseVelocity = movement / dt; lastMove = now;
-      touchAt = now; y = point.clientY; x = point.clientX;
+      if (!delta) return;
+      const elapsed = at - touchAt;
+      const { reverse, entered } = readCommand(delta, at, gestureHeight, elapsed, false);
+      const movement = reverse ? -delta : delta;
+      apply(movement, reverse, 'touch', entered);
+      lastReverse = reverse; releaseVelocity = movement / Math.max(1, elapsed); lastMove = at;
+      touchAt = at; y = point.clientY; x = point.clientX;
     };
-    const touchEnd = () => {
+    const touchEnd = (event: TouchEvent) => {
       touching = false;
-      if (!owned || !allowed) return;
+      if (!owned) return;
       owned = false;
-      const now = performance.now();
-      const releasedSpeed = releaseVelocity * Math.exp(-Math.max(0, now - lastMove - 16) / 100);
-      if (now - lastMove > 240 || Math.abs(releasedSpeed) < .05 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const pause = inputTime(event) - lastMove, now = performance.now();
+      const releasedSpeed = releaseVelocity * Math.exp(-Math.max(0, pause - 16) / 100);
+      if (pause >= scrollBurstIdleMs || Math.abs(releasedSpeed) < .05 || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
       let previous = now, elapsed = 0, pending = 0, speed = Math.max(-6, Math.min(6, releasedSpeed));
       const reverse = lastReverse;
       const coast = (at: number) => {

@@ -1,4 +1,4 @@
-/* The loader traces the logo frame while its image stays in full color. */
+/* The loader traces the logo frame as exploration progresses. */
 [data-experience-item] .experience-brand .company-logo {
   position: relative;
   top: auto;
@@ -6,8 +6,13 @@
   right: auto;
   border-color: transparent;
 }
-.company-logo > img {
-  opacity: 1;
+@media screen and (max-width: 767px) {
+  [data-experience-item] .company-logo > img {
+    /* Keep this dimming inside the paint effect. Actual element opacity and
+       its ancestors still determine whether the image can earn exposure. */
+    filter: grayscale(calc(1 - var(--exploration-evidence, 0))) opacity(calc(.5 + .5 * var(--exploration-evidence, 0)));
+    transition: filter .24s linear;
+  }
 }
 .company-evidence {
   position: absolute;
@@ -29,6 +34,14 @@
   stroke-dasharray: 1;
   stroke-dashoffset: calc(1 - var(--exploration-evidence, 0));
   transition: stroke-dashoffset .24s linear;
+}
+@media screen and (max-width: 767px) {
+  .company-evidence-progress {
+    /* Normalize the dash in the SVG's coordinate space. The 40-unit viewBox
+       scales to 68 CSS pixels, including the original 1.5px stroke. */
+    vector-effect: none;
+    stroke-width: calc(1.5 * 40 / 68);
+  }
 }
 .company-evidence-finish {
   opacity: 0;
@@ -91,7 +104,7 @@
   .project-card[data-scene-shell]::after { content: none; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .company-logo > img, .company-evidence-progress, .company-evidence-finish, .credential-evidence, .project-card { transition: none; }
+  [data-experience-item] .company-logo > img, .company-evidence-progress, .company-evidence-finish, .credential-evidence, .project-card { transition: none; }
   .credential-evidence .certificate-image-trigger::after, .project-card::after { transition: none; }
 }
 @media print {

@@ -23,15 +23,15 @@ export default function AdaptiveBrowsing() {
   useAdaptiveBrowsing(editor);
   const cue = useFastScrollReturn();
   const variant = returnVariants[Math.max(0, cue.activation - 1) % returnVariants.length];
-  const [title, subtitle] = returnMessages[Math.max(0, cue.message - 1) % returnMessages.length];
+  const [title, subtitle] = returnMessages[Math.max(0, cue.activation - 1) % returnMessages.length];
   useAttentionJourney();
   return <>
     {createPortal(
       <div className="section-return-cue" data-visible={cue.visible} data-variant={variant}>
-        {cue.showMessage && <div className="return-popup" key={cue.activation} aria-hidden="true">
-          <strong>{title}</strong><span>{subtitle}</span>
+        {cue.activation > 0 && <div className="return-popup" key={cue.activation} aria-hidden="true">
+          <strong>Slow Down</strong><span>{title} {subtitle}</span>
         </div>}
-        <div role="status" aria-atomic="true" className="sr-only">{cue.visible && cue.showMessage ? `${title} ${subtitle}` : ""}</div>
+        <div role="status" aria-atomic="true" className="sr-only">{cue.visible ? `Slow Down. ${title} ${subtitle}` : ""}</div>
       </div>, document.body,
     )}
     <div ref={editor} data-scan-agent aria-hidden="true">
