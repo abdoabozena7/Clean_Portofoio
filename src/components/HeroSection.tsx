@@ -190,7 +190,7 @@ const HeroSection = () => {
             },
             {
               Icon: Globe,
-              href: "https://abdoabozena7.github.io/Clean_Portofoio/",
+              href: "https://abdoabozena7.github.io/main/",
               label: "Portfolio",
             },
             {
@@ -227,7 +227,7 @@ const HeroSection = () => {
 
       <div className="absolute bottom-10 left-6 md:left-10 z-10">
         <span className="text-foreground/80 text-xs tracking-[0.2em] uppercase font-mono font-medium">
-          abdoabozena7.github.io/Clean_Portofoio
+          abdoabozena7.github.io/main
         </span>
       </div>
 

@@ -23,7 +23,7 @@ const Finale = () => {
     },
     {
       icon: Globe,
-      href: "https://abdoabozena7.github.io/Clean_Portofoio/",
+      href: "https://abdoabozena7.github.io/main/",
       label: "Portfolio",
     },
   ];

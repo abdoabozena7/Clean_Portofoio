@@ -8,7 +8,7 @@ const links = [
   { label: "Projects", href: "#projects" },
   {
     label: "Portfolio",
-    href: "https://abdoabozena7.github.io/Clean_Portofoio/",
+    href: "https://abdoabozena7.github.io/main/",
   },
   { label: "Contact", href: "#contact" },
 ];
